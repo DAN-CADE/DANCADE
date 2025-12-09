@@ -15,6 +15,8 @@ export default function PhaserGame() {
     const initPhaser = async () => {
       const Phaser = await import("phaser");
       const { StartScene } = await import("@/game/scenes/StartScene");
+
+      const { MainScene } = await import("@/game/scenes/MainScene");
       const { BrickBreakerScene } = await import(
         "@/game/scenes/BrickBreackerScene"
       );
@@ -24,7 +26,7 @@ export default function PhaserGame() {
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [StartScene, BrickBreakerScene],
+        scene: [MainScene, StartScene, BrickBreakerScene],
       };
 
       gameRef.current = new Phaser.Game(config);
@@ -40,7 +42,10 @@ export default function PhaserGame() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900">
-      <div id="game-container" className="rounded-lg overflow-hidden shadow-2xl" />
+      <div
+        id="game-container"
+        className="rounded-lg overflow-hidden shadow-2xl"
+      />
     </div>
   );
 }
