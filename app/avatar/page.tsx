@@ -19,7 +19,7 @@ export default function Home() {
         {/* 게임 컴포넌트 배치 */}
         <GameComponent />
         <p style={{ color: '#aaa', textAlign: 'center', marginTop: '10px' }}>
-          방향키를 눌러 캐릭터를 움직여보세요
+          WASD를 눌러 캐릭터를 움직여보세요
         </p>
       </div>
     </main>

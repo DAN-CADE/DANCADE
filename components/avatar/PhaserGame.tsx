@@ -9,6 +9,9 @@ const PhaserGame = () => {
   useEffect(() => {
     if (gameRef.current || !containerRef.current) return;
 
+    const MAP_WIDTH = 1920;
+    const MAP_HEIGHT = 1088;
+
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       width: 800,
@@ -16,7 +19,14 @@ const PhaserGame = () => {
       parent: containerRef.current,
       backgroundColor: '#D9D9D9',
       
-      // [추가] 픽셀 아트 전용 렌더링 설정
+      // [수정] 맵 크기에 맞춘 스케일링 설정
+      scale: {
+        mode: Phaser.Scale.FIT, // 부모 컨테이너에 맞춰 비율 유지하며 크기 조절
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: MAP_WIDTH,
+        height: MAP_HEIGHT,
+      },
+
       render: {
         pixelArt: true,   // 도트가 선명하게 보이도록 설정
         roundPixels: true // 픽셀 좌표를 정수로 맞춤 (깨짐 방지)
@@ -41,53 +51,11 @@ const PhaserGame = () => {
     };
   }, []);
 
-  // [핵심] 버튼 클릭 핸들러
-  const handleRandomClick = () => {
-    if (!gameRef.current) return;
-
-    // 1. 현재 실행 중인 MainScene 가져오기
-    const scene = gameRef.current.scene.getScene('MainScene') as MainScene;
-    
-    // 2. MainScene의 public 메서드 호출
-    if (scene) {
-      scene.randomizeCharacter(); 
-    }
-  };
-
   return (
     <div style={{ position: 'relative', width: '800px', height: '600px', margin: '0 auto' }}>
       
       {/* 게임 화면 */}
       <div ref={containerRef} id="phaser-container" style={{ width: '100%', height: '100%' }} />
-
-      {/* UI 레이어 */}
-      <div 
-        className="ui-layer" 
-        style={{ 
-          position: 'absolute', 
-          top: '20px', 
-          right: '20px', 
-          zIndex: 10, 
-          pointerEvents: 'none' 
-        }}
-      >
-        <button 
-          onClick={handleRandomClick} // React 이벤트 연결
-          style={{ 
-            pointerEvents: 'auto', 
-            padding: '10px 20px', 
-            fontSize: '16px', 
-            cursor: 'pointer',
-            backgroundColor: '#fff',
-            border: '2px solid #333',
-            color: '#333',
-            borderRadius: '8px',
-            fontWeight: 'bold'
-          }}
-        >
-          🎲 HTML 랜덤 버튼
-        </button>
-      </div>
 
     </div>
   );

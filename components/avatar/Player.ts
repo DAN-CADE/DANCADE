@@ -40,7 +40,7 @@ export default class Player extends Phaser.GameObjects.Container {
         body.setOffset(-16, 16);  
         body.setCollideWorldBounds(true);
 
-        // 3. 레이어 초기화 [수정된 부분]
+        // 3. 레이어 초기화
         this.layerOrder.forEach((part) => {
             // [수정] scene.add.sprite 대신 new Sprite 사용
             // 이렇게 해야 씬에 직접 등록되지 않고 컨테이너의 자식으로만 관리됩니다.
