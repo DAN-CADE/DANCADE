@@ -28,6 +28,16 @@ export class MainScene extends Phaser.Scene {
     // 맵 리소스 로드
     this.load.image("CommonTile", "/tilesets/CommonTile.png");
     this.load.tilemapTiledJSON("map", "/maps/DanMap5.tmj");
+
+    this.load.spritesheet(
+      "player",
+      "/assets/spritesheets/body/zombie/universal.png",
+      // "/tilesets/CommonTile.png",
+      {
+        frameWidth: 64,
+        frameHeight: 64,
+      }
+    );
   }
 
   create() {
@@ -48,14 +58,7 @@ export class MainScene extends Phaser.Scene {
       this.map.heightInPixels
     );
 
-    // 플레이어 생성 (임시)
-    const graphics = this.add.graphics();
-    graphics.fillStyle(0x00ff00, 1);
-    graphics.fillRect(0, 0, 32, 32);
-    graphics.generateTexture("player", 32, 32);
-    graphics.destroy();
-
-    this.player = this.physics.add.sprite(960, 544, "player"); // 맵 중앙
+    this.player = this.physics.add.sprite(960, 544, "player", 0); // 0은 첫 번째 프레임
     this.player.setCollideWorldBounds(true);
 
     // 카메라가 플레이어 따라가도록
