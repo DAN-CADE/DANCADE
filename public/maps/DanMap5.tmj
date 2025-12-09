@@ -217,7 +217,7 @@
         {
          "columns":21,
          "firstgid":1,
-         "image":"tiled_asset\/pixel_cyberpunk_interior_free_1.0.1 (1)\/pixel_cyberpunk_interior_free_1.0.1\/CommonTile.png",
+         "image":"/assets/tilesets/CommonTile.png",
          "imageheight":352,
          "imagewidth":672,
          "margin":0,
