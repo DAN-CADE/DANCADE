@@ -1,5 +1,6 @@
 import Link from "next/link";
 import RankingBoard from "@/components/RankingBoard";
+import PhaserGame from "@/components/game/PhaserGame";
 
 export default function Home() {
   return (
@@ -10,14 +11,9 @@ export default function Home() {
           🎮 아케이드 플랫폼
         </h1>
 
-        {/* 게임 선택 */}
-        <div className="flex justify-center gap-4 mb-8">
-          <Link
-            href="/game"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold"
-          >
-            🧱 벽돌깨기 플레이
-          </Link>
+        {/* 게임 (MainScene) */}
+        <div className="flex justify-center mb-8">
+          <PhaserGame />
         </div>
 
         {/* 랭킹 보드 */}
