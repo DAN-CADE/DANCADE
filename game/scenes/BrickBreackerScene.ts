@@ -7,9 +7,45 @@ export class BrickBreakerScene extends Phaser.Scene {
   private score: number = 0;
   private scoreText?: Phaser.GameObjects.Text;
 
+  // 벽돌 색상 배열
+  private brickColors = [
+    "element_red_rectangle_glossy",
+    "element_yellow_rectangle_glossy",
+    "element_green_rectangle_glossy",
+    "element_blue_rectangle_glossy",
+    "element_purple_rectangle_glossy",
+  ];
+
+  constructor() {
+    super({ key: "BrickBreakerScene" });
+  }
+
+  preload() {
+    const basePath = "/assets/game/kenney_puzzle-pack/png/";
+
+    // 패들
+    this.load.image("paddle", `${basePath}paddleBlu.png`);
+
+    // 공
+    this.load.image("ball", `${basePath}ballBlue.png`);
+
+    // 벽돌 (여러 색상)
+    this.brickColors.forEach((color) => {
+      this.load.image(color, `${basePath}${color}.png`);
+    });
+
+    // UI 버튼
+    this.load.image("buttonDefault", `${basePath}buttonDefault.png`);
+    this.load.image("buttonSelected", `${basePath}buttonSelected.png`);
+  }
+
   create() {
+    // 배경색
+    this.cameras.main.setBackgroundColor("#2c3e50");
+
     // 패들 생성 (화면 아래 중앙)
     this.paddle = this.physics.add.sprite(400, 550, "paddle");
+    this.paddle.setScale(1.2);
 
     // 패들 설정
     this.paddle.setImmovable(true); // 충돌해도 안 밀림
@@ -18,26 +54,34 @@ export class BrickBreakerScene extends Phaser.Scene {
     // 키보드 입력 설정
     this.cursors = this.input.keyboard?.createCursorKeys();
 
+    // 공 생성
     this.ball = this.physics.add.sprite(400, 500, "ball");
     this.ball.setCollideWorldBounds(true);
     this.ball.setBounce(1);
-    this.ball.setVelocity(150, -150);
+    this.ball.setVelocity(200, -200);
 
     // 벽돌 그룹 생성
     this.bricks = this.physics.add.staticGroup();
 
-    // 벽돌 배치
+    // 벽돌 배치 (가운데 정렬)
+    const brickWidth = 64;
+    const brickSpacing = 4;
+    const cols = 10;
+    const totalWidth = cols * brickWidth + (cols - 1) * brickSpacing;
+    const startX = (800 - totalWidth) / 2 + brickWidth / 2; // 게임 너비 800 기준 가운데 정렬
+
     for (let row = 0; row < 5; row++) {
-      for (let col = 0; col < 10; col++) {
-        const brickX = 80 + col * 64;
-        const brickY = 50 + row * 32;
-        this.bricks.create(brickX, brickY, "brick").setOrigin(0, 0);
+      for (let col = 0; col < cols; col++) {
+        const brickX = startX + col * (brickWidth + brickSpacing);
+        const brickY = 80 + row * 32;
+        const brickColor = this.brickColors[row];
+        this.bricks.create(brickX, brickY, brickColor);
       }
     }
 
     // 패들과 공의 충돌 처리
     if (this.ball.body) {
-      (this.ball.body as Phaser.Physics.Arcade.Body).onWorldBounds = true; // 벽 충돌 감지 활성화
+      (this.ball.body as Phaser.Physics.Arcade.Body).onWorldBounds = true;
     }
 
     // 벽 충돌 이벤트 리스너
@@ -51,8 +95,9 @@ export class BrickBreakerScene extends Phaser.Scene {
     });
 
     // 점수 텍스트
-    this.scoreText = this.add.text(16, 16, "Score: 0", {
-      fontSize: "24px",
+    this.scoreText = this.add.text(16, 16, "SCORE: 0", {
+      fontFamily: '"Press Start 2P"',
+      fontSize: "14px",
       color: "#ffffff",
     });
 
@@ -98,7 +143,7 @@ export class BrickBreakerScene extends Phaser.Scene {
 
     // 점수 증가
     this.score += 10;
-    this.scoreText?.setText(`Score: ${this.score}`);
+    this.scoreText?.setText(`SCORE: ${this.score}`);
 
     // 모든 벽돌을 깼는지 확인
     if (this.bricks?.countActive() === 0) {
@@ -108,50 +153,128 @@ export class BrickBreakerScene extends Phaser.Scene {
 
   private winGame() {
     this.ball?.setVelocity(0, 0);
-    this.add
-      .text(400, 300, "YOU WIN!", {
-        fontSize: "64px",
-        color: "#00ff00",
-      })
-      .setOrigin(0.5);
+    this.paddle?.setVelocity(0, 0);
 
-    this.createRestartButton();
+    // 반투명 오버레이 (승리는 좀 더 밝게)
+    const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.6);
+    overlay.setDepth(10);
+
+    // YOU WIN 텍스트
+    const winText = this.add
+      .text(400, 200, "YOU WIN!", {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "36px",
+        color: "#2ecc71",
+      })
+      .setOrigin(0.5)
+      .setDepth(11);
+
+    // 반짝임 효과
+    this.tweens.add({
+      targets: winText,
+      scale: 1.1,
+      duration: 300,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // 최종 점수 표시
+    this.add
+      .text(400, 280, `SCORE`, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "14px",
+        color: "#95a5a6",
+      })
+      .setOrigin(0.5)
+      .setDepth(11);
+
+    this.add
+      .text(400, 320, `${this.score}`, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "32px",
+        color: "#f1c40f",
+      })
+      .setOrigin(0.5)
+      .setDepth(11);
+
+    this.createRestartButton(11);
   }
 
   private gameOver() {
     this.ball?.setVelocity(0, 0);
+    this.paddle?.setVelocity(0, 0);
 
-    this.add
-      .text(400, 300, "Game Over", {
-        fontSize: "64px",
-        color: "#ff0000",
-      })
-      .setOrigin(0.5);
+    // 반투명 오버레이
+    const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
+    overlay.setDepth(10);
 
-    this.createRestartButton();
-  }
-
-  private createRestartButton() {
-    const restartBtn = this.add
-      .text(400, 400, "🔄 다시 시작", {
-        fontSize: "32px",
-        color: "#ffffff",
-        backgroundColor: "#333333",
-        padding: { x: 20, y: 10 },
+    // GAME OVER 텍스트
+    const gameOverText = this.add
+      .text(400, 200, "GAME OVER", {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "36px",
+        color: "#e74c3c",
       })
       .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
+      .setDepth(11);
 
-    // 호버 효과
-    restartBtn.on("pointerover", () => {
-      restartBtn.setStyle({ backgroundColor: "#555555" });
-    });
-    restartBtn.on("pointerout", () => {
-      restartBtn.setStyle({ backgroundColor: "#333333" });
+    // 점멸 효과
+    this.tweens.add({
+      targets: gameOverText,
+      alpha: 0.3,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
     });
 
-    // 클릭 시 재시작
-    restartBtn.on("pointerdown", () => {
+    // 최종 점수 표시
+    this.add
+      .text(400, 280, `SCORE`, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "14px",
+        color: "#95a5a6",
+      })
+      .setOrigin(0.5)
+      .setDepth(11);
+
+    this.add
+      .text(400, 320, `${this.score}`, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "32px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setDepth(11);
+
+    this.createRestartButton(11);
+  }
+
+  private createRestartButton(depth: number = 0) {
+    const buttonStyle = {
+      fontFamily: '"Press Start 2P"',
+      fontSize: "14px",
+      color: "#333333",
+    };
+
+    // 다시 시작 버튼 (Y: 400)
+    const restartBtnBg = this.add
+      .image(400, 400, "buttonDefault")
+      .setScale(3, 1.5)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(depth);
+
+    this.add
+      .text(400, 400, "RETRY", buttonStyle)
+      .setOrigin(0.5)
+      .setDepth(depth);
+
+    restartBtnBg.on("pointerover", () => {
+      restartBtnBg.setTexture("buttonSelected").setScale(3.1, 1.6);
+    });
+    restartBtnBg.on("pointerout", () => {
+      restartBtnBg.setTexture("buttonDefault").setScale(3, 1.5);
+    });
+    restartBtnBg.on("pointerdown", () => {
       this.score = 0;
       this.scene.restart();
     });

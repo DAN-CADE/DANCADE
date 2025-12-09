@@ -14,6 +14,7 @@ export default function PhaserGame() {
     // 클라이언트 사이드에서만 Phaser를 동적 import
     const initPhaser = async () => {
       const Phaser = await import("phaser");
+      const { StartScene } = await import("@/game/scenes/StartScene");
       const { BrickBreakerScene } = await import(
         "@/game/scenes/BrickBreackerScene"
       );
@@ -23,7 +24,7 @@ export default function PhaserGame() {
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [BrickBreakerScene],
+        scene: [StartScene, BrickBreakerScene],
       };
 
       gameRef.current = new Phaser.Game(config);
@@ -39,8 +40,7 @@ export default function PhaserGame() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900">
-      <h1 className="text-white text-3xl mb-4">Phaser 테스트</h1>
-      <div id="game-container" className="border-4 border-white" />
+      <div id="game-container" className="rounded-lg overflow-hidden shadow-2xl" />
     </div>
   );
 }
