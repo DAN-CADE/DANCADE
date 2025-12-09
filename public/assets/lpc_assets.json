@@ -1,0 +1,79 @@
+{
+    "definitions": {
+        "comments": "공통으로 사용되는 색상 팔레트 정의",
+        "palettes": {
+            "hair_common": ["ash", "blonde", "black", "red"],
+            "skin_common": ["light", "brown"],
+            "eye_common": ["gray", "blue", "green", "brown"],
+            "nose_common": ["light", "brown"],
+            "clothes_common": ["black", "white", "navy"]
+        }
+    },
+    "assets": {
+        "body": {
+            "path": "/assets/spritesheets/body/teen/{color}.png",
+            "colors": { "$ref": "skin_common" } 
+        },
+        "head": {
+            "path": "/assets/spritesheets/head/heads/human/{gender}/{color}.png",
+            "genders": ["male", "female"],
+            "colors": { "$ref": "skin_common" }
+        },
+        "hair": {
+            "config": {
+                "description": "헤어는 아래 템플릿 경로의 {style} 부분만 변경되어 적용됩니다.",
+                "path_template": "/assets/spritesheets/hair/{style}/{gender}/{color}.png",
+                "default_colors": { "$ref": "hair_common" }
+            },
+            "styles": [
+                {
+                    "id": "plain",
+                    "genders": ["male"]
+                },
+                {
+                    "id": "idol",
+                    "genders": ["male"]
+                },
+                {
+                    "id": "mop",
+                    "genders": ["male"]
+                },
+                {
+                    "id": "bangslong",
+                    "genders": ["female"]
+                },
+                {
+                    "id": "long_straight",
+                    "genders": ["female"]
+                },
+                {
+                    "id": "loose",
+                    "genders": ["female"]
+                }                
+            ]
+        },
+        "eyes": {
+            "path": "/assets/spritesheets/eyes/human/adult/{color}.png",
+            "colors": { "$ref": "eye_common" }
+        },
+        "nose": {
+            "path": "/assets/spritesheets/nose/button/adult/{color}.png",
+            "colors": { "$ref": "nose_common" }
+        },
+        "legs": {
+            "prefix": "legs_pants",
+            "path": "/assets/spritesheets/legs/pants/teen/{color}.png",
+            "colors": { "$ref": "clothes_common" }
+        },
+        "torso": {
+            "prefix": "short_shirt",
+            "path": "/assets/spritesheets/torso/clothes/shortsleeve/tshirt/teen/{color}.png",
+            "colors": { "$ref": "clothes_common" }
+        },
+        "feet": {
+            "prefix": "feet_shoes",
+            "path": "/assets/spritesheets/feet/shoes2/thin/{color}.png",
+            "colors": { "$ref": "clothes_common" }
+        }
+    }
+}
