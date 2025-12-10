@@ -120,8 +120,6 @@ export class RealPingPongScene extends Phaser.Scene {
     this.showStartMenu();
   }
 
-
-
   /**
    * 점수 리셋
    */
@@ -591,11 +589,9 @@ export class RealPingPongScene extends Phaser.Scene {
         ) {
           // 플레이어 서브 (서브 준비 상태가 아닐 때)
           this.serve();
-
+        }
       }
     }
-
-
 
     // 색상 선택 모드에서 좌우 화살표 처리
     if (this.gameState.gameMode === "colorSelect") {
