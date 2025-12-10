@@ -101,16 +101,6 @@ export class BrickBreakerScene extends Phaser.Scene {
       color: "#ffffff",
     });
 
-    // 게임 규칙 안내 텍스트
-    this.add
-      .text(400, 560, "모든 벽돌을 깨면 승리! | A/D: 패들 이동", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "12px",
-        color: "#ffffff",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-
     // 공과 패들 충돌
     this.physics.add.collider(
       this.ball,
