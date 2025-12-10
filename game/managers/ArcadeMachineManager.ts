@@ -159,6 +159,7 @@ export class ArcadeMachineManager {
       { x: 300, y: 300, gameId: "brick-breaker" },
       { x: 600, y: 300, gameId: "whack-a-mole" },
       { x: 900, y: 300, gameId: "memory-game" },
+      { x: 1200, y: 300, gameId: "ping-pong" },
     ];
 
     positions.forEach((pos) => {
