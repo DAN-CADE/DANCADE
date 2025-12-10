@@ -101,6 +101,16 @@ export class BrickBreakerScene extends Phaser.Scene {
       color: "#ffffff",
     });
 
+    // 게임 규칙 안내 텍스트
+    this.add
+      .text(400, 560, "모든 벽돌을 깨면 승리! | A/D: 패들 이동", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "12px",
+        color: "#ffffff",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
+
     // 공과 패들 충돌
     this.physics.add.collider(
       this.ball,
@@ -278,6 +288,87 @@ export class BrickBreakerScene extends Phaser.Scene {
       this.score = 0;
       this.scene.restart();
     });
+  }
+
+  /**
+   * 게임 규칙 안내 표시
+   */
+  private showGameInstructions() {
+    // 반투명 오버레이
+    const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+    overlay.setDepth(100);
+
+    // 제목
+    this.add
+      .text(400, 150, "BRICK BREAKER", {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "32px",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5)
+      .setDepth(101);
+
+    // 게임 규칙
+    const instructions = [
+      "HOW TO PLAY:",
+      "",
+      "• Use LEFT/RIGHT arrows to move paddle",
+      "• Bounce the ball to break all bricks",
+      "• Don't let the ball fall down!",
+      "• Break all bricks to win",
+      "",
+      "PRESS SPACE TO START",
+    ];
+
+    instructions.forEach((instruction, index) => {
+      const isTitle = instruction === "HOW TO PLAY:";
+      const isStart = instruction === "PRESS SPACE TO START";
+      const isEmpty = instruction === "";
+
+      if (!isEmpty) {
+        const text = this.add
+          .text(400, 200 + index * 25, instruction, {
+            fontFamily:
+              isTitle || isStart ? '"Press Start 2P"' : "Arial, sans-serif",
+            fontSize: isTitle ? "16px" : isStart ? "14px" : "12px",
+            color: isTitle ? "#00ff88" : isStart ? "#ffff00" : "#cccccc",
+          })
+          .setOrigin(0.5)
+          .setDepth(101);
+
+        // 시작 텍스트 깜빡임 효과
+        if (isStart) {
+          this.tweens.add({
+            targets: text,
+            alpha: 0.3,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+          });
+        }
+      }
+    });
+
+    // 스페이스 키로 시작
+    const spaceKey = this.input.keyboard?.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SPACE
+    );
+    const startHandler = () => {
+      if (Phaser.Input.Keyboard.JustDown(spaceKey!)) {
+        // 오버레이와 텍스트들 제거
+        overlay.destroy();
+        this.children.list
+          .filter(
+            (child) =>
+              "depth" in child &&
+              (child as Phaser.GameObjects.GameObject & { depth: number })
+                .depth >= 100
+          )
+          .forEach((child) => child.destroy());
+        this.input.keyboard?.off("keydown-SPACE", startHandler);
+      }
+    };
+    this.input.keyboard?.on("keydown-SPACE", startHandler);
   }
 
   update() {

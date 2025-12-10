@@ -20,13 +20,16 @@ export default function PhaserGame() {
       const { BrickBreakerScene } = await import(
         "@/game/scenes/BrickBreackerScene"
       );
+      const { RealPingPongScene } = await import(
+        "@/game/scenes/RealPingPongScene"
+      );
 
       // 다시 한번 체크 (비동기 작업 중 생성되었을 수 있음)
       if (gameRef.current) return;
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [MainScene, StartScene, BrickBreakerScene],
+        scene: [MainScene, StartScene, BrickBreakerScene, RealPingPongScene],
       };
 
       gameRef.current = new Phaser.Game(config);
