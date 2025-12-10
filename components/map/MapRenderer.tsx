@@ -2,6 +2,7 @@
 
 import * as Phaser from "phaser";
 import { useEffect, useRef } from "react";
+import MapScene from "./MapScene";
 
 export default function MapRenderer() {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -9,7 +10,6 @@ export default function MapRenderer() {
   useEffect(() => {
     if (gameRef.current) return;
 
-    // 맵의 원본 크기를 상수로 정의합니다.
     const MAP_WIDTH = 1920;
     const MAP_HEIGHT = 1088;
 
@@ -24,11 +24,15 @@ export default function MapRenderer() {
         height: MAP_HEIGHT,
       },
       backgroundColor: "#000",
-      scene: {
-        preload,
-        create,
+
+      // ⭐ 중요한 부분: Scene 클래스를 넣어야 Player가 동작함
+      scene: [MapScene],
+      physics: {
+        default: "arcade",
+        arcade: {
+          debug: false,
+        },
       },
-      
     };
 
     gameRef.current = new Phaser.Game(config);
@@ -39,25 +43,5 @@ export default function MapRenderer() {
     };
   }, []);
 
-function preload(this: Phaser.Scene) {
-  this.load.image("CommonTile", "/tilesets/CommonTile.png");
-  // 맵 로딩
-  this.load.tilemapTiledJSON("map", "/maps/DanMap5.tmj");
-}
-
-
-  function create(this: Phaser.Scene) {
-    const map = this.make.tilemap({ key: "map" });
-
-    // Tiled tileset 이름("CommonTile")과 preload key("CommonTile")를 매칭
-    const tileset = map.addTilesetImage("CommonTile", "CommonTile");
-
-    // 모든 레이어 자동 생성
-    map.layers.forEach((layer) => {
-      map.createLayer(layer.name, tileset ?? [], 0, 0);
-    });
-    
-  }
-
-  return null;
+  return <div id="game-container" style={{ width: "100%", height: "100%" }} />;
 }
