@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# assets
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# asset previews and docs (keep only necessary game assets)
+public/assets/*/Preview.png
+public/assets/*/README.txt
+public/assets/*/itch.io*
+public/assets/*/fonts/Font*

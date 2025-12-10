@@ -1,88 +1,191 @@
-// game/scenes/MainScene.ts
+import { type GameConfig } from "@/game/config/gameRegistry";
+import { AvatarManager } from "@/game/managers/AvatarManager";
+import { ArcadeMachineManager } from "@/game/managers/ArcadeMachineManager";
+import { AssetLoader } from "@/game/managers/AssetLoader";
+import { CharacterCustomization } from "@/types/character";
+import { LPCData } from "@/types/lpc";
+
 export class MainScene extends Phaser.Scene {
-  private player!: Phaser.Physics.Arcade.Sprite;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private interactKey!: Phaser.Input.Keyboard.Key;
+  private readonly FADE_DURATION = 1000;
+  private readonly PLAYER_START_X = 960;
+  private readonly PLAYER_START_Y = 544;
+
   private map!: Phaser.Tilemaps.Tilemap;
+  private machineManager!: ArcadeMachineManager;
+  private avatarManager!: AvatarManager;
+  private assetLoader!: AssetLoader;
 
-  // 게임기 정보
-  private arcadeMachines = [
-    {
-      id: "game1",
-      x: 200,
-      y: 200,
-      scene: "StartScene",
-      name: "Brick Breaker",
-    },
-    { id: "game2", x: 600, y: 200, scene: "Test", name: "Test Game" },
-  ];
-
-  private nearbyGame: { id: string; scene: string; name: string } | null = null;
+  private interactKey!: Phaser.Input.Keyboard.Key;
   private interactPrompt!: Phaser.GameObjects.Text;
+  private nearbyGame: GameConfig | null = null;
 
   constructor() {
     super({ key: "MainScene" });
   }
 
   preload() {
-    // 맵 리소스 로드
     this.load.image("CommonTile", "/tilesets/CommonTile.png");
     this.load.tilemapTiledJSON("map", "/maps/DanMap5.tmj");
+    // this.load.image("arcade-machine", "/assets/arcade-machine.png");
+    this.load.json("lpc_config", "/assets/lpc_assets.json");
 
-    this.load.spritesheet(
-      "player",
-      "/assets/spritesheets/body/zombie/universal.png",
-      // "/tilesets/CommonTile.png",
-      {
-        frameWidth: 64,
-        frameHeight: 64,
+    this.assetLoader = new AssetLoader(this);
+
+    this.load.on(
+      Phaser.Loader.Events.FILE_COMPLETE + "-json-lpc_config",
+      (key: string, type: string, data: LPCData) => {
+        if (data && data.assets) {
+          this.loadCharacterAssets(data);
+        }
       }
     );
   }
 
   create() {
-    // 맵 생성
+    this.machineManager = new ArcadeMachineManager(this);
+    this.avatarManager = new AvatarManager(this);
+
+    this.createMap();
+    this.createAvatar();
+    this.finishSetup();
+  }
+
+  /**
+   * 아바타 생성
+   */
+  private createAvatar(): void {
+    const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
+    const lpcData = this.cache.json.get("lpc_config") as LPCData;
+
+    if (savedCustomization && lpcData) {
+      try {
+        const customization: CharacterCustomization =
+          JSON.parse(savedCustomization);
+        this.avatarManager.createCustomAvatar(
+          this.PLAYER_START_X,
+          this.PLAYER_START_Y,
+          customization
+        );
+      } catch (error) {
+        console.error(error);
+        this.createRandomAvatar(lpcData);
+      }
+    } else {
+      this.createRandomAvatar(lpcData);
+    }
+  }
+
+  private createRandomAvatar(lpcData: LPCData): void {
+    const savedSeed = localStorage.getItem("selectedCharacterSeed");
+    if (savedSeed) {
+      Phaser.Math.RND.sow([savedSeed]);
+    }
+
+    this.avatarManager.createRandomAvatar(
+      this.PLAYER_START_X,
+      this.PLAYER_START_Y,
+      lpcData
+    );
+  }
+
+  /**
+   * 에셋 로딩
+   */
+  private loadCharacterAssets(data: LPCData): void {
+    const savedCustomization = localStorage.getItem("characterCustomization");
+
+    if (savedCustomization) {
+      try {
+        const customization: CharacterCustomization =
+          JSON.parse(savedCustomization);
+        this.assetLoader.loadCustomAssets(customization);
+        return;
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    this.assetLoader.loadDefaultAssets(data);
+  }
+
+  private finishSetup(): void {
+    this.machineManager.parseFromMap(this.map);
+    this.setupCollisions();
+    this.setupInput();
+    this.createUI();
+  }
+
+  update(time: number, delta: number): void {
+    this.avatarManager.update(delta);
+    this.checkNearbyArcade();
+    this.handleInteraction();
+    this.updateUI();
+  }
+
+  // ============================================================
+  // 맵 & UI
+  // ============================================================
+
+  private createMap(): void {
     this.map = this.make.tilemap({ key: "map" });
     const tileset = this.map.addTilesetImage("CommonTile", "CommonTile");
+    if (!tileset) return;
 
-    // 모든 레이어 생성
     this.map.layers.forEach((layer) => {
-      this.map.createLayer(layer.name, tileset ?? [], 0, 0);
+      this.map.createLayer(layer.name, tileset, 0, 0);
     });
 
-    // 카메라 설정 (맵 크기에 맞춤)
     this.cameras.main.setBounds(
       0,
       0,
       this.map.widthInPixels,
       this.map.heightInPixels
     );
+  }
 
-    this.player = this.physics.add.sprite(960, 544, "player", 0); // 0은 첫 번째 프레임
-    this.player.setCollideWorldBounds(true);
+  // 충돌 설정
+  private setupCollisions(): void {
+    const avatar = this.avatarManager.getContainer();
 
-    // 카메라가 플레이어 따라가도록
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    // 1. 벽 충돌
+    const wallLayer = this.map.createLayer("walls", "CommonTile");
+    if (wallLayer) {
+      wallLayer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, wallLayer);
+    }
 
-    // 게임기들 표시 (나중에 맵의 Object Layer에서 가져올 예정)
-    this.arcadeMachines.forEach((arcade, index) => {
-      const color = index === 0 ? 0xff0000 : 0x0000ff;
-      this.add.rectangle(arcade.x, arcade.y, 64, 64, color);
-      this.add
-        .text(arcade.x, arcade.y - 50, arcade.name, {
-          fontSize: "14px",
-          backgroundColor: "#000",
-          padding: { x: 5, y: 3 },
-        })
-        .setOrigin(0.5)
-        .setScrollFactor(1); // 카메라와 함께 스크롤
+    // 2. 게임기 충돌
+    const machines = this.machineManager.getMachines();
+    machines.forEach((machine) => {
+      this.physics.add.collider(avatar, machine.sprite);
     });
 
-    // 키보드 설정
-    this.cursors = this.input.keyboard!.createCursorKeys();
-    this.interactKey = this.input.keyboard!.addKey("E");
+    // 3. 기타 오브젝트 충돌
+    const collisionLayer = this.map.getObjectLayer("CollisionObjects");
+    if (collisionLayer) {
+      collisionLayer.objects.forEach((obj) => {
+        const x = obj.x ?? 0;
+        const y = obj.y ?? 0;
+        const width = obj.width ?? 0;
+        const height = obj.height ?? 0;
 
-    // 상호작용 프롬프트
+        const box = this.add.rectangle(
+          x + width / 2,
+          y + height / 2,
+          width,
+          height
+        );
+        this.physics.add.existing(box, true);
+        this.physics.add.collider(avatar, box);
+      });
+    }
+  }
+
+  private setupInput(): void {
+    this.interactKey = this.input.keyboard!.addKey("E");
+  }
+
+  private createUI(): void {
     this.interactPrompt = this.add
       .text(0, 0, "", {
         fontSize: "16px",
@@ -92,86 +195,51 @@ export class MainScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setVisible(false)
-      .setScrollFactor(0); // 화면 고정
-
-    console.log("MainScene with map created!");
+      .setScrollFactor(0)
+      .setDepth(1000);
   }
 
-  update() {
-    this.handlePlayerMovement();
-    this.checkNearbyArcade();
-    this.handleInteraction();
+  private checkNearbyArcade(): void {
+    const pos = this.avatarManager.getPosition();
+    const nearest = this.machineManager.findNearestMachine(pos.x, pos.y);
 
-    // 프롬프트를 플레이어 위에 표시 (카메라 좌표 고려)
-    if (this.interactPrompt.visible) {
-      const screenPos = this.cameras.main.getWorldPoint(
-        this.player.x,
-        this.player.y - 40
-      );
-      this.interactPrompt.setPosition(
-        this.cameras.main.width / 2,
-        screenPos.y - this.cameras.main.scrollY
-      );
-    }
-  }
+    this.machineManager.clearAllHighlights();
 
-  private handlePlayerMovement() {
-    const speed = 200;
-
-    if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-speed);
-    } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(speed);
+    if (nearest) {
+      this.nearbyGame = nearest.game;
+      this.machineManager.highlightMachine(nearest);
+      this.interactPrompt
+        .setText(`Press E to play ${nearest.game.name}`)
+        .setVisible(true);
     } else {
-      this.player.setVelocityX(0);
-    }
-
-    if (this.cursors.up.isDown) {
-      this.player.setVelocityY(-speed);
-    } else if (this.cursors.down.isDown) {
-      this.player.setVelocityY(speed);
-    } else {
-      this.player.setVelocityY(0);
-    }
-  }
-
-  private checkNearbyArcade() {
-    const interactionRadius = 80;
-    let foundNearby = false;
-
-    for (const machine of this.arcadeMachines) {
-      const distance = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        machine.x,
-        machine.y
-      );
-
-      if (distance < interactionRadius) {
-        this.nearbyGame = machine;
-        this.interactPrompt
-          .setText(`Press E to play ${machine.name}`)
-          .setVisible(true);
-        foundNearby = true;
-        break;
-      }
-    }
-
-    if (!foundNearby) {
       this.nearbyGame = null;
       this.interactPrompt.setVisible(false);
     }
   }
 
-  private handleInteraction() {
+  private handleInteraction(): void {
     if (Phaser.Input.Keyboard.JustDown(this.interactKey) && this.nearbyGame) {
-      console.log(`Launching: ${this.nearbyGame.name}`);
-      this.launchGame(this.nearbyGame.scene);
+      this.launchGame(this.nearbyGame);
     }
   }
 
-  private launchGame(sceneName: string) {
-    console.log(`Starting scene: ${sceneName}`);
-    this.scene.start(sceneName);
+  private updateUI(): void {
+    if (this.interactPrompt.visible) {
+      this.interactPrompt.setPosition(this.cameras.main.width / 2, 100);
+    }
+  }
+
+  private launchGame(game: GameConfig): void {
+    this.cameras.main.fadeOut(this.FADE_DURATION, 0, 0, 0);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.start(game.sceneKey, {
+        returnScene: "MainScene",
+        playerPosition: this.avatarManager.getPosition(),
+      });
+    });
+  }
+
+  shutdown(): void {
+    this.machineManager.destroy();
   }
 }
