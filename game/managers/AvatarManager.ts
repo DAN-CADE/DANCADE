@@ -1,5 +1,6 @@
 // game/managers/AvatarManager.ts
 import { CharacterCustomization } from "@/types/character";
+import { LPCData, LPCAssetConfig, LPCPalettes } from "@/types/lpc";
 
 /**
  * AvatarManager - 아바타 생성 및 애니메이션 관리
@@ -50,7 +51,7 @@ export class AvatarManager {
   /**
    * 랜덤 캐릭터 생성
    */
-  createRandomAvatar(x: number, y: number, lpcData: any): void {
+  createRandomAvatar(x: number, y: number, lpcData: LPCData): void {
     this.avatarContainer = this.scene.add.container(x, y);
     this.scene.physics.add.existing(this.avatarContainer);
 
@@ -111,7 +112,7 @@ export class AvatarManager {
   /**
    * 랜덤 캐릭터 생성
    */
-  private createRandomCharacter(data: any): void {
+  private createRandomCharacter(data: LPCData): void {
     const palettes = data.definitions.palettes;
     const assets = data.assets;
 
@@ -136,13 +137,12 @@ export class AvatarManager {
       const config = assets[partName];
       if (!config) return;
 
-      let textureKey = this.getTextureKey(
+      const textureKey = this.getTextureKey(
         partName,
         config,
         selectedGender,
         selectedSkin,
-        palettes,
-        assets
+        palettes
       );
 
       if (textureKey && this.scene.textures.exists(textureKey)) {
@@ -160,11 +160,10 @@ export class AvatarManager {
    */
   private getTextureKey(
     partName: string,
-    config: any,
+    config: LPCAssetConfig,
     selectedGender: string,
     selectedSkin: string,
-    palettes: any,
-    assets: any
+    palettes: LPCPalettes
   ): string {
     if (["body", "head", "nose"].includes(partName)) {
       const gender = config.genders?.includes(selectedGender)
@@ -179,15 +178,15 @@ export class AvatarManager {
       return this.getAssetKey(partName, null, "", eyeColor);
     }
 
-    if (partName === "hair") {
+    if (partName === "hair" && config.styles) {
       const styles = config.styles.filter(
-        (s: any) => !s.genders || s.genders.includes(selectedGender)
+        (s) => !s.genders || s.genders.includes(selectedGender)
       );
       if (styles.length > 0) {
         const style = Phaser.Math.RND.pick(styles);
         const colors =
           style.colors ||
-          this.resolveColors(config.config.default_colors, palettes).slice(
+          this.resolveColors(config.config?.default_colors, palettes).slice(
             0,
             5
           );
@@ -196,9 +195,9 @@ export class AvatarManager {
       }
     }
 
-    if (["torso", "legs", "feet"].includes(partName)) {
+    if (["torso", "legs", "feet"].includes(partName) && config.styles) {
       const colors = this.resolveColors(
-        config.config.default_colors,
+        config.config?.default_colors,
         palettes
       ).slice(0, 5);
       const color = Phaser.Math.RND.pick(colors);
@@ -324,7 +323,10 @@ export class AvatarManager {
   }
 
   // 헬퍼 메서드
-  private resolveColors(colorDef: any, palettes: any): string[] {
+  private resolveColors(
+    colorDef: string[] | { $ref: string } | undefined,
+    palettes: LPCPalettes
+  ): string[] {
     if (Array.isArray(colorDef)) return colorDef;
     if (colorDef?.$ref) return palettes[colorDef.$ref] || [];
     return [];

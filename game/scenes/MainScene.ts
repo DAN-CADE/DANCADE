@@ -3,6 +3,7 @@ import { AvatarManager } from "@/game/managers/AvatarManager";
 import { ArcadeMachineManager } from "@/game/managers/ArcadeMachineManager";
 import { AssetLoader } from "@/game/managers/AssetLoader";
 import { CharacterCustomization } from "@/types/character";
+import { LPCData } from "@/types/lpc";
 
 export class MainScene extends Phaser.Scene {
   private readonly FADE_DURATION = 1000;
@@ -32,7 +33,7 @@ export class MainScene extends Phaser.Scene {
 
     this.load.on(
       Phaser.Loader.Events.FILE_COMPLETE + "-json-lpc_config",
-      (key: string, type: string, data: any) => {
+      (key: string, type: string, data: LPCData) => {
         if (data && data.assets) {
           this.loadCharacterAssets(data);
         }
@@ -53,8 +54,8 @@ export class MainScene extends Phaser.Scene {
    * 아바타 생성
    */
   private createAvatar(): void {
-    const savedCustomization = localStorage.getItem("characterCustomization");
-    const lpcData = this.cache.json.get("lpc_config");
+    const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
+    const lpcData = this.cache.json.get("lpc_config") as LPCData;
 
     if (savedCustomization && lpcData) {
       try {
@@ -74,7 +75,7 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private createRandomAvatar(lpcData: any): void {
+  private createRandomAvatar(lpcData: LPCData): void {
     const savedSeed = localStorage.getItem("selectedCharacterSeed");
     if (savedSeed) {
       Phaser.Math.RND.sow([savedSeed]);
@@ -90,7 +91,7 @@ export class MainScene extends Phaser.Scene {
   /**
    * 에셋 로딩
    */
-  private loadCharacterAssets(data: any): void {
+  private loadCharacterAssets(data: LPCData): void {
     const savedCustomization = localStorage.getItem("characterCustomization");
 
     if (savedCustomization) {
@@ -162,12 +163,17 @@ export class MainScene extends Phaser.Scene {
     // 3. 기타 오브젝트 충돌
     const collisionLayer = this.map.getObjectLayer("CollisionObjects");
     if (collisionLayer) {
-      collisionLayer.objects.forEach((obj: any) => {
+      collisionLayer.objects.forEach((obj) => {
+        const x = obj.x ?? 0;
+        const y = obj.y ?? 0;
+        const width = obj.width ?? 0;
+        const height = obj.height ?? 0;
+
         const box = this.add.rectangle(
-          obj.x + obj.width / 2,
-          obj.y + obj.height / 2,
-          obj.width,
-          obj.height
+          x + width / 2,
+          y + height / 2,
+          width,
+          height
         );
         this.physics.add.existing(box, true);
         this.physics.add.collider(avatar, box);

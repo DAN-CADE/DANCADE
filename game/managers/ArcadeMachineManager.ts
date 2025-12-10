@@ -119,13 +119,13 @@ export class ArcadeMachineManager {
     this.scene.physics.add.existing(sprite, true);
 
     // 3. 충돌 박스 크기 조정 (스프라이트보다 작게)
-    const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
-    if (body) {
-      // 스프라이트 크기의 80% 너비, 60% 높이로 설정
-      body.setSize(sprite.width * 0.8, sprite.height * 0.6);
-      // 충돌 박스를 약간 아래쪽으로 이동 (발판 느낌)
-      body.setOffset(sprite.width * 0.1, sprite.height * 0.4);
-    }
+    // const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
+    // if (body) {
+    //   // 스프라이트 크기의 80% 너비, 60% 높이로 설정
+    //   body.setSize(sprite.width * 0.8, sprite.height * 0.6);
+    //   // 충돌 박스를 약간 아래쪽으로 이동 (발판 느낌)
+    //   body.setOffset(sprite.width * 0.1, sprite.height * 0.4);
+    // }
 
     // 4. 게임 이름 라벨 생성 (게임기 위에 표시)
     const nameLabel = this.scene.add
