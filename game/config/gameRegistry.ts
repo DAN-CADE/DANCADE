@@ -29,7 +29,7 @@ export const GAME_REGISTRY: GameConfig[] = [
   {
     id: "ping-pong",
     name: "Ping Pong",
-    sceneKey: "RealPingPongScene",
+    sceneKey: "PingPongScene",
     description: "실제 탁구 게임을 즐겨보세요!",
   },
   // 새 게임 추가는 여기에만

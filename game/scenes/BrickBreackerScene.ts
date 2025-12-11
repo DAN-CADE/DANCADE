@@ -1,14 +1,56 @@
 // game/scenes/BrickBreakerScene.ts
+import { GameConfig } from "@/game/config/gameRegistry";
+
+interface BrickBreakerConfig {
+  width: number;
+  height: number;
+  paddleSpeed: number;
+  ballSpeed: number;
+}
+
+interface BrickLayoutConfig {
+  cols: number;
+  rows: number;
+  width: number;
+  height: number;
+  spacing: number;
+  startY: number;
+}
+
+type EndGameType = "win" | "gameOver";
+
 export class BrickBreakerScene extends Phaser.Scene {
+  // Game Meta
+  private gameConfig?: GameConfig;
+
+  // Game Objects
   private paddle?: Phaser.Physics.Arcade.Sprite;
-  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
-  private bricks?: Phaser.Physics.Arcade.StaticGroup;
   private ball?: Phaser.Physics.Arcade.Sprite;
-  private score: number = 0;
+  private bricks?: Phaser.Physics.Arcade.StaticGroup;
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private scoreText?: Phaser.GameObjects.Text;
 
-  // 벽돌 색상 배열
-  private brickColors = [
+  // Game State
+  private score: number = 0;
+
+  // Constants
+  private readonly GAME_CONFIG: BrickBreakerConfig = {
+    width: 800,
+    height: 600,
+    paddleSpeed: 300,
+    ballSpeed: 200,
+  };
+
+  private readonly BRICK_LAYOUT: BrickLayoutConfig = {
+    cols: 10,
+    rows: 5,
+    width: 64,
+    height: 32,
+    spacing: 4,
+    startY: 80,
+  };
+
+  private readonly BRICK_COLORS = [
     "element_red_rectangle_glossy",
     "element_yellow_rectangle_glossy",
     "element_green_rectangle_glossy",
@@ -16,177 +58,319 @@ export class BrickBreakerScene extends Phaser.Scene {
     "element_purple_rectangle_glossy",
   ];
 
+  private readonly ASSET_PATH = "/assets/game/kenney_puzzle-pack/png/";
+  private readonly POINTS_PER_BRICK = 10;
+
   constructor() {
     super({ key: "BrickBreakerScene" });
   }
 
+  init(data: { gameConfig?: GameConfig }) {
+    this.gameConfig = data.gameConfig;
+  }
+
   preload() {
-    const basePath = "/assets/game/kenney_puzzle-pack/png/";
-
-    // 패들
-    this.load.image("paddle", `${basePath}paddleBlu.png`);
-
-    // 공
-    this.load.image("ball", `${basePath}ballBlue.png`);
-
-    // 벽돌 (여러 색상)
-    this.brickColors.forEach((color) => {
-      this.load.image(color, `${basePath}${color}.png`);
-    });
-
-    // UI 버튼
-    this.load.image("buttonDefault", `${basePath}buttonDefault.png`);
-    this.load.image("buttonSelected", `${basePath}buttonSelected.png`);
+    this.loadAssets();
   }
 
   create() {
-    // 배경색
+    this.setupScene();
+    this.createGameObjects();
+    this.setupCollisions();
+    this.setupInput();
+  }
+
+  update() {
+    this.handlePaddleMovement();
+  }
+
+  shutdown() {
+    this.physics.world.off("worldbounds");
+  }
+
+  /**
+   * 에셋 로드
+   */
+  private loadAssets(): void {
+    this.load.image("paddle", `${this.ASSET_PATH}paddleBlu.png`);
+    this.load.image("ball", `${this.ASSET_PATH}ballBlue.png`);
+    this.load.image("buttonDefault", `${this.ASSET_PATH}buttonDefault.png`);
+    this.load.image("buttonSelected", `${this.ASSET_PATH}buttonSelected.png`);
+
+    this.BRICK_COLORS.forEach((color) => {
+      this.load.image(color, `${this.ASSET_PATH}${color}.png`);
+    });
+  }
+
+  /**
+   * 씬 기본 설정
+   */
+  private setupScene(): void {
     this.cameras.main.setBackgroundColor("#2c3e50");
+  }
 
-    // 패들 생성 (화면 아래 중앙)
-    this.paddle = this.physics.add.sprite(400, 550, "paddle");
+  /**
+   * 게임 오브젝트 생성
+   */
+  private createGameObjects(): void {
+    this.createPaddle();
+    this.createBall();
+    this.createBricks();
+    this.createScoreText();
+  }
+
+  /**
+   * 패들 생성
+   */
+  private createPaddle(): void {
+    const paddleX = this.GAME_CONFIG.width / 2;
+    const paddleY = 550;
+
+    this.paddle = this.physics.add.sprite(paddleX, paddleY, "paddle");
     this.paddle.setScale(1.2);
+    this.paddle.setImmovable(true);
+    this.paddle.setCollideWorldBounds(true);
+  }
 
-    // 패들 설정
-    this.paddle.setImmovable(true); // 충돌해도 안 밀림
-    this.paddle.setCollideWorldBounds(true); // 화면 밖으로 안 나감
+  /**
+   * 공 생성
+   */
+  private createBall(): void {
+    const ballX = this.GAME_CONFIG.width / 2;
+    const ballY = 500;
 
-    // 키보드 입력 설정
-    this.cursors = this.input.keyboard?.createCursorKeys();
-
-    // 공 생성
-    this.ball = this.physics.add.sprite(400, 500, "ball");
+    this.ball = this.physics.add.sprite(ballX, ballY, "ball");
     this.ball.setCollideWorldBounds(true);
     this.ball.setBounce(1);
-    this.ball.setVelocity(200, -200);
+    this.ball.setVelocity(
+      this.GAME_CONFIG.ballSpeed,
+      -this.GAME_CONFIG.ballSpeed
+    );
 
-    // 벽돌 그룹 생성
-    this.bricks = this.physics.add.staticGroup();
-
-    // 벽돌 배치 (가운데 정렬)
-    const brickWidth = 64;
-    const brickSpacing = 4;
-    const cols = 10;
-    const totalWidth = cols * brickWidth + (cols - 1) * brickSpacing;
-    const startX = (800 - totalWidth) / 2 + brickWidth / 2; // 게임 너비 800 기준 가운데 정렬
-
-    for (let row = 0; row < 5; row++) {
-      for (let col = 0; col < cols; col++) {
-        const brickX = startX + col * (brickWidth + brickSpacing);
-        const brickY = 80 + row * 32;
-        const brickColor = this.brickColors[row];
-        this.bricks.create(brickX, brickY, brickColor);
-      }
-    }
-
-    // 패들과 공의 충돌 처리
     if (this.ball.body) {
       (this.ball.body as Phaser.Physics.Arcade.Body).onWorldBounds = true;
     }
+  }
 
-    // 벽 충돌 이벤트 리스너
-    this.physics.world.on("worldbounds", (body: Phaser.Physics.Arcade.Body) => {
-      if (body.gameObject === this.ball) {
-        // 아래쪽 벽에 부딪혔는지 확인
-        if (body.blocked.down) {
-          this.gameOver();
-        }
+  /**
+   * 벽돌 생성
+   */
+  private createBricks(): void {
+    this.bricks = this.physics.add.staticGroup();
+
+    const { cols, width, spacing, startY, height } = this.BRICK_LAYOUT;
+    const totalWidth = cols * width + (cols - 1) * spacing;
+    const startX = (this.GAME_CONFIG.width - totalWidth) / 2 + width / 2;
+
+    for (let row = 0; row < this.BRICK_LAYOUT.rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const brickX = startX + col * (width + spacing);
+        const brickY = startY + row * height;
+        const brickColor = this.BRICK_COLORS[row];
+
+        this.bricks.create(brickX, brickY, brickColor);
       }
-    });
+    }
+  }
 
-    // 점수 텍스트
+  /**
+   * 점수 텍스트 생성
+   */
+  private createScoreText(): void {
     this.scoreText = this.add.text(16, 16, "SCORE: 0", {
       fontFamily: '"Press Start 2P"',
       fontSize: "14px",
       color: "#ffffff",
     });
+  }
 
+  /**
+   * 충돌 설정
+   */
+  private setupCollisions(): void {
     // 공과 패들 충돌
     this.physics.add.collider(
-      this.ball,
-      this.paddle,
-      this.hitPaddle,
+      this.ball!,
+      this.paddle!,
+      this.handlePaddleCollision,
       undefined,
       this
     );
 
     // 공과 벽돌 충돌
     this.physics.add.collider(
-      this.ball,
-      this.bricks,
-      this.hitBrick,
+      this.ball!,
+      this.bricks!,
+      this.handleBrickCollision,
       undefined,
       this
     );
 
+    // 바닥 충돌 감지
+    this.physics.world.on("worldbounds", (body: Phaser.Physics.Arcade.Body) => {
+      if (body.gameObject === this.ball && body.blocked.down) {
+        this.handleGameOver();
+      }
+    });
+  }
+
+  /**
+   * 입력 설정
+   */
+  private setupInput(): void {
     this.cursors = this.input.keyboard?.createCursorKeys();
   }
 
-  private hitPaddle: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (
-    ball,
-    paddle
-  ) => {
-    // 패들의 어느 위치에 맞았는지에 따라 반사 각도 조절
-    const ballSprite = ball as Phaser.Physics.Arcade.Sprite;
-    const paddleSprite = paddle as Phaser.Physics.Arcade.Sprite;
+  /**
+   * 패들 이동 처리
+   */
+  private handlePaddleMovement(): void {
+    if (!this.paddle || !this.cursors) return;
 
-    const diff = ballSprite.x - paddleSprite.x;
-    ballSprite.setVelocityX(diff * 5);
-  };
-
-  private hitBrick: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (
-    ball,
-    brick
-  ) => {
-    // 벽돌 제거
-    (brick as Phaser.GameObjects.GameObject).destroy();
-
-    // 점수 증가
-    this.score += 10;
-    this.scoreText?.setText(`SCORE: ${this.score}`);
-
-    // 모든 벽돌을 깼는지 확인
-    if (this.bricks?.countActive() === 0) {
-      this.winGame();
+    if (this.cursors.left.isDown) {
+      this.paddle.setVelocityX(-this.GAME_CONFIG.paddleSpeed);
+    } else if (this.cursors.right.isDown) {
+      this.paddle.setVelocityX(this.GAME_CONFIG.paddleSpeed);
+    } else {
+      this.paddle.setVelocityX(0);
     }
-  };
+  }
 
-  private winGame() {
+  /**
+   * 패들 충돌 처리
+   */
+  private handlePaddleCollision: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
+    (ball, paddle) => {
+      const ballSprite = ball as Phaser.Physics.Arcade.Sprite;
+      const paddleSprite = paddle as Phaser.Physics.Arcade.Sprite;
+
+      const diff = ballSprite.x - paddleSprite.x;
+      ballSprite.setVelocityX(diff * 5);
+    };
+
+  /**
+   * 벽돌 충돌 처리
+   */
+  private handleBrickCollision: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
+    (ball, brick) => {
+      (brick as Phaser.GameObjects.GameObject).destroy();
+      this.updateScore(this.POINTS_PER_BRICK);
+
+      if (this.bricks?.countActive() === 0) {
+        this.handleWin();
+      }
+    };
+
+  /**
+   * 점수 업데이트
+   */
+  private updateScore(points: number): void {
+    this.score += points;
+    this.scoreText?.setText(`SCORE: ${this.score}`);
+  }
+
+  /**
+   * 게임 승리 처리
+   */
+  private handleWin(): void {
+    this.stopGame();
+    this.showEndGameScreen("win");
+  }
+
+  /**
+   * 게임 오버 처리
+   */
+  private handleGameOver(): void {
+    this.stopGame();
+    this.showEndGameScreen("gameOver");
+  }
+
+  /**
+   * 게임 정지
+   */
+  private stopGame(): void {
     this.ball?.setVelocity(0, 0);
     this.paddle?.setVelocity(0, 0);
+  }
 
-    // 반투명 오버레이 (승리는 좀 더 밝게)
-    const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.6);
-    overlay.setDepth(10);
+  /**
+   * 종료 화면 표시 (통합)
+   */
+  private showEndGameScreen(type: EndGameType): void {
+    const depth = 10;
+    const config = this.getEndGameConfig(type);
 
-    // YOU WIN 텍스트
-    const winText = this.add
-      .text(400, 200, "YOU WIN!", {
+    // 반투명 오버레이
+    this.add
+      .rectangle(
+        this.GAME_CONFIG.width / 2,
+        this.GAME_CONFIG.height / 2,
+        this.GAME_CONFIG.width,
+        this.GAME_CONFIG.height,
+        0x000000,
+        config.overlayAlpha
+      )
+      .setDepth(depth);
+
+    // 메인 텍스트
+    const mainText = this.add
+      .text(400, 200, config.mainText, {
         fontFamily: '"Press Start 2P"',
         fontSize: "36px",
-        color: "#2ecc71",
+        color: config.mainColor,
       })
       .setOrigin(0.5)
-      .setDepth(11);
+      .setDepth(depth + 1);
 
-    // 반짝임 효과
+    // 애니메이션 효과
     this.tweens.add({
-      targets: winText,
-      scale: 1.1,
-      duration: 300,
+      targets: mainText,
+      ...config.animation,
       yoyo: true,
       repeat: -1,
     });
 
-    // 최종 점수 표시
+    // 점수 표시
+    this.createScoreDisplay(depth);
+
+    // 재시작 버튼
+    this.createRestartButton(depth + 1);
+  }
+
+  /**
+   * 종료 화면 설정 가져오기
+   */
+  private getEndGameConfig(type: EndGameType) {
+    const configs = {
+      win: {
+        mainText: "YOU WIN!",
+        mainColor: "#2ecc71",
+        overlayAlpha: 0.6,
+        animation: { scale: 1.1, duration: 300 },
+      },
+      gameOver: {
+        mainText: "GAME OVER",
+        mainColor: "#e74c3c",
+        overlayAlpha: 0.7,
+        animation: { alpha: 0.3, duration: 500 },
+      },
+    };
+
+    return configs[type];
+  }
+
+  /**
+   * 점수 표시 생성
+   */
+  private createScoreDisplay(depth: number): void {
     this.add
-      .text(400, 280, `SCORE`, {
+      .text(400, 280, "SCORE", {
         fontFamily: '"Press Start 2P"',
         fontSize: "14px",
         color: "#95a5a6",
       })
       .setOrigin(0.5)
-      .setDepth(11);
+      .setDepth(depth + 1);
 
     this.add
       .text(400, 320, `${this.score}`, {
@@ -195,186 +379,49 @@ export class BrickBreakerScene extends Phaser.Scene {
         color: "#f1c40f",
       })
       .setOrigin(0.5)
-      .setDepth(11);
-
-    this.createRestartButton(11);
+      .setDepth(depth + 1);
   }
 
-  private gameOver() {
-    this.ball?.setVelocity(0, 0);
-    this.paddle?.setVelocity(0, 0);
-
-    // 반투명 오버레이
-    const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
-    overlay.setDepth(10);
-
-    // GAME OVER 텍스트
-    const gameOverText = this.add
-      .text(400, 200, "GAME OVER", {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "36px",
-        color: "#e74c3c",
-      })
-      .setOrigin(0.5)
-      .setDepth(11);
-
-    // 점멸 효과
-    this.tweens.add({
-      targets: gameOverText,
-      alpha: 0.3,
-      duration: 500,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // 최종 점수 표시
-    this.add
-      .text(400, 280, `SCORE`, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "14px",
-        color: "#95a5a6",
-      })
-      .setOrigin(0.5)
-      .setDepth(11);
-
-    this.add
-      .text(400, 320, `${this.score}`, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "32px",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5)
-      .setDepth(11);
-
-    this.createRestartButton(11);
-  }
-
-  private createRestartButton(depth: number = 0) {
+  /**
+   * 재시작 버튼 생성
+   */
+  private createRestartButton(depth: number): void {
+    const buttonY = 400;
     const buttonStyle = {
       fontFamily: '"Press Start 2P"',
       fontSize: "14px",
       color: "#333333",
     };
 
-    // 다시 시작 버튼 (Y: 400)
     const restartBtnBg = this.add
-      .image(400, 400, "buttonDefault")
+      .image(400, buttonY, "buttonDefault")
       .setScale(3, 1.5)
       .setInteractive({ useHandCursor: true })
       .setDepth(depth);
 
     this.add
-      .text(400, 400, "RETRY", buttonStyle)
+      .text(400, buttonY, "RETRY", buttonStyle)
       .setOrigin(0.5)
       .setDepth(depth);
 
     restartBtnBg.on("pointerover", () => {
       restartBtnBg.setTexture("buttonSelected").setScale(3.1, 1.6);
     });
+
     restartBtnBg.on("pointerout", () => {
       restartBtnBg.setTexture("buttonDefault").setScale(3, 1.5);
     });
+
     restartBtnBg.on("pointerdown", () => {
-      this.score = 0;
-      this.scene.restart();
+      this.restartGame();
     });
   }
 
   /**
-   * 게임 규칙 안내 표시
+   * 게임 재시작
    */
-  private showGameInstructions() {
-    // 반투명 오버레이
-    const overlay = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
-    overlay.setDepth(100);
-
-    // 제목
-    this.add
-      .text(400, 150, "BRICK BREAKER", {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "32px",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5)
-      .setDepth(101);
-
-    // 게임 규칙
-    const instructions = [
-      "HOW TO PLAY:",
-      "",
-      "• Use LEFT/RIGHT arrows to move paddle",
-      "• Bounce the ball to break all bricks",
-      "• Don't let the ball fall down!",
-      "• Break all bricks to win",
-      "",
-      "PRESS SPACE TO START",
-    ];
-
-    instructions.forEach((instruction, index) => {
-      const isTitle = instruction === "HOW TO PLAY:";
-      const isStart = instruction === "PRESS SPACE TO START";
-      const isEmpty = instruction === "";
-
-      if (!isEmpty) {
-        const text = this.add
-          .text(400, 200 + index * 25, instruction, {
-            fontFamily:
-              isTitle || isStart ? '"Press Start 2P"' : "Arial, sans-serif",
-            fontSize: isTitle ? "16px" : isStart ? "14px" : "12px",
-            color: isTitle ? "#00ff88" : isStart ? "#ffff00" : "#cccccc",
-          })
-          .setOrigin(0.5)
-          .setDepth(101);
-
-        // 시작 텍스트 깜빡임 효과
-        if (isStart) {
-          this.tweens.add({
-            targets: text,
-            alpha: 0.3,
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-          });
-        }
-      }
-    });
-
-    // 스페이스 키로 시작
-    const spaceKey = this.input.keyboard?.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE
-    );
-    const startHandler = () => {
-      if (Phaser.Input.Keyboard.JustDown(spaceKey!)) {
-        // 오버레이와 텍스트들 제거
-        overlay.destroy();
-        this.children.list
-          .filter(
-            (child) =>
-              "depth" in child &&
-              (child as Phaser.GameObjects.GameObject & { depth: number })
-                .depth >= 100
-          )
-          .forEach((child) => child.destroy());
-        this.input.keyboard?.off("keydown-SPACE", startHandler);
-      }
-    };
-    this.input.keyboard?.on("keydown-SPACE", startHandler);
-  }
-
-  update() {
-    if (!this.paddle || !this.cursors) return;
-
-    // 왼쪽 화살표 키를 누르고 있으면
-    if (this.cursors.left.isDown) {
-      this.paddle.setVelocityX(-300); // 왼쪽으로 이동
-    }
-    // 오른쪽 화살표 키를 누르고 있으면
-    else if (this.cursors.right.isDown) {
-      this.paddle.setVelocityX(300); // 오른쪽으로 이동
-    }
-    // 아무 키도 안 누르고 있으면
-    else {
-      this.paddle.setVelocityX(0); // 멈춤
-    }
+  private restartGame(): void {
+    this.score = 0;
+    this.scene.restart();
   }
 }
