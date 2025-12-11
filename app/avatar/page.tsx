@@ -4,7 +4,7 @@
 import dynamic from 'next/dynamic';
 
 // SSR을 끄고 클라이언트 사이드에서만 로드하도록 설정
-const GameComponent = dynamic(() => import('@/components/avatar/PhaserGame'), {
+const GameComponent = dynamic(() => import('@/components/avatar/ui/CharacterConfig'), {
   ssr: false,
   loading: () => <p>아바타 로딩중...</p>, // 로딩 중에 보여줄 UI
 });

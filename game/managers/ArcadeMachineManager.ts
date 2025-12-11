@@ -106,7 +106,7 @@ export class ArcadeMachineManager {
 
 
     // 게임기 생성
-    this.create(centerX, centerY, gameConfig, obj.width, obj.height);
+    this.create(centerX, centerY, gameConfig);
   }
 
   /**
@@ -118,8 +118,7 @@ export class ArcadeMachineManager {
    * @param y - Y 좌표
    * @param gameConfig - 게임 설정 정보
    */
-  private create(x: number, y: number, gameConfig: GameConfig ,  width: number,
-  height: number): void {
+  private create(x: number, y: number, gameConfig: GameConfig ): void {
     // 1. 게임기 스프라이트 생성
     // const sprite = this.scene.add.sprite(x, y, "arcade-machine");
 

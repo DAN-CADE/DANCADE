@@ -1,0 +1,199 @@
+{
+    "definitions": {
+        "comments": "공통 팔레트 및 등급 정의",
+        "palettes": {
+            "hair_common": ["black", "red", "pink", "orange", "blonde", "green", "blue", "purple"],
+            "skin_common": ["light", "amber", "bronze", "green", "zombie", "blue"],
+            "eye_common": ["gray", "red", "orange", "yellow", "brown", "green", "blue", "purple"],
+            "clothes_common": ["white", "gray", "black", "red", "pink", "orange", "yellow", "brown", "green", "blue", "purple"]
+        }
+    },
+    "assets": {
+        "body": {
+            "tier": "basic",
+            "path": "/assets/spritesheets/body/teen/{color}.png",
+            "colors": { "$ref": "skin_common" } 
+        },
+        "head": {
+            "tier": "basic",
+            "path": "/assets/spritesheets/head/heads/human/{gender}/{color}.png",
+            "genders": ["male", "female"],
+            "colors": { "$ref": "skin_common" }
+        },
+        "eyes": {
+            "tier": "basic",
+            "path": "/assets/spritesheets/eyes/human/adult/{color}.png",
+            "colors": { "$ref": "eye_common" }
+        },
+        "nose": {
+            "tier": "basic",
+            "path": "/assets/spritesheets/nose/button/adult/{color}.png",
+            "colors": { "$ref": "skin_common" }
+        },
+        "hair": {
+            "config": {
+                "description": "헤어 스타일 템플릿",
+                "path_template": "/assets/spritesheets/hair/{style}/{gender}/{color}.png",
+                "default_colors": { "$ref": "hair_common" }
+            },
+            "styles": [
+                {
+                    "id": "plain",
+                    "genders": ["male"],
+                    "tier": "basic",
+                    "name": "단정한 머리"
+                },
+                {
+                    "id": "mop",
+                    "genders": ["male"],
+                    "tier": "basic",
+                    "name": "덥수룩한 머리"
+                },
+                {
+                    "id": "idol",
+                    "genders": ["male"],
+                    "tier": "point",
+                    "price": 500,
+                    "name": "아이돌 스타일"
+                },
+                {
+                    "id": "long_straight",
+                    "genders": ["female"],
+                    "tier": "basic",
+                    "name": "긴 생머리"
+                },
+                {
+                    "id": "loose",
+                    "genders": ["female"],
+                    "tier": "basic",
+                    "name": "웨이브 펌"
+                },
+                {
+                    "id": "bangslong",
+                    "genders": ["female"],
+                    "tier": "point",
+                    "price": 800,
+                    "name": "앞머리 롱헤어"
+                }
+            ]
+        },
+        "torso": {
+            "config": {
+                "description": "상의 의상 템플릿",
+                "path_template": "/assets/spritesheets/torso/clothes/{style}/teen/{color}.png",
+                "default_colors": { "$ref": "clothes_common" }
+            },
+            "styles": [
+                {
+                    "id": "shortSleeve",
+                    "path_segment": "shortsleeve", 
+                    "tier": "basic",
+                    "name": "반팔 티셔츠"
+                },
+                {
+                    "id": "shortSleeveButton",
+                    "path_segment": "shortsleeve/button", 
+                    "tier": "basic",
+                    "name": "반팔 Button 티셔츠"
+                },
+                 {
+                    "id": "shortSleevePolo",
+                    "path_segment": "shortsleeve/polo", 
+                    "tier": "basic",
+                    "name": "반팔 Polo 티셔츠"
+                },
+                 {
+                    "id": "shortSleeveScoop",
+                    "path_segment": "shortsleeve/scoop", 
+                    "tier": "basic",
+                    "name": "반팔 Scoop 티셔츠"
+                },
+                 {
+                    "id": "shortSleeveVneck",
+                    "path_segment": "shortsleeve/vneck", 
+                    "tier": "basic",
+                    "name": "반팔 Vneck 티셔츠"
+                },
+                {
+                    "id": "longSleeve",
+                    "path_segment": "longsleeve", 
+                    "tier": "basic",
+                    "name": "긴팔 티셔츠"
+                },
+                {
+                    "id": "longSleeveButton",
+                    "path_segment": "longsleeve/button", 
+                    "tier": "basic",
+                    "name": "긴팔 Button 티셔츠"
+                },
+                {
+                    "id": "longSleeveCardigan",
+                    "path_segment": "longsleeve/cardigan", 
+                    "tier": "basic",
+                    "name": "긴팔 cardigan 티셔츠"
+                },
+                {
+                    "id": "longSleevePolo",
+                    "path_segment": "longsleeve/polo", 
+                    "tier": "basic",
+                    "name": "긴팔 Polo 티셔츠"
+                },
+                {
+                    "id": "longSleeveScoop",
+                    "path_segment": "longsleeve/scoop", 
+                    "tier": "basic",
+                    "name": "긴팔 Scoop 티셔츠"
+                },
+                {
+                    "id": "longSleeveVneck",
+                    "path_segment": "longsleeve/vneck", 
+                    "tier": "basic",
+                    "name": "긴팔 vneck 티셔츠"
+                }
+            ]
+        },
+        "legs": {
+            "config": {
+                "description": "하의 의상 템플릿",
+                "path_template": "/assets/spritesheets/legs/{style}/teen/{color}.png",
+                "default_colors": { "$ref": "clothes_common" }
+            },
+            "styles": [
+                {
+                    "id": "cuffed",
+                    "path_segment": "cuffed",
+                    "tier": "basic",
+                    "name": "기본바지"
+                },
+                {
+                    "id": "pants",
+                    "path_segment": "pants",
+                    "tier": "basic",
+                    "name": "팬츠"
+                },
+                {
+                    "id": "formal",
+                    "path_segment": "formal",
+                    "tier": "basic",
+                    "name": "정장바지"
+                }
+                
+            ]
+        },
+        "feet": {
+            "config": {
+                "description": "신발 템플릿",
+                "path_template": "/assets/spritesheets/feet/{style}/thin/{color}.png",
+                "default_colors": { "$ref": "clothes_common" }
+            },
+            "styles": [
+                {
+                    "id": "shoes2",
+                    "path_segment": "shoes2",
+                    "tier": "basic",
+                    "name": "기본 신발"
+                }
+            ]
+        }
+    }
+}

@@ -4,6 +4,19 @@
   --background: #ffffff;
   --foreground: #171717;
   --font-arcade: "Press Start 2P", cursive;
+  --font-korean: "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+
+  --color-cyan: #1af9d9;
+  --color-blue: #4285f4;
+  --color-pink: #ff006e;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-navy: #003b84;
+  --color-dark-blue: #1a1a2e;
+  --color-midnight: #222345;
+  --color-slate-gray: #414656;
 }
 
 @theme inline {
@@ -24,4 +37,73 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/***************************************************************
+공통
+/***************************************************************/
+.font-neo {
+  font-family: var(--font-neo);
+}
+.cyan-pixelBtn {
+  padding: 4px 10px;
+  border-width: 6px;
+  background: transparent;
+
+  border-style: solid;
+  border-image: url("../public/assets/ui/buttons/cyan-pixel-button.png") 6 fill
+    stretch;
+  font-family: inherit;
+  font-size: 16px;
+  color: black;
+}
+/***************************************************************
+아이디 로그인 페이지
+/***************************************************************/
+.game-list::before,
+.game-list::after {
+  content: "";
+  width: 100%;
+  height: 10px;
+  background: var(--color-cyan);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.game-list::before {
+  transform: translateY(calc(-50% + 55px));
+}
+.game-list::after {
+  transform: translateY(calc(-50% - 55px));
+}
+
+.game-item::before,
+.game-item::after {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: var(--color-cyan);
+  border-radius: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  content: "";
+}
+.game-item::before {
+  top: -20px;
+}
+.game-item::after {
+  bottom: -20px;
+}
+
+@media (max-width: 1023px) {
+  .game-list::before {
+    transform: translateY(0);
+    top: 150px;
+  }
+  .game-list::after {
+    transform: translateY(0);
+    bottom: 150px;
+    top: auto;
+  }
 }
