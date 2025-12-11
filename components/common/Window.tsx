@@ -18,9 +18,10 @@ export default function Window({
   showMaximize = true,
 }: WindowProps) {
   return (
-    <section className="drop-shadow-[0_0_14px_rgba(108,173,247,0.55)]">
+    <section className="relative min-h-screen py-12 px-5 drop-shadow-[0_0_14px_rgba(108,173,247,0.55)]">
+      <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
       <div
-        className={`w-[1400px] m-auto border border-[var(--color-navy)] ${className}`}
+        className={`max-w-[1400px] w-full m-auto border border-[var(--color-navy)] ${className}`}
       >
         {/* 핑크색 타이틀바 */}
         <div className="window-header bg-[var(--color-pink)] flex items-center justify-between px-4 py-3">
@@ -43,7 +44,19 @@ export default function Window({
         </div>
 
         {/* 컨텐츠 영역 */}
-        <div className="window-content bg-[var(--color-dark-blue)] p-8 h-full min-h-[800px] flex flex-col items-center justify-center gap-8">
+        <div
+          className="
+            window-content relative 
+            bg-[var(--color-dark-blue)] 
+            py-15 px-8
+            lg:p-8
+            h-full 
+            min-h-[800px]
+            lg:max-h-[800px] 
+            max-h-none
+            flex flex-col items-center justify-center gap-8
+          "
+        >
           {children}
         </div>
       </div>
