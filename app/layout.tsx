@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,6 +19,12 @@ const pressStart2P = Press_Start_2P({
   subsets: ["latin"],
 });
 
+const pixelFont = localFont({
+  src: "../public/assets/fonts/neodgm.woff",
+  variable: "--font-neo",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "DANCADE - 아케이드 게임",
   description: "벽돌깨기 등 아케이드 게임 플랫폼",
@@ -32,7 +39,7 @@ export default function RootLayout({
     <html lang="ko">
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${pixelFont.variable} antialiased font-neo`}
       >
         {children}
       </body>
