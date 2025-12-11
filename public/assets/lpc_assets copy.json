@@ -5,35 +5,35 @@
             "hair_common": ["black", "red", "pink", "orange", "blonde", "green", "blue", "purple"],
             "skin_common": ["light", "amber", "bronze", "green", "zombie", "blue"],
             "eye_common": ["gray", "red", "orange", "yellow", "brown", "green", "blue", "purple"],
-            "clothes_common": ["white", "gray", "black", "red", "pink", "orange", "brown", "green", "blue", "purple"]
+            "clothes_common": ["white", "gray", "black", "red", "pink", "orange", "yellow", "brown", "green", "blue", "purple"]
         }
     },
     "assets": {
         "body": {
             "tier": "basic",
-            "path": "/assets/spritesheets/body/base/{color}.png",
+            "path": "/assets/spritesheets/body/teen/{color}.png",
             "colors": { "$ref": "skin_common" } 
         },
         "head": {
             "tier": "basic",
-            "path": "/assets/spritesheets/head/base/{gender}/{color}.png",
+            "path": "/assets/spritesheets/head/heads/human/{gender}/{color}.png",
             "genders": ["male", "female"],
             "colors": { "$ref": "skin_common" }
         },
         "eyes": {
             "tier": "basic",
-            "path": "/assets/spritesheets/head/eyes/{color}.png",
+            "path": "/assets/spritesheets/eyes/human/adult/{color}.png",
             "colors": { "$ref": "eye_common" }
         },
         "nose": {
             "tier": "basic",
-            "path": "/assets/spritesheets/head/nose/button/{color}.png",
+            "path": "/assets/spritesheets/nose/button/adult/{color}.png",
             "colors": { "$ref": "skin_common" }
         },
         "hair": {
             "config": {
                 "description": "헤어 스타일 템플릿",
-                "path_template": "/assets/spritesheets/head/hair/{gender}/{style}/{color}.png",
+                "path_template": "/assets/spritesheets/hair/{style}/{gender}/{color}.png",
                 "default_colors": { "$ref": "hair_common" }
             },
             "styles": [
@@ -50,46 +50,11 @@
                     "name": "덥수룩한 머리"
                 },
                 {
-                    "id": "afro",
-                    "genders": ["male"],
-                    "tier": "point",
-                    "price": 500,
-                    "name": "아프로 머리"
-                },
-                {
-                    "id": "cornrows",
-                    "genders": ["male"],
-                    "tier": "point",
-                    "price": 500,
-                    "name": "콘로우"
-                },
-                {
-                    "id": "dreadlocks_short",
-                    "genders": ["male"],
-                    "tier": "point",
-                    "price": 500,
-                    "name": "숏 드레드"
-                },
-                {
-                    "id": "high_and_tight",
-                    "genders": ["male"],
-                    "tier": "point",
-                    "price": 500,
-                    "name": "투블럭 크롭컷"
-                },
-                {
-                    "id": "pixie",
-                    "genders": ["male"],
-                    "tier": "point",
-                    "price": 500,
-                    "name": "댄디 숏컷"
-                },
-                {
                     "id": "idol",
                     "genders": ["male"],
                     "tier": "point",
                     "price": 500,
-                    "name": "아이돌 컷"
+                    "name": "아이돌 스타일"
                 },
                 {
                     "id": "long_straight",
@@ -101,62 +66,27 @@
                     "id": "loose",
                     "genders": ["female"],
                     "tier": "basic",
-                    "name": "내추럴 펌"
-                },
-                {
-                    "id": "bunches",
-                    "genders": ["female"],
-                    "tier": "point",
-                    "price": 800,
-                    "name": "양갈래 머리"
-                },
-                {
-                    "id": "long_band",
-                    "genders": ["female"],
-                    "tier": "point",
-                    "price": 800,
-                    "name": "헤어밴드 롱헤어"
-                },
-                {
-                    "id": "pigtails",
-                    "genders": ["female"],
-                    "tier": "point",
-                    "price": 800,
-                    "name": "양갈래 땋은 머리"
-                },
-                {
-                    "id": "sara",
-                    "genders": ["female"],
-                    "tier": "point",
-                    "price": 800,
-                    "name": "사라 머리"
-                },
-                {
-                    "id": "wavy",
-                    "genders": ["female"],
-                    "tier": "point",
-                    "price": 800,
-                    "name": "웨이브"
+                    "name": "웨이브 펌"
                 },
                 {
                     "id": "bangslong",
                     "genders": ["female"],
                     "tier": "point",
                     "price": 800,
-                    "name": "뱅헤어 롱스타일"
+                    "name": "앞머리 롱헤어"
                 }
             ]
         },
         "torso": {
             "config": {
                 "description": "상의 의상 템플릿",
-                "path_template": "/assets/spritesheets/body/torso/clothes/{style}/{color}.png",
+                "path_template": "/assets/spritesheets/torso/clothes/{style}/teen/{color}.png",
                 "default_colors": { "$ref": "clothes_common" }
             },
             "styles": [
                 {
                     "id": "shortSleeve",
-                    "path_segment": "shortsleeve/base", 
+                    "path_segment": "shortsleeve", 
                     "tier": "basic",
                     "name": "반팔 티셔츠"
                 },
@@ -186,7 +116,7 @@
                 },
                 {
                     "id": "longSleeve",
-                    "path_segment": "longsleeve/base", 
+                    "path_segment": "longsleeve", 
                     "tier": "basic",
                     "name": "긴팔 티셔츠"
                 },
@@ -225,7 +155,7 @@
         "legs": {
             "config": {
                 "description": "하의 의상 템플릿",
-                "path_template": "/assets/spritesheets/body/legs/{style}/{color}.png",
+                "path_template": "/assets/spritesheets/legs/{style}/teen/{color}.png",
                 "default_colors": { "$ref": "clothes_common" }
             },
             "styles": [
@@ -253,13 +183,13 @@
         "feet": {
             "config": {
                 "description": "신발 템플릿",
-                "path_template": "/assets/spritesheets/body/feet/{style}/{color}.png",
+                "path_template": "/assets/spritesheets/feet/{style}/thin/{color}.png",
                 "default_colors": { "$ref": "clothes_common" }
             },
             "styles": [
                 {
-                    "id": "shoes",
-                    "path_segment": "shoes",
+                    "id": "shoes2",
+                    "path_segment": "shoes2",
                     "tier": "basic",
                     "name": "기본 신발"
                 }
