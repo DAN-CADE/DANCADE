@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import logo from "@/public/assets/logos/logo.svg";
 import google from "@/public/assets/icons/google.svg";
 import Window from "@/components/common/Window";
+import {
+  generateGuestId,
+  generateGuestNickname,
+} from "@/lib/utils/guestNickname";
 
 export default function Home() {
   const router = useRouter();
@@ -43,8 +47,48 @@ export default function Home() {
         router.push("/game");
         break;
       case "guest":
-        console.log("게스트 로그인");
-        // 게스트 로그인 처리 후 게임 페이지로 이동
+        // 기존 게스트 정보가 있는지 확인
+        const existingUserData = localStorage.getItem("user");
+        let guestData;
+
+        if (existingUserData) {
+          try {
+            const parsedData = JSON.parse(existingUserData);
+            if (parsedData.isGuest) {
+              // 기존 게스트 정보 재사용
+              guestData = parsedData;
+              console.log(
+                `기존 게스트로 로그인 - 닉네임: ${parsedData.nickname}`
+              );
+            } else {
+              // 기존 데이터가 게스트가 아닌 경우 새로 생성
+              throw new Error("Not a guest user");
+            }
+          } catch {
+            // 파싱 오류 또는 게스트가 아닌 경우 새로 생성
+            guestData = null;
+          }
+        }
+
+        if (!guestData) {
+          // 새로운 게스트 정보 생성
+          const guestId = generateGuestId();
+          const nickname = generateGuestNickname();
+
+          guestData = {
+            userId: guestId,
+            nickname: nickname,
+            isGuest: true,
+            createdAt: new Date().toISOString(),
+          };
+
+          console.log(`새 게스트 생성 - ID: ${guestId}, 닉네임: ${nickname}`);
+        }
+
+        // localStorage에 게스트 정보 저장
+        localStorage.setItem("user", JSON.stringify(guestData));
+
+        // 게임 페이지로 이동
         router.push("/game");
         break;
     }
