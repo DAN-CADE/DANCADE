@@ -4,8 +4,11 @@ import Image from "next/image";
 import logo from "@/public/assets/logos/logo.svg";
 import google from "@/public/assets/icons/google.svg";
 import Window from "@/components/common/Window";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const LOGIN_BUTTONS = [
     {
       id: "email",
@@ -30,8 +33,8 @@ export default function LoginPage() {
   const handleLogin = (type: "email" | "google" | "guest") => {
     switch (type) {
       case "email":
-        console.log("아이디 로그인");
-        // 아이디 로그인 처리
+        router.push("/login/id");
+        return;
         break;
       case "google":
         console.log("구글 로그인");
@@ -45,8 +48,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page relative min-h-screen py-12">
-      <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
+    <div className="login-page">
       <Window title="LOGIN">
         <Image src={logo} alt="DAN-CADE 로고" width={262} height={185} />
         <div className="text-black flex flex-col gap-4 w-full items-center">

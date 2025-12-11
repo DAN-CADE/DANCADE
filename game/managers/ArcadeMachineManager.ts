@@ -6,7 +6,7 @@ interface TiledObject {
   properties?: Array<{ name: string; value: string }>; // 커스텀 속성 (예: gameId)
 }
 export interface ArcadeMachine {
-  sprite: Phaser.GameObjects.Sprite; // 게임기 스프라이트 (비주얼)
+  sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle; // 게임기 스프라이트 (비주얼)
   game: GameConfig; // 연결된 게임 정보 (이름, sceneKey 등)
   x: number; // 게임기 X 좌표
   y: number; // 게임기 Y 좌표
@@ -166,13 +166,7 @@ export class ArcadeMachineManager {
       const gameConfig = getGameById(pos.gameId);
       if (gameConfig) {
         // 빨간 사각형 생성 (임시 게임기)
-        const sprite = this.scene.add.rectangle(
-          pos.x,
-          pos.y,
-          64,
-          64,
-          0xff0000 // 빨간색
-        ) as any;
+        const sprite = this.scene.add.rectangle(pos.x, pos.y, 64, 64, 0xff0000);
 
         // 물리 바디 추가 (충돌 가능하게)
         this.scene.physics.add.existing(sprite, true);
