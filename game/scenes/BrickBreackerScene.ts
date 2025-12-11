@@ -90,6 +90,9 @@ export class BrickBreakerScene extends Phaser.Scene {
    * 에셋 로드
    */
   private loadAssets(): void {
+    // 배경 이미지 로드
+    this.load.image("game_background", "/assets/background/bg 1.png");
+
     this.load.image("paddle", `${this.ASSET_PATH}paddleBlu.png`);
     this.load.image("ball", `${this.ASSET_PATH}ballBlue.png`);
     this.load.image("buttonDefault", `${this.ASSET_PATH}buttonDefault.png`);
@@ -104,7 +107,12 @@ export class BrickBreakerScene extends Phaser.Scene {
    * 씬 기본 설정
    */
   private setupScene(): void {
-    this.cameras.main.setBackgroundColor("#2c3e50");
+    // 배경 이미지 추가
+    const background = this.add.image(400, 300, "game_background");
+    background.setDisplaySize(800, 600);
+    background.setDepth(-1);
+
+    this.cameras.main.setBackgroundColor("#000000");
   }
 
   /**
