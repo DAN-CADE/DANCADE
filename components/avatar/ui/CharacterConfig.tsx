@@ -17,8 +17,8 @@ const PhaserGame = () => {
       width: 800,
       height: 600,
       parent: containerRef.current,
-      backgroundColor: '#D9D9D9',
-      
+      backgroundColor: "#D9D9D9",
+
       // [수정] 맵 크기에 맞춘 스케일링 설정
       scale: {
         mode: Phaser.Scale.FIT, // 부모 컨테이너에 맞춰 비율 유지하며 크기 조절
@@ -28,15 +28,15 @@ const PhaserGame = () => {
       },
 
       render: {
-        pixelArt: true,   // 도트가 선명하게 보이도록 설정
-        roundPixels: true // 픽셀 좌표를 정수로 맞춤 (깨짐 방지)
+        pixelArt: true, // 도트가 선명하게 보이도록 설정
+        roundPixels: true, // 픽셀 좌표를 정수로 맞춤 (깨짐 방지)
       },
 
       physics: {
-        default: 'arcade',
-        arcade: { 
-            gravity: { y: 0, x: 0 }, // x, y 속성을 명확히 분리
-            debug: false 
+        default: "arcade",
+        arcade: {
+          gravity: { y: 0, x: 0 }, // x, y 속성을 명확히 분리
+          debug: false,
         },
       },
       scene: [CharacterScene],
@@ -52,11 +52,20 @@ const PhaserGame = () => {
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '800px', height: '600px', margin: '0 auto' }}>
-      
+    <div
+      style={{
+        position: "relative",
+        width: "800px",
+        height: "600px",
+        margin: "0 auto",
+      }}
+    >
       {/* 게임 화면 */}
-      <div ref={containerRef} id="phaser-container" style={{ width: '100%', height: '100%' }} />
-
+      <div
+        ref={containerRef}
+        id="phaser-container"
+        style={{ width: "100%", height: "100%" }}
+      />
     </div>
   );
 };

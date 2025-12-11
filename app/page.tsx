@@ -7,6 +7,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-900 py-8">
       <main className="container mx-auto px-4">
         {/* 게임 (MainScene) */}
+
         <div className="flex justify-center mb-8">
           <PhaserGame />
         </div>
