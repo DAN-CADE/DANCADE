@@ -1,37 +1,33 @@
 // game/scenes/BrickBreakerScene.ts
 import { GameConfig } from "@/game/config/gameRegistry";
+import { BrickBreakerGameManager } from "@/game/managers/brickbracker/BrickBreakerGameManager";
+import { BrickBreakerUIManager } from "@/game/managers/brickbracker/BrickBreakerUIManager";
+import { BrickBreakerInputManager } from "@/game/managers/brickbracker/BrickBreakerInputManager";
+import { BrickBreakerEffectsManager } from "@/game/managers/brickbracker/BrickBreakerEffectsManager";
 
-interface BrickBreakerConfig {
-  width: number;
-  height: number;
-  paddleSpeed: number;
-  ballSpeed: number;
-}
+import type {
+  BrickBreakerConfig,
+  BrickLayoutConfig,
+} from "@/game/managers/brickbracker/BrickBreakerGameManager";
 
-interface BrickLayoutConfig {
-  cols: number;
-  rows: number;
-  width: number;
-  height: number;
-  spacing: number;
-  startY: number;
-}
-
-type EndGameType = "win" | "gameOver";
-
+/**
+ * 벽돌깨기 게임 씬
+ * 매니저들을 조합하여 게임을 구성
+ */
 export class BrickBreakerScene extends Phaser.Scene {
-  // Game Meta
-  private gameConfig?: GameConfig;
+  // Managers
+  private gameManager!: BrickBreakerGameManager;
+  private uiManager!: BrickBreakerUIManager;
+  private inputManager!: BrickBreakerInputManager;
+  private effectsManager!: BrickBreakerEffectsManager;
 
   // Game Objects
-  private paddle?: Phaser.Physics.Arcade.Sprite;
-  private ball?: Phaser.Physics.Arcade.Sprite;
-  private bricks?: Phaser.Physics.Arcade.StaticGroup;
-  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
-  private scoreText?: Phaser.GameObjects.Text;
+  private paddle!: Phaser.Physics.Arcade.Sprite;
+  private ball!: Phaser.Physics.Arcade.Sprite;
+  private bricks!: Phaser.Physics.Arcade.StaticGroup;
 
-  // Game State
-  private score: number = 0;
+  // Game Meta
+  private gameConfig?: GameConfig;
 
   // Constants
   private readonly GAME_CONFIG: BrickBreakerConfig = {
@@ -59,7 +55,6 @@ export class BrickBreakerScene extends Phaser.Scene {
   ];
 
   private readonly ASSET_PATH = "/assets/game/kenney_puzzle-pack/png/";
-  private readonly POINTS_PER_BRICK = 10;
 
   constructor() {
     super({ key: "BrickBreakerScene" });
@@ -75,17 +70,20 @@ export class BrickBreakerScene extends Phaser.Scene {
 
   create() {
     this.setupScene();
+    this.initManagers();
     this.createGameObjects();
     this.setupCollisions();
-    this.setupInput();
   }
 
   update() {
-    this.handlePaddleMovement();
+    const direction = this.inputManager.getPaddleMoveDirection();
+    this.gameManager.movePaddle(direction);
   }
 
   shutdown() {
     this.physics.world.off("worldbounds");
+    this.inputManager.cleanup();
+    this.uiManager.cleanup();
   }
 
   /**
@@ -110,13 +108,48 @@ export class BrickBreakerScene extends Phaser.Scene {
   }
 
   /**
+   * 매니저 초기화
+   */
+  private initManagers(): void {
+    // UI Manager
+    this.uiManager = new BrickBreakerUIManager(this);
+
+    // Effects Manager
+    this.effectsManager = new BrickBreakerEffectsManager(this);
+
+    // Game Manager
+    this.gameManager = new BrickBreakerGameManager(
+      this,
+      this.GAME_CONFIG,
+      this.BRICK_LAYOUT,
+      {
+        onScoreUpdate: (score) => {
+          this.uiManager.updateScore(score);
+        },
+        onGameResult: (result) => {
+          this.handleGameResult(result);
+        },
+        onBrickDestroy: () => {
+          // 벽돌 파괴 효과는 필요시 추가
+          // this.effectsManager.createBrickDestroyEffect(x, y);
+        },
+      }
+    );
+
+    // Input Manager
+    this.inputManager = new BrickBreakerInputManager(this);
+  }
+
+  /**
    * 게임 오브젝트 생성
    */
   private createGameObjects(): void {
     this.createPaddle();
     this.createBall();
     this.createBricks();
-    this.createScoreText();
+    this.uiManager.createGameUI();
+
+    this.gameManager.setGameObjects(this.paddle, this.ball, this.bricks);
   }
 
   /**
@@ -174,254 +207,46 @@ export class BrickBreakerScene extends Phaser.Scene {
   }
 
   /**
-   * 점수 텍스트 생성
-   */
-  private createScoreText(): void {
-    this.scoreText = this.add.text(16, 16, "SCORE: 0", {
-      fontFamily: '"Press Start 2P"',
-      fontSize: "14px",
-      color: "#ffffff",
-    });
-  }
-
-  /**
    * 충돌 설정
    */
   private setupCollisions(): void {
     // 공과 패들 충돌
-    this.physics.add.collider(
-      this.ball!,
-      this.paddle!,
-      this.handlePaddleCollision,
-      undefined,
-      this
-    );
+    this.physics.add.collider(this.ball, this.paddle, (ball, paddle) => {
+      this.gameManager.handlePaddleCollision(
+        ball as Phaser.Types.Physics.Arcade.GameObjectWithBody,
+        paddle as Phaser.Types.Physics.Arcade.GameObjectWithBody
+      );
+    });
 
     // 공과 벽돌 충돌
-    this.physics.add.collider(
-      this.ball!,
-      this.bricks!,
-      this.handleBrickCollision,
-      undefined,
-      this
-    );
+    this.physics.add.collider(this.ball, this.bricks, (ball, brick) => {
+      this.gameManager.handleBrickCollision(
+        ball as Phaser.Types.Physics.Arcade.GameObjectWithBody,
+        brick as Phaser.Types.Physics.Arcade.GameObjectWithBody
+      );
+    });
 
     // 바닥 충돌 감지
     this.physics.world.on("worldbounds", (body: Phaser.Physics.Arcade.Body) => {
       if (body.gameObject === this.ball && body.blocked.down) {
-        this.handleGameOver();
+        this.gameManager.handleFloorCollision();
       }
     });
   }
 
   /**
-   * 입력 설정
+   * 게임 결과 처리
    */
-  private setupInput(): void {
-    this.cursors = this.input.keyboard?.createCursorKeys();
-  }
-
-  /**
-   * 패들 이동 처리
-   */
-  private handlePaddleMovement(): void {
-    if (!this.paddle || !this.cursors) return;
-
-    if (this.cursors.left.isDown) {
-      this.paddle.setVelocityX(-this.GAME_CONFIG.paddleSpeed);
-    } else if (this.cursors.right.isDown) {
-      this.paddle.setVelocityX(this.GAME_CONFIG.paddleSpeed);
-    } else {
-      this.paddle.setVelocityX(0);
-    }
-  }
-
-  /**
-   * 패들 충돌 처리
-   */
-  private handlePaddleCollision: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
-    (ball, paddle) => {
-      const ballSprite = ball as Phaser.Physics.Arcade.Sprite;
-      const paddleSprite = paddle as Phaser.Physics.Arcade.Sprite;
-
-      const diff = ballSprite.x - paddleSprite.x;
-      ballSprite.setVelocityX(diff * 5);
-    };
-
-  /**
-   * 벽돌 충돌 처리
-   */
-  private handleBrickCollision: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
-    (ball, brick) => {
-      (brick as Phaser.GameObjects.GameObject).destroy();
-      this.updateScore(this.POINTS_PER_BRICK);
-
-      if (this.bricks?.countActive() === 0) {
-        this.handleWin();
-      }
-    };
-
-  /**
-   * 점수 업데이트
-   */
-  private updateScore(points: number): void {
-    this.score += points;
-    this.scoreText?.setText(`SCORE: ${this.score}`);
-  }
-
-  /**
-   * 게임 승리 처리
-   */
-  private handleWin(): void {
-    this.stopGame();
-    this.showEndGameScreen("win");
-  }
-
-  /**
-   * 게임 오버 처리
-   */
-  private handleGameOver(): void {
-    this.stopGame();
-    this.showEndGameScreen("gameOver");
-  }
-
-  /**
-   * 게임 정지
-   */
-  private stopGame(): void {
-    this.ball?.setVelocity(0, 0);
-    this.paddle?.setVelocity(0, 0);
-  }
-
-  /**
-   * 종료 화면 표시 (통합)
-   */
-  private showEndGameScreen(type: EndGameType): void {
-    const depth = 10;
-    const config = this.getEndGameConfig(type);
-
-    // 반투명 오버레이
-    this.add
-      .rectangle(
-        this.GAME_CONFIG.width / 2,
-        this.GAME_CONFIG.height / 2,
-        this.GAME_CONFIG.width,
-        this.GAME_CONFIG.height,
-        0x000000,
-        config.overlayAlpha
-      )
-      .setDepth(depth);
-
-    // 메인 텍스트
-    const mainText = this.add
-      .text(400, 200, config.mainText, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "36px",
-        color: config.mainColor,
-      })
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-
-    // 애니메이션 효과
-    this.tweens.add({
-      targets: mainText,
-      ...config.animation,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // 점수 표시
-    this.createScoreDisplay(depth);
-
-    // 재시작 버튼
-    this.createRestartButton(depth + 1);
-  }
-
-  /**
-   * 종료 화면 설정 가져오기
-   */
-  private getEndGameConfig(type: EndGameType) {
-    const configs = {
-      win: {
-        mainText: "YOU WIN!",
-        mainColor: "#2ecc71",
-        overlayAlpha: 0.6,
-        animation: { scale: 1.1, duration: 300 },
-      },
-      gameOver: {
-        mainText: "GAME OVER",
-        mainColor: "#e74c3c",
-        overlayAlpha: 0.7,
-        animation: { alpha: 0.3, duration: 500 },
-      },
-    };
-
-    return configs[type];
-  }
-
-  /**
-   * 점수 표시 생성
-   */
-  private createScoreDisplay(depth: number): void {
-    this.add
-      .text(400, 280, "SCORE", {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "14px",
-        color: "#95a5a6",
-      })
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-
-    this.add
-      .text(400, 320, `${this.score}`, {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "32px",
-        color: "#f1c40f",
-      })
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-  }
-
-  /**
-   * 재시작 버튼 생성
-   */
-  private createRestartButton(depth: number): void {
-    const buttonY = 400;
-    const buttonStyle = {
-      fontFamily: '"Press Start 2P"',
-      fontSize: "14px",
-      color: "#333333",
-    };
-
-    const restartBtnBg = this.add
-      .image(400, buttonY, "buttonDefault")
-      .setScale(3, 1.5)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(depth);
-
-    this.add
-      .text(400, buttonY, "RETRY", buttonStyle)
-      .setOrigin(0.5)
-      .setDepth(depth);
-
-    restartBtnBg.on("pointerover", () => {
-      restartBtnBg.setTexture("buttonSelected").setScale(3.1, 1.6);
-    });
-
-    restartBtnBg.on("pointerout", () => {
-      restartBtnBg.setTexture("buttonDefault").setScale(3, 1.5);
-    });
-
-    restartBtnBg.on("pointerdown", () => {
-      this.restartGame();
-    });
+  private handleGameResult(result: "win" | "gameOver"): void {
+    this.uiManager.showEndGameScreen(result, this.gameManager.getScore(), () =>
+      this.restartGame()
+    );
   }
 
   /**
    * 게임 재시작
    */
   private restartGame(): void {
-    this.score = 0;
     this.scene.restart();
   }
 }
