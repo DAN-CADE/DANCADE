@@ -96,7 +96,7 @@ export default class MainScene extends Phaser.Scene {
 
   preload() {
     this.load.image("CommonTile", "/tilesets/CommonTile.png");
-    this.load.tilemapTiledJSON("map", "/maps/DanMap5.tmj");
+    this.load.tilemapTiledJSON("map", "/maps/DanArcadeLast1.tmj");
     this.load.json("lpc_config", "/assets/lpc_assets.json");
 
     // JSON 로드 완료 시 에셋 파싱 시작

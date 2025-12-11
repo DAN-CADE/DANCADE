@@ -25,7 +25,7 @@ export class MainScene extends Phaser.Scene {
 
   preload() {
     this.load.image("CommonTile", "/tilesets/CommonTile.png");
-    this.load.tilemapTiledJSON("map", "/maps/DanMap5.tmj");
+    this.load.tilemapTiledJSON("map", "/maps/DanArcadeLast1.tmj");
     // this.load.image("arcade-machine", "/assets/arcade-machine.png");
     this.load.json("lpc_config", "/assets/lpc_assets.json");
 
