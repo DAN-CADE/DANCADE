@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
-import localFont from "next/font/local";
+import {
+  Geist,
+  Geist_Mono,
+  Press_Start_2P,
+  Noto_Sans_KR,
+} from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,10 +23,10 @@ const pressStart2P = Press_Start_2P({
   subsets: ["latin"],
 });
 
-const pixelFont = localFont({
-  src: "../public/assets/fonts/neodgm.woff",
-  variable: "--font-neo",
-  display: "swap",
+const notoSansKR = Noto_Sans_KR({
+  weight: ["400", "700"],
+  variable: "--font-noto-sans-kr",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +43,7 @@ export default function RootLayout({
     <html lang="ko">
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${pixelFont.variable} antialiased font-neo`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${notoSansKR.variable} antialiased`}
       >
         {children}
       </body>

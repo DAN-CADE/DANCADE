@@ -4,17 +4,7 @@
   --background: #ffffff;
   --foreground: #171717;
   --font-arcade: "Press Start 2P", cursive;
-
-  --color-cyan: #1af9d9;
-  --color-blue: #4285f4;
-  --color-pink: #ff006e;
-
-  --color-white: #ffffff;
-  --color-black: #000000;
-
-  --color-navy: #003b84;
-  --color-dark-blue: #1a1a2e;
-  --color-midnight: #222345;
+  --font-korean: "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
 }
 
 @theme inline {
