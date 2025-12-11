@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
-import CharacterScene from './CharacterScene';
+import Scene from './CharacterScene';
 
 const PhaserGame = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -14,32 +14,40 @@ const PhaserGame = () => {
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 600,
+      // [중요 1] width/height를 실제 게임 해상도(100)로 맞춥니다.
+      // 400으로 설정하면 100짜리 맵이 작게 보이거나, 스케일 매니저와 충돌할 수 있습니다.
+      width: MAP_WIDTH,
+      height: MAP_HEIGHT,
+      
       parent: containerRef.current,
-      backgroundColor: "#D9D9D9",
+      backgroundColor: '#D9D9D9',
 
-      // [수정] 맵 크기에 맞춘 스케일링 설정
+      // [중요 2] 픽셀 아트 전용 렌더링 설정 (Root 레벨에 두는 것이 확실합니다)
+      pixelArt: true,    // 텍스처를 부드럽게 뭉개지 않고 도트 그대로 유지
+      antialias: false,  // 브라우저 차원의 스무딩 기능 끄기
+      roundPixels: true, // 픽셀 좌표를 정수로 처리하여 이동 시 '찢어짐' 방지
+
       scale: {
-        mode: Phaser.Scale.FIT, // 부모 컨테이너에 맞춰 비율 유지하며 크기 조절
+        // FIT: 부모 컨테이너(400px)에 맞춰서 내부(100px)를 꽉 차게 늘림
+        mode: Phaser.Scale.FIT, 
         autoCenter: Phaser.Scale.CENTER_BOTH,
+        
+        // 스케일 매니저에게 기준 해상도 명시
         width: MAP_WIDTH,
         height: MAP_HEIGHT,
-      },
-
-      render: {
-        pixelArt: true, // 도트가 선명하게 보이도록 설정
-        roundPixels: true, // 픽셀 좌표를 정수로 맞춤 (깨짐 방지)
+        
+        // [팁] 만약 FIT 모드에서도 흐릿하다면 zoom을 명시해볼 수 있습니다.
+        // zoom: 4, 
       },
 
       physics: {
-        default: "arcade",
-        arcade: {
-          gravity: { y: 0, x: 0 }, // x, y 속성을 명확히 분리
-          debug: false,
+        default: 'arcade',
+        arcade: { 
+            gravity: { y: 0, x: 0 }, 
+            debug: false 
         },
       },
-      scene: [CharacterScene],
+      scene: [Scene],
     };
 
     const game = new Phaser.Game(config);
@@ -52,20 +60,11 @@ const PhaserGame = () => {
   }, []);
 
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "800px",
-        height: "600px",
-        margin: "0 auto",
-      }}
-    >
+    <div style={{ position: 'relative', width: '250px', height: '250px', margin: '0 auto' }}>
+      
       {/* 게임 화면 */}
-      <div
-        ref={containerRef}
-        id="phaser-container"
-        style={{ width: "100%", height: "100%" }}
-      />
+      <div ref={containerRef} id="phaser-container" style={{ width: '100%', height: '100%' }} />
+
     </div>
   );
 };
