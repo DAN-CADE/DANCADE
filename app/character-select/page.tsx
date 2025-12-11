@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { CharacterCustomization } from "@/types/character";
+import type { LPCData, LPCStyle } from "@/types/lpc";
 
 const AvatarPreview = dynamic(
   () => import("@/components/avatar/AvatarPreview"),
@@ -13,7 +14,7 @@ const AvatarPreview = dynamic(
 
 export default function CharacterSelect() {
   const router = useRouter();
-  const [lpcData, setLpcData] = useState<any>(null);
+  const [lpcData, setLpcData] = useState<LPCData | null>(null);
 
   // 🎯 커스터마이징 상태
   const [customization, setCustomization] = useState<CharacterCustomization>({
@@ -30,7 +31,7 @@ export default function CharacterSelect() {
   useEffect(() => {
     fetch("/assets/lpc_assets.json")
       .then((res) => res.json())
-      .then((data) => setLpcData(data))
+      .then((data: LPCData) => setLpcData(data))
       .catch((err) => console.error("Failed to load LPC config:", err));
   }, []);
 
@@ -48,9 +49,13 @@ export default function CharacterSelect() {
       ];
 
     // 헤어 (성별 맞는 것만)
-    const hairStyles = assets.hair.styles.filter(
-      (s: any) => !s.genders || s.genders.includes(randomGender)
-    );
+    const hairStyles =
+      assets.hair.styles?.filter(
+        (s: LPCStyle) => !s.genders || s.genders.includes(randomGender)
+      ) || [];
+
+    if (hairStyles.length === 0) return;
+
     const randomHairStyle =
       hairStyles[Math.floor(Math.random() * hairStyles.length)];
     const hairColors = randomHairStyle.colors || palettes.hair_common;
@@ -79,15 +84,24 @@ export default function CharacterSelect() {
         Math.floor(Math.random() * palettes.eye_common.length)
       ],
       torso: {
-        style: assets.torso.styles[0].path_segment,
+        style:
+          assets.torso.styles?.[0]?.path_segment ||
+          assets.torso.styles?.[0]?.id ||
+          "longsleeve",
         color: randomTorsoColor,
       },
       legs: {
-        style: assets.legs.styles[0].path_segment,
+        style:
+          assets.legs.styles?.[0]?.path_segment ||
+          assets.legs.styles?.[0]?.id ||
+          "cuffed",
         color: randomLegsColor,
       },
       feet: {
-        style: assets.feet.styles[0].path_segment,
+        style:
+          assets.feet.styles?.[0]?.path_segment ||
+          assets.feet.styles?.[0]?.id ||
+          "shoes2",
         color: randomFeetColor,
       },
     });
@@ -226,7 +240,7 @@ export default function CharacterSelect() {
 // ============================================================
 
 interface CustomizationPanelProps {
-  lpcData: any;
+  lpcData: LPCData;
   customization: CharacterCustomization;
   onChange: (newCustomization: CharacterCustomization) => void;
 }
@@ -242,9 +256,11 @@ function CustomizationPanel({
   // 성별 변경
   const handleGenderChange = (gender: "male" | "female") => {
     // 성별에 맞는 헤어로 자동 변경
-    const hairStyles = assets.hair.styles.filter(
-      (s: any) => !s.genders || s.genders.includes(gender)
-    );
+    const hairStyles =
+      assets.hair.styles?.filter(
+        (s: LPCStyle) => !s.genders || s.genders.includes(gender)
+      ) || [];
+    if (hairStyles.length === 0) return;
     const firstHair = hairStyles[0];
 
     onChange({
@@ -300,11 +316,12 @@ function CustomizationPanel({
       {/* 헤어 스타일 */}
       <Section title="헤어 스타일">
         <ButtonGroup>
-          {assets.hair.styles
+          {(assets.hair.styles || [])
             .filter(
-              (s: any) => !s.genders || s.genders.includes(customization.gender)
+              (s: LPCStyle) =>
+                !s.genders || s.genders.includes(customization.gender) // ✅ LPCStyle
             )
-            .map((style: any) => (
+            .map((style: LPCStyle) => (
               <OptionButton
                 key={style.id}
                 active={customization.hair.style === style.id}
@@ -315,7 +332,7 @@ function CustomizationPanel({
                   })
                 }
               >
-                {style.name}
+                {style.id}
               </OptionButton>
             ))}
         </ButtonGroup>
@@ -460,7 +477,6 @@ function ColorGrid({ children }: { children: React.ReactNode }) {
 }
 
 function ColorButton({
-  color,
   active,
   onClick,
   children,

@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 
-const MapRenderer = dynamic(() => import("@/components/game/MapRenderer"), {
+const MapRenderer = dynamic(() => import("@/components/map/MapRenderer"), {
   ssr: false,
 });
 
