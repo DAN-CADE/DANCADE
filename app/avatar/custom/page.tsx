@@ -1,4 +1,3 @@
-// app/character-select/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,7 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 import type { LPCData, LPCStyle } from "@/types/lpc";
-import { CharacterCustomization, CharacterState, LpcRootData, PartType } from "@/components/avatar/utils/LpcTypes";
+import { CharacterCustomization, CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
 import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 
 const AvatarPreview = dynamic(
@@ -203,7 +202,6 @@ function CustomizationPanel({
     if (hairStyles.length === 0) return;
     const firstHair = hairStyles[0];
       
-    console.log(customization)
     onChange({
       ...customization,
       gender,

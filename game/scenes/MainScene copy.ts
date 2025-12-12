@@ -4,8 +4,6 @@ import { ArcadeMachineManager } from "@/game/managers/ArcadeMachineManager";
 import { AssetLoader } from "@/game/managers/AssetLoader";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
-import CharacterScene from "@/components/avatar/ui/CharacterScene";
-import { CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
 
 const TILE_IMAGES: Array<[string, string]> = [
   ["CommonTile", "/tilesets/CommonTile.png"],
@@ -62,7 +60,7 @@ export class MainScene extends Phaser.Scene {
       Phaser.Loader.Events.FILE_COMPLETE + "-json-lpc_config",
       (key: string, type: string, data: LPCData) => {
         if (data && data.assets) {
-          // this.loadCharacterAssets(data);
+          this.loadCharacterAssets(data);
         }
       }
     );
@@ -90,11 +88,12 @@ export class MainScene extends Phaser.Scene {
    */
   private createAvatar(): void {
     const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
-    const lpcData = this.cache.json.get("lpc_config") as LpcRootData;
+    const lpcData = this.cache.json.get("lpc_config") as LPCData;
 
     if (savedCustomization && lpcData) {
       try {
-        const customization: CharacterState = JSON.parse(savedCustomization);
+        const customization: CharacterCustomization =
+          JSON.parse(savedCustomization);
         this.avatarManager.createCustomAvatar(
           this.PLAYER_START_X,
           this.PLAYER_START_Y,
@@ -132,8 +131,6 @@ export class MainScene extends Phaser.Scene {
       try {
         const customization: CharacterCustomization =
           JSON.parse(savedCustomization);
-
-        console.log(customization)
         this.assetLoader.loadCustomAssets(customization);
         return;
       } catch (error) {

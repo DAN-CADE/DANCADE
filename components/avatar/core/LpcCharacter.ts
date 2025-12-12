@@ -225,6 +225,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         (Object.keys(defaultPart) as PartType[]).forEach((part) => {
             const textureKey = defaultPart[part];
             
+            console.log(part, textureKey);
             // 텍스처 키가 있고, 실제로 Scene에 로드되어 있는지 확인 (안전장치)
             if (textureKey && scene.textures.exists(textureKey)) {
                 this.setPart(part, textureKey);

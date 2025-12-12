@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from "react";
 import { createGameConfig } from "@/game/config";
+import PreloadScene from "../avatar/ui/PreLoadScene";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -23,7 +24,7 @@ export default function PhaserGame() {
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [MainScene, StartScene, BrickBreakerScene, PingPongScene],
+        scene: [PreloadScene, MainScene, StartScene, BrickBreakerScene, PingPongScene],
       };
 
       gameRef.current = new Phaser.Game(config);
