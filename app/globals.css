@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@font-face {
+  font-family: "NeoDGM";
+  src: url("/assets/fonts/neodgm.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --background: #ffffff;
@@ -43,19 +50,29 @@ body {
 공통
 /***************************************************************/
 .font-neo {
-  font-family: var(--font-neo);
+  font-family: "NeoDGM";
 }
-.cyan-pixelBtn {
+.pixelBtn {
   padding: 4px 10px;
   border-width: 6px;
   background: transparent;
-
   border-style: solid;
-  border-image: url("../public/assets/ui/buttons/cyan-pixel-button.png") 6 fill
-    stretch;
   font-family: inherit;
   font-size: 16px;
   color: black;
+}
+/* 색상별 테마 */
+.pixelBtn--cyan {
+  border-image: url("../public/assets/ui/buttons/cyan-pixel-button.svg") 6 fill
+    stretch;
+}
+.pixelBtn--gray {
+  border-image: url("../public/assets/ui/buttons/gray-pixel-button.svg") 6 fill
+    stretch;
+}
+.pixelBtn--pink {
+  border-image: url("../public/assets/ui/buttons/pink-pixel-button.svg") 6 fill
+    stretch;
 }
 /***************************************************************
 아이디 로그인 페이지
