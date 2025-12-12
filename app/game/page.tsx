@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import RankingBoard from "@/components/RankingBoard";
 import PhaserGame from "@/components/game/PhaserGame";
 
 export default function GamePage() {
@@ -34,10 +33,6 @@ export default function GamePage() {
 
         <div className="flex justify-center mb-8">
           <PhaserGame />
-        </div>
-
-        <div className="flex justify-center">
-          <RankingBoard gameType="brick-breaker" />
         </div>
       </main>
     </div>

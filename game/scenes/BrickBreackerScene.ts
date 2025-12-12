@@ -15,7 +15,7 @@ import type {
  * 매니저들을 조합하여 게임을 구성
  */
 export class BrickBreakerScene extends Phaser.Scene {
-  // Managers
+  // Managers (게임로직, UI, 입력, 이펙트)
   private gameManager!: BrickBreakerGameManager;
   private uiManager!: BrickBreakerUIManager;
   private inputManager!: BrickBreakerInputManager;
@@ -30,6 +30,7 @@ export class BrickBreakerScene extends Phaser.Scene {
   private gameConfig?: GameConfig;
 
   // Constants
+  // 게임 기본 설정 (너비, 높이, 속도)
   private readonly GAME_CONFIG: BrickBreakerConfig = {
     width: 800,
     height: 600,
@@ -37,6 +38,7 @@ export class BrickBreakerScene extends Phaser.Scene {
     ballSpeed: 200,
   };
 
+  // 벽돌 배치 설정 (행, 열, 크기, 간격, 시작 Y 좌표)
   private readonly BRICK_LAYOUT: BrickLayoutConfig = {
     cols: 10,
     rows: 5,
@@ -46,6 +48,7 @@ export class BrickBreakerScene extends Phaser.Scene {
     startY: 80,
   };
 
+  // 벽돌 색상 리스트
   private readonly BRICK_COLORS = [
     "element_red_rectangle_glossy",
     "element_yellow_rectangle_glossy",
@@ -54,6 +57,7 @@ export class BrickBreakerScene extends Phaser.Scene {
     "element_purple_rectangle_glossy",
   ];
 
+  // 에셋 경로
   private readonly ASSET_PATH = "/assets/game/kenney_puzzle-pack/png/";
 
   constructor() {
