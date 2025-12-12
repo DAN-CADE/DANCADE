@@ -1,62 +1,50 @@
+// scenes/CharacterCustomScene.ts
 import Phaser from 'phaser';
 import LpcCharacter from '../core/LpcCharacter';
-import { LpcLoader } from '../core/LpcLoader'; 
-import { MakerUI } from '../core/MakerUI'; // 경로에 맞게 수정하세요
 import { CharacterState, LpcRootData, PartType, StandardPartConfig } from '../utils/LpcTypes';
 import { LpcUtils } from '../utils/LpcUtils';
+
 export default class CharacterCustomScene extends Phaser.Scene {
     private character!: LpcCharacter;
-    private makerUI!: MakerUI;
+    private lpcData!: LpcRootData;
 
     constructor() {
         super('CharacterCustomScene');
     }
 
-    preload() {
-        // [1] 리소스 로딩
-        this.load.json('lpc_config', '/assets/lpc_assets.json');
+    create() {
+        // 1. 캐릭터 생성
+        this.character = new LpcCharacter(this, 200, 200, '');
 
-        // JSON 로드 완료 후 에셋 파싱
-        this.load.on(Phaser.Loader.Events.FILE_COMPLETE + '-json-lpc_config', (key: string, type: string, data: any) => {
-            if (data && data.assets) {
-                // LpcLoader를 통해 이미지를 로드합니다.
-                this.registry.set('lpc_data', data);
-                LpcLoader.loadAssets(this, data);
-            }
+        // 2. LPC 데이터 로드 (PreloadScene에서 이미 로드됨, 파싱만 수행)
+        const storedData = sessionStorage.getItem("lpcRootData");
+        if (storedData) {
+             this.lpcData = JSON.parse(storedData);
+        }
+
+        this.cameras.main.setZoom(2.5);
+        this.cameras.main.centerOn(200, 200);
+
+        // 3. [초기 상태 적용] Registry에 이미 값이 있다면 적용
+        const currentData = this.registry.get('customization');
+        if (currentData) {
+            this.updatePlayerVisuals(currentData);
+        } else if (this.lpcData) {
+             // 데이터가 없으면 랜덤
+            this.updatePlayerVisuals(LpcUtils.getRandomState(this.lpcData));
+        }
+
+        // 4. [이벤트 리스너] React에서 registry 값을 바꿀 때마다 실행됨
+        // 'changedata-키이름' 이벤트가 발생합니다.
+        this.registry.events.on('changedata-customization', (parent: any, newValue: CharacterState) => {
+            console.log("🎨 React updated customization:", newValue);
+            this.updatePlayerVisuals(newValue);
         });
     }
 
-    create() {
-        this.character = new LpcCharacter(this, 50, 100, '');
-        this.character.setDefaultPart(this, "female");
-
-        // 데이터 로드 완료 확인 후 UI 및 초기화
-        const data = this.registry.get('lpc_data') as LpcRootData;
-        if (data) {
-            // 초기 랜덤 상태 생성
-            const initialState = LpcUtils.getRandomState(data);
-            
-            // UI 생성 및 상태 변경 콜백 연결
-            this.makerUI = new MakerUI(data, initialState, (newState) => {
-                this.updatePlayerVisuals(newState);
-            });
-            
-            // 초기 비주얼 적용
-            this.updatePlayerVisuals(initialState);
-        }
-    }
-
-    update() {
-        if (this.character) {
-            this.character.update();
-        }
-    }
-
-     /**
-     * [CORE] UI 변경사항을 플레이어에게 반영
-     */
     private updatePlayerVisuals(state: CharacterState) {
-        const data = this.registry.get('lpc_data') as LpcRootData;
+        if (!this.lpcData) return; 
+        
         const gender = state.gender;
 
         Object.keys(state.parts).forEach(key => {
@@ -64,7 +52,7 @@ export default class CharacterCustomScene extends Phaser.Scene {
             const partState = state.parts[partName];
             if (!partState) return;
 
-            const config = data.assets[partName];
+            const config = this.lpcData.assets[partName];
             let assetKey = '';
 
             if (LpcUtils.isStyledPart(config)) {
@@ -90,6 +78,6 @@ export default class CharacterCustomScene extends Phaser.Scene {
             }
         });
 
-        this.character.refresh();
+        this.character.refresh();       
     }
 }

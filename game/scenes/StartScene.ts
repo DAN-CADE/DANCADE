@@ -47,6 +47,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   create() {
+    this.scale.resize(800, 600);
     // 배경 이미지 추가
     const background = this.add.image(400, 300, "game_background");
     background.setDisplaySize(800, 600);

@@ -95,7 +95,7 @@ export default function Home() {
   };
 
   return (
-    <div className="login-page relative min-h-screen py-12">
+    <main className="login-page relative min-h-screen">
       <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
       <Window title="LOGIN">
         <Image src={logo} alt="DAN-CADE 로고" width={262} height={185} />
@@ -120,6 +120,6 @@ export default function Home() {
           ))}
         </div>
       </Window>
-    </div>
+    </main>
   );
 }

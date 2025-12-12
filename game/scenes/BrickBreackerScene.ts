@@ -73,6 +73,7 @@ export class BrickBreakerScene extends Phaser.Scene {
   }
 
   create() {
+    this.scale.resize(800, 600);
     this.setupScene();
     this.initManagers();
     this.createGameObjects();

@@ -24,7 +24,7 @@ export default function GamePage() {
 
   return (
     <div className="min-h-screen bg-gray-900 py-8">
-      <main className="container mx-auto px-4">
+      <main className="container mx-auto ">
         {nickname && (
           <div className="text-white text-right mb-4" suppressHydrationWarning>
             환영합니다, <strong>{nickname}</strong>님! 🎮

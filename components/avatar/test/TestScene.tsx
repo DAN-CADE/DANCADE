@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import Player from './core/LpcCharacter';
-import { PartType } from './utils/LpcTypes';
+import Player from '../core/LpcCharacter';
+import { PartType } from '../utils/LpcTypes';
 
 // -------------------- [Interfaces: JSON Schema] --------------------
 

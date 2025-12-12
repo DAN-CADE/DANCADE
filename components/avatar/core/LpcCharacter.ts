@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { PartType } from '../utils/LpcTypes';
 
 const DEFAULT_OUTFIT: Partial<Record<PartType, string>> = {
@@ -212,12 +212,6 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
             }
         });
     }  
-    // 이름 변경용
-    public setDisplayName(newName: string) {
-        if (this.nameTag) {
-            this.nameTag.setText(newName);
-        }
-    }
 
     public setDefaultPart(scene: Phaser.Scene, gender: string) {
         const hair = gender === "male" ? "hair_male_idol_black" : "hair_female_long_straight_black"
@@ -239,6 +233,13 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         
         // 초기 모습 갱신 (Idle 애니메이션 시작)
         this.refresh();
+    }
+
+    // 이름 변경용
+    public setDisplayName(newName: string) {
+        if (this.nameTag) {
+            this.nameTag.setText(newName);
+        }
     }
 
     // UI 미리보기용 강제 방향 설정 (키보드 입력 무시)

@@ -27,7 +27,7 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({ customization }) => {
       await import("phaser");
 
       // 그 다음 PreviewScene import
-      const { PreviewScene } = await import("@/components/avatar/PreviewScene");
+      const { PreviewScene } = await import("@/components/avatar/test/PreviewScene");
 
       // 이제 Phaser가 전역에 있어서 PreviewScene이 작동함
       const Phaser = (await import("phaser")).default;

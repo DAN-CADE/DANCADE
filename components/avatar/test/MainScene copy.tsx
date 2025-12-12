@@ -1,10 +1,10 @@
 // src/scenes/MainScene.ts
 import Phaser from 'phaser';
-import Player from './core/LpcCharacter';
-import { LpcRootData, CharacterState, StandardPartConfig, PartType } from './utils/LpcTypes';
-import { LpcLoader } from './core/LpcLoader';
-import { MakerUI } from './core/MakerUI';
-import { LpcUtils } from './utils/LpcUtils';
+import Player from '../core/LpcCharacter';
+import { LpcRootData, CharacterState, StandardPartConfig, PartType } from '../utils/LpcTypes';
+import { LpcLoader } from '../core/LpcLoader';
+import { MakerUI } from '../core/MakerUI';
+import { LpcUtils } from '../utils/LpcUtils';
 
 export default class MainScene extends Phaser.Scene {
     private player!: Player;

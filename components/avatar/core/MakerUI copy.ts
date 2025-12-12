@@ -36,7 +36,7 @@ export class MakerUI {
 
         // 랜덤 버튼
         const randomBtn = document.createElement('button');
-        randomBtn.innerText = "🎲 램덤생성";
+        randomBtn.innerText = "🎲 RANDOMIZE";
         randomBtn.style.cssText = "width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:4px; margin-top:15px; cursor:pointer; font-weight:bold; font-size:14px;";
         randomBtn.onclick = () => {
             const randomState = LpcUtils.getRandomState(this.data);
