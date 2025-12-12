@@ -4,13 +4,9 @@ import Image from "next/image";
 import logo from "@/public/assets/logos/logo.svg";
 import brickBreaker from "@/public/assets/screenshots/brick-breaker.png";
 import pingPong from "@/public/assets/screenshots/ping-pong.png";
-import back from "@/public/assets/icons/back.svg";
 import Window from "@/components/common/Window";
-import { useRouter } from "next/navigation";
 
 export default function LoginIdPage() {
-  const router = useRouter();
-
   const gameList = [
     { src: brickBreaker, alt: "벽돌깨기 게임" },
     { src: pingPong, alt: "핑퐁 게임" },
@@ -21,14 +17,6 @@ export default function LoginIdPage() {
   return (
     <main className="login-id-page">
       <Window title="LOGIN">
-        {/* 뒤로 가기 */}
-        <Image
-          src={back}
-          alt="뒤로가기"
-          className="absolute left-5 top-5 cursor-pointer"
-          onClick={() => router.back()}
-        />
-
         {/* 로그인 영역 */}
         <section
           className="
@@ -98,13 +86,13 @@ export default function LoginIdPage() {
             <div className="text-right mt-6">
               <button
                 type="submit"
-                className="login-button cyan-pixelBtn mr-3 cursor-pointer"
+                className="login-button pixelBtn pixelBtn--cyan mr-3 cursor-pointer"
               >
                 로그인
               </button>
               <button
                 type="button"
-                className="login-button cyan-pixelBtn cursor-pointer"
+                className="login-button pixelBtn pixelBtn--cyan cursor-pointer"
               >
                 회원가입
               </button>
