@@ -27,7 +27,7 @@ export class LpcLoader {
                             if (assetPath.includes('{gender}')) {
                                 assetPath = assetPath.replace('{gender}', gender);
                             }
-                            console.log(assetKey)
+                            // console.log(assetKey)
                             scene.load.spritesheet(assetKey, assetPath, frameConfig);
                         });
                     });
@@ -45,7 +45,7 @@ export class LpcLoader {
                         if (assetPath.includes('{gender}')) {
                             assetPath = assetPath.replace('{gender}', gender);
                         }
-                        console.log(assetKey)
+                        // console.log(assetKey)
                         scene.load.spritesheet(assetKey, assetPath, frameConfig);
                     });
                 });

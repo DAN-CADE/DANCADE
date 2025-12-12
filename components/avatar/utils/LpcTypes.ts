@@ -60,3 +60,18 @@ export interface CharacterConfig {
     name: string;
     parts: Partial<Record<PartType, string>>; // { body: 'body_white', hair: 'hair_messy_red' ... }
 }
+
+export interface CharacterCustomization {
+    gender: string;
+    skin: string;
+    head: {
+        hair: {style: string, color:string};
+        eyes: {color: string};
+        nose: {style: string};
+    };
+    body: {
+        torso: {style: string, color: string}
+        legs: {style: string, color: string}
+        feet: {style: string, color: string}
+    }
+}

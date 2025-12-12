@@ -63,7 +63,7 @@ const PhaserGame = () => {
     <div style={{ position: 'relative', width: '250px', height: '250px', margin: '0 auto' }}>
       
       {/* 게임 화면 */}
-      <div ref={containerRef} id="phaser-container" style={{ width: '100%', height: '100%' }} />
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
     </div>
   );

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
-import Player from './core/LpcCharacter';
-import { LpcRootData, PartType } from './utils/LpcTypes';
-import { LpcLoader } from './core/LpcLoader';
+import Player from '../core/LpcCharacter';
+import { LpcRootData, PartType } from '../utils/LpcTypes';
+import { LpcLoader } from '../core/LpcLoader';
 
 interface LpcCharacterViewProps {
     width?: number;
