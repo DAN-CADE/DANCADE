@@ -49,6 +49,7 @@ export class PingPongScene extends Phaser.Scene {
   }
 
   create() {
+    this.scale.resize(800, 600);
     this.setupScene();
     this.initGameState();
     this.initManagers();
