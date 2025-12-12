@@ -3,6 +3,8 @@
 import Image from "next/image";
 import windowClose from "@/public/assets/icons/window-close.svg";
 import windowMaximize from "@/public/assets/icons/window-maximize.svg";
+import back from "@/public/assets/icons/back.svg";
+import { useRouter } from "next/navigation";
 
 interface WindowProps {
   title: string;
@@ -17,10 +19,13 @@ export default function Window({
   className = "",
   showMaximize = true,
 }: WindowProps) {
+  const router = useRouter();
+
   return (
-    <section className="drop-shadow-[0_0_14px_rgba(108,173,247,0.55)]">
+    <section className="relative min-h-screen py-12 px-5 drop-shadow-[0_0_14px_rgba(108,173,247,0.55)] font-neo">
+      <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
       <div
-        className={`w-[1400px] m-auto border border-[var(--color-navy)] ${className}`}
+        className={`max-w-[1400px] w-full m-auto border border-[var(--color-navy)] ${className}`}
       >
         {/* 핑크색 타이틀바 */}
         <div className="window-header bg-[var(--color-pink)] flex items-center justify-between px-4 py-3">
@@ -30,7 +35,7 @@ export default function Window({
           </button>
 
           {/* 중앙 타이틀 */}
-          <h2 className="text-black font-pixel text-2xl">{title}</h2>
+          <h2 className="text-black font-neo text-xl">{title}</h2>
 
           {/* 우측 아이콘 */}
           <div className="flex gap-2">
@@ -43,7 +48,25 @@ export default function Window({
         </div>
 
         {/* 컨텐츠 영역 */}
-        <div className="window-content bg-[var(--color-dark-blue)] p-8 h-full min-h-[800px] flex flex-col items-center justify-center gap-8">
+        <div
+          className="
+            window-content relative 
+            bg-[var(--color-dark-blue)] 
+            py-15 px-8
+            lg:p-8
+            h-full 
+            min-h-[800px]
+            lg:max-h-[800px] 
+            max-h-none
+            flex flex-col items-center justify-center gap-8
+          "
+        >
+          <Image
+            src={back}
+            alt="뒤로가기"
+            className="absolute left-5 top-5 cursor-pointer"
+            onClick={() => router.back()}
+          />
           {children}
         </div>
       </div>

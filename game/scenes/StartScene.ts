@@ -17,6 +17,9 @@ export class StartScene extends Phaser.Scene {
   preload() {
     const basePath = ASSET_PATHS.KENNEY_PUZZLE;
 
+    // 배경 이미지 로드
+    this.load.image("game_background", "/assets/background/bg 1.png");
+
     // UI 버튼 에셋
     this.load.image("ball", `${basePath}ballBlue.png`);
     this.load.image("paddle", `${basePath}paddleBlu.png`);
@@ -44,8 +47,14 @@ export class StartScene extends Phaser.Scene {
   }
 
   create() {
+    this.scale.resize(800, 600);
+    // 배경 이미지 추가
+    const background = this.add.image(400, 300, "game_background");
+    background.setDisplaySize(800, 600);
+    background.setDepth(-1);
+
     // 배경
-    this.cameras.main.setBackgroundColor("#1a1a2e");
+    this.cameras.main.setBackgroundColor("#000000");
 
     // 스타일 정의
     const titleStyle = {

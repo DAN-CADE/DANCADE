@@ -5,6 +5,23 @@ import { AssetLoader } from "@/game/managers/AssetLoader";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
 
+const TILE_IMAGES: Array<[string, string]> = [
+  ["CommonTile", "/tilesets/CommonTile.png"],
+  ["Plants", "/tilesets/Plants.png"],
+  ["arcade1", "/tilesets/arcade1.png"],
+  ["arcade2", "/tilesets/arcade2.png"],
+  ["BlueChair", "/tilesets/BlueChair.png"],
+  ["button", "/tilesets/button.png"],
+  ["button2", "/tilesets/button2.png"],
+  ["desk1", "/tilesets/desk1.png"],
+  ["desk2", "/tilesets/desk2.png"],
+  ["electronic", "/tilesets/electronic.png"],
+  ["mainDesk", "/tilesets/mainDesk.png"],
+  ["RedChair", "/tilesets/RedChair.png"],
+  ["storefrontSign", "/tilesets/storefrontSign.png"],
+  ["userButton", "/tilesets/userButton.png"],
+];
+
 export class MainScene extends Phaser.Scene {
   private readonly FADE_DURATION = 1000;
   private readonly PLAYER_START_X = 960;
@@ -18,16 +35,24 @@ export class MainScene extends Phaser.Scene {
   private interactKey!: Phaser.Input.Keyboard.Key;
   private interactPrompt!: Phaser.GameObjects.Text;
   private nearbyGame: GameConfig | null = null;
+  private wallsLayer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private object1Layer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private object2Layer: Phaser.Tilemaps.TilemapLayer | null = null;
+
+  private loadImages(images: [string, string][]) {
+    images.forEach(([key, path]) => this.load.image(key, path));
+  }
 
   constructor() {
     super({ key: "MainScene" });
   }
 
   preload() {
-    this.load.image("CommonTile", "/tilesets/CommonTile.png");
-    this.load.tilemapTiledJSON("map", "/maps/DanArcadeLast1.tmj");
-    // this.load.image("arcade-machine", "/assets/arcade-machine.png");
+    this.loadImages(TILE_IMAGES);
+    this.load.tilemapTiledJSON("map", "/maps/DanArcadeLast8.tmj");
+    // this.load.image("arcade-machine", "/tilesets/arcade1.png");
     this.load.json("lpc_config", "/assets/lpc_assets.json");
+    this.load.image("bg1_1", "/tilesets/bg1_1.png");
 
     this.assetLoader = new AssetLoader(this);
 
@@ -44,10 +69,18 @@ export class MainScene extends Phaser.Scene {
   create() {
     this.machineManager = new ArcadeMachineManager(this);
     this.avatarManager = new AvatarManager(this);
+    this.scale.resize(window.innerWidth, window.innerHeight);
 
     this.createMap();
     this.createAvatar();
     this.finishSetup();
+    this.scale.on("resize", this.handleResize, this);
+  }
+  handleResize(gameSize: Phaser.Structs.Size) {
+    // 씬이 활성화되어 있을 때만 실행
+    if (!this.scene.isActive()) return;
+
+    this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
   }
 
   /**
@@ -128,12 +161,57 @@ export class MainScene extends Phaser.Scene {
 
   private createMap(): void {
     this.map = this.make.tilemap({ key: "map" });
-    const tileset = this.map.addTilesetImage("CommonTile", "CommonTile");
-    if (!tileset) return;
 
-    this.map.layers.forEach((layer) => {
-      this.map.createLayer(layer.name, tileset, 0, 0);
-    });
+    this.add.image(0, 0, "bg1_1").setOrigin(0, 0).setDepth(-1);
+
+    // Tiled tilesets[].name 과 일치하는 이름으로 addTilesetImage
+    const common = this.map.addTilesetImage("CommonTile", "CommonTile");
+    const mainDesk = this.map.addTilesetImage("mainDesk", "mainDesk");
+    const desk2 = this.map.addTilesetImage("desk2", "desk2");
+    const desk1 = this.map.addTilesetImage("desk1", "desk1");
+    const arcade1 = this.map.addTilesetImage("arcade1", "arcade1");
+    const arcade2 = this.map.addTilesetImage("arcade2", "arcade2");
+    const blueChair = this.map.addTilesetImage("BlueChair", "BlueChair");
+    const redChair = this.map.addTilesetImage("RedChair", "RedChair");
+    const plants = this.map.addTilesetImage("Plants", "Plants");
+    const button = this.map.addTilesetImage("button", "button");
+    const button2 = this.map.addTilesetImage("button2", "button2");
+    const storefrontSign = this.map.addTilesetImage(
+      "storefrontSign",
+      "storefrontSign"
+    );
+    const electronic = this.map.addTilesetImage("electronic", "electronic");
+    const userButton = this.map.addTilesetImage("userButton", "userButton");
+
+    const tilesetsRaw = [
+      common,
+      mainDesk,
+      desk2,
+      desk1,
+      arcade1,
+      arcade2,
+      blueChair,
+      redChair,
+      plants,
+      button,
+      button2,
+      storefrontSign,
+      electronic,
+      userButton,
+    ];
+    const tilesets = tilesetsRaw.filter(
+      (ts): ts is Phaser.Tilemaps.Tileset => ts !== null
+    );
+
+    if (!tilesets) return;
+
+    this.map.createLayer("ground", tilesets, 0, 0);
+    this.wallsLayer = this.map.createLayer("walls", tilesets, 0, 0);
+    this.object1Layer = this.map.createLayer("object1", tilesets, 0, 0);
+    this.object2Layer = this.map.createLayer("object2", tilesets, 0, 0);
+
+    // this.map.createLayer("object2", tilesets, 0, 0);
+    this.physics.world.createDebugGraphic();
 
     this.cameras.main.setBounds(
       0,
@@ -148,17 +226,24 @@ export class MainScene extends Phaser.Scene {
     const avatar = this.avatarManager.getContainer();
 
     // 1. 벽 충돌
-    const wallLayer = this.map.createLayer("walls", "CommonTile");
-    if (wallLayer) {
-      wallLayer.setCollisionByProperty({ collides: true });
-      this.physics.add.collider(avatar, wallLayer);
+    if (this.wallsLayer) {
+      this.wallsLayer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, this.wallsLayer);
+    }
+    if (this.object1Layer) {
+      this.object1Layer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, this.object1Layer);
+    }
+    if (this.object2Layer) {
+      this.object2Layer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, this.object2Layer);
     }
 
     // 2. 게임기 충돌
-    const machines = this.machineManager.getMachines();
-    machines.forEach((machine) => {
-      this.physics.add.collider(avatar, machine.sprite);
-    });
+    // const machines = this.machineManager.getMachines();
+    // machines.forEach((machine) => {
+    //   this.physics.add.collider(avatar, machine.sprite);
+    // });
 
     // 3. 기타 오브젝트 충돌
     const collisionLayer = this.map.getObjectLayer("CollisionObjects");

@@ -4,15 +4,19 @@ interface TiledObject {
   x: number; // 오브젝트 X 좌표
   y: number; // 오브젝트 Y 좌표
   properties?: Array<{ name: string; value: string }>; // 커스텀 속성 (예: gameId)
+  width : number
+  height : number
 }
 export interface ArcadeMachine {
-  sprite: Phaser.GameObjects.Sprite; // 게임기 스프라이트 (비주얼)
+  // sprite: Phaser.GameObjects.Sprite; // 게임기 스프라이트 (비주얼) -> 기본 tileLayer의 이미지로 대체
   game: GameConfig; // 연결된 게임 정보 (이름, sceneKey 등)
   x: number; // 게임기 X 좌표
   y: number; // 게임기 Y 좌표
   highlight?: Phaser.GameObjects.Graphics; // 하이라이트 원 (플레이어가 가까이 갔을 때)
   nameLabel?: Phaser.GameObjects.Text; // 게임 이름 텍스트
   collider?: Phaser.Physics.Arcade.Body; // 물리 충돌 바디 (사용 안 함, 제거 가능)
+  width? : number
+  height? : number
 }
 
 /**
@@ -27,7 +31,7 @@ export interface ArcadeMachine {
  */
 export class ArcadeMachineManager {
   private readonly LABEL_OFFSET_Y = 60; // 게임 이름 라벨의 Y축 오프셋 (게임기 위에 표시)
-  private readonly INTERACTION_RADIUS = 80; // 상호작용 가능 반경 (픽셀)
+  private readonly INTERACTION_RADIUS = 110; // 상호작용 가능 반경 (픽셀)
 
   private scene: Phaser.Scene; // 현재 씬 참조 (스프라이트 생성용)
   private machines: ArcadeMachine[] = []; // 생성된 모든 게임기 배열
@@ -50,7 +54,7 @@ export class ArcadeMachineManager {
    */
   parseFromMap(map: Phaser.Tilemaps.Tilemap): void {
     // Tiled에서 생성한 "ArcadeMachines" 레이어 가져오기
-    const objectLayer = map.getObjectLayer("ArcadeMachines");
+    const objectLayer = map.getObjectLayer("gameObject"); 
 
     if (!objectLayer) {
       // 레이어가 없으면 임시 게임기 생성 (개발용)
@@ -97,8 +101,12 @@ export class ArcadeMachineManager {
       return;
     }
 
+      const centerX = obj.x + obj.width / 2;
+      const centerY = obj.y + obj.height / 2;
+
+
     // 게임기 생성
-    this.create(obj.x, obj.y, gameConfig);
+    this.create(centerX, centerY, gameConfig);
   }
 
   /**
@@ -110,13 +118,13 @@ export class ArcadeMachineManager {
    * @param y - Y 좌표
    * @param gameConfig - 게임 설정 정보
    */
-  private create(x: number, y: number, gameConfig: GameConfig): void {
+  private create(x: number, y: number, gameConfig: GameConfig ): void {
     // 1. 게임기 스프라이트 생성
-    const sprite = this.scene.add.sprite(x, y, "arcade-machine");
+    // const sprite = this.scene.add.sprite(x, y, "arcade-machine");
 
     // 2. 물리 바디 추가 (플레이어가 통과하지 못하게)
     // true = static body (움직이지 않는 고정 오브젝트)
-    this.scene.physics.add.existing(sprite, true);
+    // this.scene.physics.add.existing(sprite, true);
 
     // 3. 충돌 박스 크기 조정 (스프라이트보다 작게)
     // const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
@@ -139,7 +147,7 @@ export class ArcadeMachineManager {
 
     // 5. 배열에 추가 (나중에 검색/관리용)
     this.machines.push({
-      sprite,
+      // sprite,
       game: gameConfig,
       x,
       y,
@@ -166,14 +174,13 @@ export class ArcadeMachineManager {
       const gameConfig = getGameById(pos.gameId);
       if (gameConfig) {
         // 빨간 사각형 생성 (임시 게임기)
-        const sprite = this.scene.add.rectangle(
+           const sprite = this.scene.add.rectangle(
           pos.x,
           pos.y,
           64,
           64,
           0xff0000 // 빨간색
-        ) as any;
-
+          ) ;
         // 물리 바디 추가 (충돌 가능하게)
         this.scene.physics.add.existing(sprite, true);
 
@@ -187,7 +194,7 @@ export class ArcadeMachineManager {
           .setOrigin(0.5);
 
         this.machines.push({
-          sprite,
+          // sprite,
           game: gameConfig,
           x: pos.x,
           y: pos.y,
@@ -240,11 +247,14 @@ export class ArcadeMachineManager {
    * @param machine - 하이라이트할 게임기
    */
   highlightMachine(machine: ArcadeMachine): void {
+
+    
+
     if (!machine.highlight) {
       // Graphics 객체가 없으면 생성
       machine.highlight = this.scene.add.graphics();
       machine.highlight.lineStyle(3, 0xffff00, 0.8); // 노란색, 두께 3, 투명도 80%
-      machine.highlight.strokeCircle(machine.x, machine.y, 50); // 반경 50 원
+      machine.highlight.strokeCircle(machine.x, machine.y, 70); // 반경 70 원
       machine.highlight.setDepth(10); // 다른 오브젝트 위에 표시
     }
     // 보이기
@@ -284,7 +294,7 @@ export class ArcadeMachineManager {
     this.machines.forEach((machine) => {
       machine.highlight?.destroy(); // 하이라이트 원 제거
       machine.nameLabel?.destroy(); // 이름 라벨 제거
-      machine.sprite?.destroy(); // 스프라이트 제거
+      // machine.sprite?.destroy(); // 스프라이트 제거
     });
     this.machines = []; // 배열 초기화
   }
