@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 import { createGameConfig } from "@/game/config";
-import PreloadScene from "../avatar/ui/PreLoadScene";
+// import PreloadScene from "../avatar/ui/PreLoadScene";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -19,6 +19,7 @@ export default function PhaserGame() {
         "@/game/scenes/BrickBreackerScene"
       );
       const { PingPongScene } = await import("@/game/scenes/PingPongScene");
+      const PreloadScene = (await import("../avatar/ui/PreLoadScene")).default;
 
       if (gameRef.current) return;
 

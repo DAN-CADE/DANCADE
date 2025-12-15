@@ -56,11 +56,6 @@ export interface CharacterState {
     };
 }
 
-export interface CharacterConfig {
-    name: string;
-    parts: Partial<Record<PartType, string>>; // { body: 'body_white', hair: 'hair_messy_red' ... }
-}
-
 export interface CharacterCustomization {
     gender: string;
     skin: string;

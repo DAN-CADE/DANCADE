@@ -8,7 +8,7 @@ import type { CharacterCustomization } from "@/types/character";
 import type { LPCData, LPCStyle } from "@/types/lpc";
 
 const AvatarPreview = dynamic(
-  () => import("@/components/avatar/test/AvatarPreview"),
+  () => import("@/components/avatar/ui/AvatarPreview"),
   { ssr: false }
 );
 

@@ -9,7 +9,7 @@ import { CharacterCustomization, CharacterState, LpcRootData } from "@/component
 import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 
 const AvatarPreview = dynamic(
-  () => import("@/components/avatar/test/AvatarPreview"),
+  () => import("@/components/avatar/ui/AvatarPreview"),
   { ssr: false }
 );
 
