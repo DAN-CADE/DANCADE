@@ -12,6 +12,7 @@ export default function PhaserGame() {
 
     const initPhaser = async () => {
       const Phaser = await import("phaser");
+
       const { StartScene } = await import("@/game/scenes/core/StartScene");
       const { MainScene } = await import("@/game/scenes/core/MainScene");
       const { BrickBreakerScene } = await import(
@@ -20,8 +21,6 @@ export default function PhaserGame() {
       const { PingPongScene } = await import(
         "@/game/scenes/games/PingPongScene"
       );
-      const { PingPongScene } = await import("@/game/scenes/PingPongScene");
-      const PreloadScene = (await import("../avatar/ui/PreLoadScene")).default;
 
       if (gameRef.current) return;
 
