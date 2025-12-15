@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Phaser from 'phaser';
-import CharacterCustomScene from '@/components/avatar/ui/CharacterCustomScene'
+import Phaser from "phaser";
+import CharacterCustomScene from "@/components/avatar/ui/CharacterCustomScene";
 import { CharacterState } from "../utils/LpcTypes";
 import PreloadScene from "../ui/PreLoadScene";
 
@@ -30,16 +30,23 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({ customization }) => {
           roundPixels: true,
         },
         physics: {
-          default: 'arcade',
+          default: "arcade",
           arcade: {
-              gravity: { x: 0, y: 0 }, // 탑뷰 게임이므로 중력 0
-              // debug: true // 디버깅용 박스 표시 (나중에 false로 변경)
-          }
+            gravity: { x: 0, y: 0 }, // 탑뷰 게임이므로 중력 0
+            // debug: true // 디버깅용 박스 표시 (나중에 false로 변경)
+          },
         },
         scene: [PreloadScene, CharacterCustomScene],
       };
 
       gameRef.current = new Phaser.Game(config);
+
+      // 추가
+      if (customization) {
+        gameRef.current.registry.set("customization", customization);
+      }
+      // END 추가
+
       gameRef.current.scene.start("CharacterCustomScene", { customization });
     };
 
@@ -54,7 +61,16 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({ customization }) => {
         gameRef.current = null;
       }
     };
+  }, []);
+
+  // 추가
+  useEffect(() => {
+    if (!gameRef.current || !customization) return;
+
+    console.log("🎨 Updating customization:", customization);
+    gameRef.current.registry.set("customization", customization);
   }, [customization]);
+  // END 추가
 
   return (
     <div
