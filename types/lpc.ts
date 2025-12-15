@@ -9,9 +9,12 @@ export interface LPCAssetConfig {
 
 export interface LPCStyle {
   id: string;
+  tier: "basic" | "point";
+  price?: number;
   path_segment?: string;
   genders?: string[];
   colors?: string[];
+  name?: string;
 }
 
 export interface LPCPalettes {

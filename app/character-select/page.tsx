@@ -77,10 +77,6 @@ export default function CharacterSelect() {
     handleGenderChange,
   } = useCharacterCustomization(lpcData);
 
-  // lpc 로딩 디버깅
-  // console.log("1. lpcData:", lpcData);
-  // console.log("2. customization:", customization);
-
   // 2. 이벤트 핸들러
   const handleStartGame = useCallback(() => {
     try {
