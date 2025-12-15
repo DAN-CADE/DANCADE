@@ -12,12 +12,14 @@ export default function PhaserGame() {
 
     const initPhaser = async () => {
       const Phaser = await import("phaser");
-      const { StartScene } = await import("@/game/scenes/StartScene");
-      const { MainScene } = await import("@/game/scenes/MainScene");
+      const { StartScene } = await import("@/game/scenes/core/StartScene");
+      const { MainScene } = await import("@/game/scenes/core/MainScene");
       const { BrickBreakerScene } = await import(
-        "@/game/scenes/BrickBreackerScene"
+        "@/game/scenes/games/BrickBreackerScene"
       );
-      const { PingPongScene } = await import("@/game/scenes/PingPongScene");
+      const { PingPongScene } = await import(
+        "@/game/scenes/games/PingPongScene"
+      );
 
       if (gameRef.current) return;
 
