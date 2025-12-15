@@ -1,10 +1,7 @@
-// /game/MapScene.ts
 import Phaser from "phaser";
-// import Player from "@/components/avatar/Player";
 
 export default class MapScene extends Phaser.Scene {
-  // private player!: Player;
-
+ 
   constructor() {
     super("MapScene");
   }
@@ -26,31 +23,7 @@ export default class MapScene extends Phaser.Scene {
     this.load.image("storefrontSign", "/tilesets/storefrontSign.png");
     this.load.image("userButton", "/tilesets/userButton.png");
     this.load.tilemapTiledJSON("map", "/maps/DanArcadeLast8.tmj");
-
     this.load.image("bg1_1", "/tilesets/bg1_1.png");
-
-
-
-  // Body (teen / black)
-  this.load.spritesheet(
-    "body_black",
-    "/assets/spritesheets/body/teen/black.png",
-    { frameWidth: 64, frameHeight: 64 }
-  );
-
-  // Eyes (human / adult / blue)
-  this.load.spritesheet(
-    "eyes_blue",
-    "/assets/spritesheets/eyes/human/adult/blue.png",
-    { frameWidth: 64, frameHeight: 64 }
-  );
-
-  // Hair (bangslong / male / black)
-  this.load.spritesheet(
-    "hair_black",
-    "/assets/spritesheets/hair/bangslong/male/black.png",
-    { frameWidth: 64, frameHeight: 64 }
-  );
   }
 
   create() {
@@ -98,33 +71,16 @@ export default class MapScene extends Phaser.Scene {
 
 
     this.add.image(0, 0, "bg1_1").setOrigin(0, 0);
-    // ground, walls 레이어만 생성
     map.createLayer("ground", tilesets , 0, 0);
-    // const wallsLayer = map.createLayer("walls", tilesets, 0, 0);
     map.createLayer("object1", tilesets, 0, 0);
-    map.createLayer("boject2", tilesets, 0, 0); // 오타지만 Tiled name이 boject2니까 그대로
+    map.createLayer("object2", tilesets, 0, 0); 
+    const wallsLayer = map.createLayer("walls", tilesets, 0, 0);
   
     this.physics.world.createDebugGraphic();
 
-    // 1) Player 생성
-    // this.player = new Player(this, 700, 600, "원찬");
-
       // 충돌 설정
-    // wallsLayer?.setCollisionByProperty({ collides: true });
-    // this.physics.add.collider(this.player, wallsLayer?? []);
-    // // // 2) 파츠 장착
-    // this.player.setPart("body", "body_black");
-    // this.player.setPart("hair", "hair_black");
-    // this.player.setPart("eyes", "eyes_blue");
-    
-    // // 3) 카메라 따라가기
-    // this.cameras.main.startFollow(this.player);
-    // this.cameras.main.setZoom(2);
+    wallsLayer?.setCollisionByProperty({ collides: true });
+
     
   }
-
-  update() {
-    // this.player.update();
-  }
-
 }
