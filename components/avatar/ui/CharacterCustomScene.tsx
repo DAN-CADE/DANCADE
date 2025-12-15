@@ -1,7 +1,7 @@
 // scenes/CharacterCustomScene.ts
 import Phaser from 'phaser';
 import LpcCharacter from '../core/LpcCharacter';
-import { CharacterState, LpcRootData, PartType, StandardPartConfig } from '../utils/LpcTypes';
+import { CharacterState, LpcRootData, PartType } from '../utils/LpcTypes';
 import { LpcUtils } from '../utils/LpcUtils';
 
 export default class CharacterCustomScene extends Phaser.Scene {
@@ -25,7 +25,7 @@ export default class CharacterCustomScene extends Phaser.Scene {
         this.cameras.main.setZoom(2.5);
         this.cameras.main.centerOn(200, 200);
 
-        // 3. [초기 상태 적용] Registry에 이미 값이 있다면 적용
+        // 3. Registry에 이미 값이 있다면 적용
         const currentData = this.registry.get('customization');
         if (currentData) {
             this.updatePlayerVisuals(currentData);
@@ -34,8 +34,7 @@ export default class CharacterCustomScene extends Phaser.Scene {
             this.updatePlayerVisuals(LpcUtils.getRandomState(this.lpcData));
         }
 
-        // 4. [이벤트 리스너] React에서 registry 값을 바꿀 때마다 실행됨
-        // 'changedata-키이름' 이벤트가 발생합니다.
+        // 4. React에서 registry 값을 바꿀 때마다 실행됨
         this.registry.events.on('changedata-customization', (parent: any, newValue: CharacterState) => {
             console.log("🎨 React updated customization:", newValue);
             this.updatePlayerVisuals(newValue);
@@ -64,12 +63,10 @@ export default class CharacterCustomScene extends Phaser.Scene {
                     }
                 }
             } else {
-                const standardConfig = config as StandardPartConfig;
-                const prefix = standardConfig.prefix || partName;
-                assetKey = LpcUtils.getAssetKey(prefix, null, gender, partState.color);
+                assetKey = LpcUtils.getAssetKey(partName, null, gender, partState.color);
                 
                 if (!this.textures.exists(assetKey)) {
-                    assetKey = LpcUtils.getAssetKey(prefix, null, '', partState.color);
+                    assetKey = LpcUtils.getAssetKey(partName, null, '', partState.color);
                 }
             }
 
@@ -77,7 +74,6 @@ export default class CharacterCustomScene extends Phaser.Scene {
                 this.character.setPart(partName, assetKey);
             }
         });
-
-        this.character.refresh();       
     }
+    
 }

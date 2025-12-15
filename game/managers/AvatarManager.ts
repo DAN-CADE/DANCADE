@@ -38,11 +38,9 @@ export class AvatarManager {
   ): void {
     this.avatarContainer = new LpcCharacter(this.scene, x, y, 'test');
     this.avatarContainer.setDefaultPart(this.scene, "female");
-    this.avatarContainer.refresh();
 
-
-
-
+    this.setupCamera();
+    
     // this.avatarContainer = this.scene.add.container(x, y);
     // this.scene.physics.add.existing(this.avatarContainer);
 
@@ -53,7 +51,7 @@ export class AvatarManager {
     // }
 
     // this.applyCustomization(customization);
-    // this.setupCamera();
+    
     // this.setupInput();
 
     console.log("✅ Custom avatar created");

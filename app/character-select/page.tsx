@@ -17,7 +17,7 @@ import { ErrorScreen } from "@/components/character-select/Error";
 // SSR 방지
 // ------------------------------------------------------------
 const AvatarPreview = dynamic(
-  () => import("@/components/avatar/test/AvatarPreview"),
+  () => import("@/components/avatar/ui/AvatarPreview"),
   { ssr: false }
 );
 

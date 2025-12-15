@@ -1,9 +1,9 @@
-import { AssetConfig, ColorDef, LpcRootData, PaletteParams, StyledPartConfig } from './LpcTypes';
+import { AssetConfig, CharacterPartState, ColorDef, LpcRootData, PaletteParams, PartType, StyledPartConfig } from './LpcTypes';
 
 export class LpcUtils {
     // 타입 가드
     static isStyledPart(config: AssetConfig): config is StyledPartConfig {
-        return (config as StyledPartConfig).styles !== undefined;
+        return 'styles' in config;
     }
 
     // 색상 참조 해석 ($ref 처리)
@@ -25,7 +25,7 @@ export class LpcUtils {
     // 랜덤 캐릭터 생성 로직
     static getRandomState(data: LpcRootData) {
         const gender = Math.random() > 0.5 ? 'male' : 'female';
-        const parts: any = {};
+        const parts: Partial<Record<string, CharacterPartState>> = {}; 
         const palettes = data.definitions.palettes;
 
         Object.keys(data.assets).forEach(key => {
@@ -34,7 +34,9 @@ export class LpcUtils {
 
             const config = data.assets[key];
 
+            // 스타일 유무 체크
             if (this.isStyledPart(config)) {
+                // 해당항목: hair, torso, legs, feet 
                 // 성별에 맞는 스타일 필터링
                 const validStyles = config.styles.filter(s => 
                     !s.genders || s.genders.length === 0 || s.genders.includes(gender)
@@ -45,11 +47,11 @@ export class LpcUtils {
                     const colorDef = style.colors || config.config.default_colors;
                     const validColors = this.resolveColors(colorDef, palettes);
                     const color = validColors[Math.floor(Math.random() * validColors.length)];
-
+                    
                     parts[partName] = { styleId: style.id, color };
                 }
             } else {
-                // 일반 파츠
+                // 해당항목: head, eyes, nose, body
                 const colors = this.resolveColors(config.colors, palettes);
                 if (colors.length > 0) {
                     const color = colors[Math.floor(Math.random() * colors.length)];

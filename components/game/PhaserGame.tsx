@@ -20,7 +20,6 @@ export default function PhaserGame() {
       const { PingPongScene } = await import("@/game/scenes/PingPongScene");
       const PreloadScene = (await import("../avatar/ui/PreLoadScene")).default;
 
-
       if (gameRef.current) return;
 
       const config: Phaser.Types.Core.GameConfig = {

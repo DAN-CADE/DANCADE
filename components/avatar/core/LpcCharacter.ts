@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { PartType } from '../utils/LpcTypes';
 
-const DEFAULT_OUTFIT: Partial<Record<PartType, string>> = {
+const DEFAULT_PART: Partial<Record<PartType, string>> = {
     body: 'body_light',
     head: 'head_male_light',
     eyes: 'eyes_blue',
@@ -56,7 +56,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         const body = this.body as Phaser.Physics.Arcade.Body;
         body.setSize(32, 32);     
         body.setOffset(-16, 16);  
-        body.setCollideWorldBounds(true);
+        body.setCollideWorldBounds(false);
 
         // 3. 파츠 스프라이트 초기화
         this.layerOrder.forEach((part) => {
@@ -169,7 +169,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         if (!textureKey) return;
         const anims = this.scene.anims;
 
-        // 이미 생성된 애니메이션이면 건너뜀
+        // 이미 생성된 애니메이션 
         if (anims.exists(`${textureKey}-down`)) return;
 
         const config = { frameRate: LPC_ANIMS.frameRate, repeat: -1 };
@@ -215,25 +215,21 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
 
     public setDefaultPart(scene: Phaser.Scene, gender: string) {
         const hair = gender === "male" ? "hair_male_idol_black" : "hair_female_long_straight_black"
-        const defaultPart = {
-            ...DEFAULT_OUTFIT,
+        const parts = {
+            ...DEFAULT_PART,
             head: `head_${gender}_light`,
             hair: hair
         };
 
-         // 생성 시점에 정의된 DEFAULT_OUTFIT을 순회하며 입힙니다.
-        (Object.keys(defaultPart) as PartType[]).forEach((part) => {
-            const textureKey = defaultPart[part];
+         // 생성 시점에 정의된 DEFAULT_PART 순회하며 적용
+        (Object.keys(parts) as PartType[]).forEach((part) => {
+            const textureKey = parts[part];
             
-            console.log(part, textureKey);
-            // 텍스처 키가 있고, 실제로 Scene에 로드되어 있는지 확인 (안전장치)
+            // 텍스처 키가 있고, 실제로 Scene에 로드되어 있는지 확인
             if (textureKey && scene.textures.exists(textureKey)) {
                 this.setPart(part, textureKey);
             }
         });
-        
-        // 초기 모습 갱신 (Idle 애니메이션 시작)
-        this.refresh();
     }
 
     // 이름 변경용
