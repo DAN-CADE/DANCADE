@@ -1,12 +1,11 @@
+// app/character-select/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-
+import type { CharacterCustomization } from "@/types/character";
 import type { LPCData, LPCStyle } from "@/types/lpc";
-import { CharacterCustomization, CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
-import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 
 const AvatarPreview = dynamic(
   () => import("@/components/avatar/test/AvatarPreview"),
@@ -15,21 +14,24 @@ const AvatarPreview = dynamic(
 
 export default function CharacterSelect() {
   const router = useRouter();
-  const [lpcData, setLpcData] = useState<LpcRootData | null>(null);
+  const [lpcData, setLpcData] = useState<LPCData | null>(null);
 
   // 🎯 커스터마이징 상태
-  const [customization, setCustomization] = useState<CharacterState>()
+  const [customization, setCustomization] = useState<CharacterCustomization>({
+    gender: "male",
+    skin: "light",
+    hair: { style: "plain", color: "black" },
+    eyes: "blue",
+    torso: { style: "longsleeve", color: "white" },
+    legs: { style: "cuffed", color: "black" },
+    feet: { style: "shoes2", color: "black" },
+  });
 
   // JSON 로드
   useEffect(() => {
     fetch("/assets/lpc_assets.json")
       .then((res) => res.json())
-      .then((data: LpcRootData) => {
-        setLpcData(data)
-        const initialState = LpcUtils.getRandomState(data);
-        setCustomization(initialState);
-        
-      })
+      .then((data: LPCData) => setLpcData(data))
       .catch((err) => console.error("Failed to load LPC config:", err));
   }, []);
 
@@ -37,13 +39,72 @@ export default function CharacterSelect() {
   const handleRandomize = () => {
     if (!lpcData) return;
 
-    if (lpcData) {
-        // 초기 랜덤 상태 생성
-        const initialState = LpcUtils.getRandomState(lpcData);
-        setCustomization(initialState);
-    }
+    const palettes = lpcData.definitions.palettes;
+    const assets = lpcData.assets;
 
-    
+    const randomGender = Math.random() > 0.5 ? "male" : "female";
+    const randomSkin =
+      palettes.skin_common[
+        Math.floor(Math.random() * palettes.skin_common.length)
+      ];
+
+    // 헤어 (성별 맞는 것만)
+    const hairStyles =
+      assets.hair.styles?.filter(
+        (s: LPCStyle) => !s.genders || s.genders.includes(randomGender)
+      ) || [];
+
+    if (hairStyles.length === 0) return;
+
+    const randomHairStyle =
+      hairStyles[Math.floor(Math.random() * hairStyles.length)];
+    const hairColors = randomHairStyle.colors || palettes.hair_common;
+    const randomHairColor =
+      hairColors[Math.floor(Math.random() * hairColors.length)];
+
+    // 옷
+    const randomTorsoColor =
+      palettes.clothes_common[
+        Math.floor(Math.random() * palettes.clothes_common.length)
+      ];
+    const randomLegsColor =
+      palettes.clothes_common[
+        Math.floor(Math.random() * palettes.clothes_common.length)
+      ];
+    const randomFeetColor =
+      palettes.clothes_common[
+        Math.floor(Math.random() * palettes.clothes_common.length)
+      ];
+
+    setCustomization({
+      gender: randomGender,
+      skin: randomSkin,
+      hair: { style: randomHairStyle.id, color: randomHairColor },
+      eyes: palettes.eye_common[
+        Math.floor(Math.random() * palettes.eye_common.length)
+      ],
+      torso: {
+        style:
+          assets.torso.styles?.[0]?.path_segment ||
+          assets.torso.styles?.[0]?.id ||
+          "longsleeve",
+        color: randomTorsoColor,
+      },
+      legs: {
+        style:
+          assets.legs.styles?.[0]?.path_segment ||
+          assets.legs.styles?.[0]?.id ||
+          "cuffed",
+        color: randomLegsColor,
+      },
+      feet: {
+        style:
+          assets.feet.styles?.[0]?.path_segment ||
+          assets.feet.styles?.[0]?.id ||
+          "shoes2",
+        color: randomFeetColor,
+      },
+    });
   };
 
   // 게임 시작
@@ -188,7 +249,7 @@ function CustomizationPanel({
   lpcData,
   customization,
   onChange,
-}: any) {
+}: CustomizationPanelProps) {
   const palettes = lpcData.definitions.palettes;
   const assets = lpcData.assets;
 
@@ -197,21 +258,18 @@ function CustomizationPanel({
     // 성별에 맞는 헤어로 자동 변경
     const hairStyles =
       assets.hair.styles?.filter(
-        (s: any) => !s.genders || s.genders.includes(gender)
+        (s: LPCStyle) => !s.genders || s.genders.includes(gender)
       ) || [];
     if (hairStyles.length === 0) return;
     const firstHair = hairStyles[0];
-      
+
     onChange({
       ...customization,
       gender,
-      parts: {
-        ...customization.parts, 
-          hair: {
-            styleId: firstHair.id,
-            color: customization.parts.hair.color,
-        },
-      }
+      hair: {
+        style: firstHair.id,
+        color: customization.hair.color,
+      },
     });
   };
 
@@ -246,28 +304,8 @@ function CustomizationPanel({
             <ColorButton
               key={color}
               color={color}
-              active={customization.parts.body.color === color}
-              onClick={() => {
-                onChange({ ...customization, parts: { ...customization.parts, body: {color}, head: {color},nose: {color}} })
-              }}
-            >
-              {color}
-            </ColorButton>
-          ))}
-        </ColorGrid>
-      </Section>
-
-      {/* 눈 색상 */}
-      <Section title="눈 색상">
-        <ColorGrid>
-          {palettes.eye_common.slice(0, 10).map((color: string) => (
-            <ColorButton
-              key={color}
-              color={color}
-              active={customization.parts.eyes.color === color}
-              onClick={() => {
-                onChange({ ...customization, parts: { ...customization.parts, eyes: {color}} })
-              }}
+              active={customization.skin === color}
+              onClick={() => onChange({ ...customization, skin: color })}
             >
               {color}
             </ColorButton>
@@ -280,16 +318,18 @@ function CustomizationPanel({
         <ButtonGroup>
           {(assets.hair.styles || [])
             .filter(
-              (s: any) =>
+              (s: LPCStyle) =>
                 !s.genders || s.genders.includes(customization.gender) // ✅ LPCStyle
             )
             .map((style: LPCStyle) => (
               <OptionButton
                 key={style.id}
-                active={customization.parts.hair.styleId === style.id}
-                onClick={() =>{
-                  onChange({ ...customization, parts: { ...customization.parts, hair: {...customization.parts.hair, styleId: style.id } }})
-                }
+                active={customization.hair.style === style.id}
+                onClick={() =>
+                  onChange({
+                    ...customization,
+                    hair: { ...customization.hair, style: style.id },
+                  })
                 }
               >
                 {style.id}
@@ -305,38 +345,18 @@ function CustomizationPanel({
             <ColorButton
               key={color}
               color={color}
-              active={customization.parts.hair.color === color}
+              active={customization.hair.color === color}
               onClick={() =>
-                onChange({ ...customization, parts: { ...customization.parts, hair: {...customization.parts.hair, color:color } } })
+                onChange({
+                  ...customization,
+                  hair: { ...customization.hair, color },
+                })
               }
             >
               {color}
             </ColorButton>
           ))}
         </ColorGrid>
-      </Section>
-
-      {/* 상의 스타일 */}
-      <Section title="상의 스타일">
-        <ButtonGroup>
-          {(assets.torso.styles || [])
-            .filter(
-              (s: any) =>
-                !s.genders || s.genders.includes(customization.gender) // ✅ LPCStyle
-            )
-            .map((style: LPCStyle) => (
-              <OptionButton
-                key={style.id}
-                active={customization.parts.torso.styleId === style.id}
-                onClick={() =>{
-                  onChange({ ...customization, parts: { ...customization.parts, torso: {...customization.parts.torso, styleId: style.id } }})
-                }
-                }
-              >
-                {style.id}
-              </OptionButton>
-            ))}
-        </ButtonGroup>
       </Section>
 
       {/* 상의 색상 */}
@@ -346,38 +366,18 @@ function CustomizationPanel({
             <ColorButton
               key={color}
               color={color}
-              active={customization.parts.torso.color === color}
+              active={customization.torso.color === color}
               onClick={() =>
-                onChange({ ...customization, parts: { ...customization.parts, torso: {...customization.parts.torso, color:color } } })
+                onChange({
+                  ...customization,
+                  torso: { ...customization.torso, color },
+                })
               }
             >
               {color}
             </ColorButton>
           ))}
         </ColorGrid>
-      </Section>
-      
-       {/* 하의 스타일 */}
-      <Section title="하의 스타일">
-        <ButtonGroup>
-          {(assets.legs.styles || [])
-            .filter(
-              (s: any) =>
-                !s.genders || s.genders.includes(customization.gender) // ✅ LPCStyle
-            )
-            .map((style: LPCStyle) => (
-              <OptionButton
-                key={style.id}
-                active={customization.parts.legs.styleId === style.id}
-                onClick={() =>{
-                  onChange({ ...customization, parts: { ...customization.parts, legs: {...customization.parts.legs, styleId: style.id } }})
-                }
-                }
-              >
-                {style.id}
-              </OptionButton>
-            ))}
-        </ButtonGroup>
       </Section>
 
       {/* 하의 색상 */}
@@ -387,50 +387,12 @@ function CustomizationPanel({
             <ColorButton
               key={color}
               color={color}
-              active={customization.parts.legs.color === color}
+              active={customization.legs.color === color}
               onClick={() =>
-                onChange({ ...customization, parts: { ...customization.parts, legs: {...customization.parts.legs, color:color } } })
-              }
-            >
-              {color}
-            </ColorButton>
-          ))}
-        </ColorGrid>
-      </Section>
-
-      {/* 신발 스타일 */}
-      <Section title="신발 스타일">
-        <ButtonGroup>
-          {(assets.feet.styles || [])
-            .filter(
-              (s: any) =>
-                !s.genders || s.genders.includes(customization.gender) // ✅ LPCStyle
-            )
-            .map((style: LPCStyle) => (
-              <OptionButton
-                key={style.id}
-                active={customization.parts.feet.styleId === style.id}
-                onClick={() =>{
-                  onChange({ ...customization, parts: { ...customization.parts, feet: {...customization.parts.torso, styleId: style.id } }})
-                }
-                }
-              >
-                {style.id}
-              </OptionButton>
-            ))}
-        </ButtonGroup>
-      </Section>
-
-      {/* 하의 색상 */}
-      <Section title="신발 색상">
-        <ColorGrid>
-          {palettes.clothes_common.slice(0, 12).map((color: string) => (
-            <ColorButton
-              key={color}
-              color={color}
-              active={customization.parts.feet.color === color}
-              onClick={() =>
-                onChange({ ...customization, parts: { ...customization.parts, feet: {...customization.parts.feet, color:color } } })
+                onChange({
+                  ...customization,
+                  legs: { ...customization.legs, color },
+                })
               }
             >
               {color}
@@ -445,7 +407,7 @@ function CustomizationPanel({
 // ============================================================
 // UI 컴포넌트들
 // ============================================================
-  
+
 function Section({
   title,
   children,

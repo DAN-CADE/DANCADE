@@ -1,5 +1,5 @@
-// scenes/PreloadScene.ts
-import Phaser from 'phaser';
+"use client"
+import * as Phaser from 'phaser';
 import { LpcLoader } from '../core/LpcLoader';
 import { LpcRootData } from '../utils/LpcTypes';
 
