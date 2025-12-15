@@ -120,18 +120,6 @@ export default function RegisterPage() {
 
     try {
       // ******************** Supabase 회원가입
-      // const { data, error } = await supabase.auth.signUp({
-      //   email: formData.email,
-      //   password: formData.password,
-      //   options: {
-      //     data: {
-      //       name: formData.name,
-      //       userId: formData.userId,
-      //     }
-      //   }
-      // });
-      // if (error) throw error;
-
       console.log("회원가입 시도:", formData);
 
       // ******************** 성공 시 로그인 페이지로 이동

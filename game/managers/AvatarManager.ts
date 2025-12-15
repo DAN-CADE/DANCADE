@@ -1,4 +1,8 @@
 // game/managers/AvatarManager.ts
+import LpcCharacter from "@/components/avatar/core/LpcCharacter";
+import { LpcLoader } from "@/components/avatar/core/LpcLoader";
+import { CharacterState, LpcRootData, PartType } from "@/components/avatar/utils/LpcTypes";
+import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData, LPCAssetConfig, LPCPalettes } from "@/types/lpc";
 
@@ -7,7 +11,7 @@ import { LPCData, LPCAssetConfig, LPCPalettes } from "@/types/lpc";
  */
 export class AvatarManager {
   private scene: Phaser.Scene;
-  private avatarContainer!: Phaser.GameObjects.Container;
+  private avatarContainer!: LpcCharacter;
   private partLayers: { [key: string]: Phaser.GameObjects.Sprite } = {};
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
 
@@ -30,20 +34,25 @@ export class AvatarManager {
   createCustomAvatar(
     x: number,
     y: number,
-    customization: CharacterCustomization
+    customization?: CharacterState
   ): void {
-    this.avatarContainer = this.scene.add.container(x, y);
-    this.scene.physics.add.existing(this.avatarContainer);
+    this.avatarContainer = new LpcCharacter(this.scene, x, y, 'test');
+    this.avatarContainer.setDefaultPart(this.scene, "female");
 
-    const body = this.avatarContainer.body as Phaser.Physics.Arcade.Body;
-    if (body) {
-      body.setSize(32, 48);
-      body.setOffset(-16, -24);
-    }
-
-    this.applyCustomization(customization);
     this.setupCamera();
-    this.setupInput();
+    
+    // this.avatarContainer = this.scene.add.container(x, y);
+    // this.scene.physics.add.existing(this.avatarContainer);
+
+    // const body = this.avatarContainer.body as Phaser.Physics.Arcade.Body;
+    // if (body) {
+    //   body.setSize(32, 48);
+    //   body.setOffset(-16, -24);
+    // }
+
+    // this.applyCustomization(customization);
+    
+    // this.setupInput();
 
     console.log("✅ Custom avatar created");
   }
@@ -52,61 +61,63 @@ export class AvatarManager {
    * 랜덤 캐릭터 생성
    */
   createRandomAvatar(x: number, y: number, lpcData: LPCData): void {
-    this.avatarContainer = this.scene.add.container(x, y);
-    this.scene.physics.add.existing(this.avatarContainer);
+    // this.avatarContainer = this.scene.add.container(x, y);
+    // this.scene.physics.add.existing(this.avatarContainer);
 
-    const body = this.avatarContainer.body as Phaser.Physics.Arcade.Body;
-    if (body) {
-      body.setSize(32, 48);
-      body.setOffset(-16, -24);
-    }
+    // const body = this.avatarContainer.body as Phaser.Physics.Arcade.Body;
+    // if (body) {
+    //   body.setSize(32, 48);
+    //   body.setOffset(-16, -24);
+    // }
 
-    this.createRandomCharacter(lpcData);
-    this.setupCamera();
-    this.setupInput();
+    // this.createRandomCharacter(lpcData);
+    // this.setupCamera();
+    // this.setupInput();
   }
 
   /**
    * 커스터마이징 적용
    */
-  private applyCustomization(customization: CharacterCustomization): void {
-    const partOrder = [
-      { name: "body", key: `body_${customization.skin}` },
-      {
-        name: "head",
-        key: `head_${customization.gender}_${customization.skin}`,
-      },
-      { name: "eyes", key: `eyes_${customization.eyes}` },
-      { name: "nose", key: `nose_${customization.skin}` },
-      {
-        name: "hair",
-        key: `hair_${customization.hair.style}_${customization.gender}_${customization.hair.color}`,
-      },
-      {
-        name: "torso",
-        key: `torso_${customization.torso.style}_${customization.torso.color}`,
-      },
-      {
-        name: "legs",
-        key: `legs_${customization.legs.style}_${customization.legs.color}`,
-      },
-      {
-        name: "feet",
-        key: `feet_${customization.feet.style}_${customization.feet.color}`,
-      },
-    ];
+  private applyCustomization(customization: CharacterState): void {
+    // console.log(customization)
+    // const gender = customization.gender;
+    // let partOrder:any[] = [];
+    
+    // Object.keys(customization.parts).forEach(key => {
+    //     const partName = key as PartType; // 'body', 'hair', 'legs' ...
+    //     const partState = customization.parts[partName];
 
-    partOrder.forEach(({ name, key }) => {
-      if (this.scene.textures.exists(key)) {
-        const sprite = this.scene.add.sprite(0, 0, key, 130);
-        sprite.setOrigin(0.5, 0.5);
-        this.avatarContainer.add(sprite);
-        this.partLayers[name] = sprite;
-        console.log(`✅ ${name}: ${key}`);
-      } else {
-        console.warn(`⚠️ Missing texture: ${key}`);
-      }
-    });
+    //     // 데이터가 없으면 스킵
+    //     if (!partState) return;
+
+    //     // 1. 파라미터 추출
+    //     // styleId가 있으면 사용하고, 없으면(body, eyes 등) null 처리
+    //     const styleId = partState.styleId || null; 
+    //     const color = partState.color || undefined;
+
+    //     // 2. 요청하신 함수 호출 (Asset Key 생성)
+    //     const assetKey = LpcUtils.getAssetKey(
+    //         partName, 
+    //         styleId, 
+    //         gender, 
+    //         color
+    //     );
+
+    //     partOrder.push({name:partName, assetKey})
+        
+    // });
+
+    // partOrder.forEach(({ name, key }) => {
+    //   if (this.scene.textures.exists(key)) {
+    //     const sprite = this.scene.add.sprite(0, 0, key, 130);
+    //     sprite.setOrigin(0.5, 0.5);
+    //     this.avatarContainer.add(sprite);
+    //     this.partLayers[name] = sprite;
+    //     console.log(`✅ ${name}: ${key}`);
+    //   } else {
+    //     console.warn(`⚠️ Missing texture: ${key}`);
+    //   }
+    // });
   }
 
   /**
@@ -213,7 +224,8 @@ export class AvatarManager {
    * 업데이트 (매 프레임)
    */
   update(delta: number): void {
-    this.updateMovement(delta);
+    this.avatarContainer.update();
+    // this.updateMovement(delta);
   }
 
   /**

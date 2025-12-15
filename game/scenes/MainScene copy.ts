@@ -4,8 +4,6 @@ import { ArcadeMachineManager } from "@/game/managers/ArcadeMachineManager";
 import { AssetLoader } from "@/game/managers/AssetLoader";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
-import CharacterScene from "@/components/avatar/ui/CharacterScene";
-import { CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
 
 const TILE_IMAGES: Array<[string, string]> = [
   ["CommonTile", "/tilesets/CommonTile.png"],
@@ -41,15 +39,6 @@ export class MainScene extends Phaser.Scene {
   private object1Layer: Phaser.Tilemaps.TilemapLayer | null = null;
   private object2Layer: Phaser.Tilemaps.TilemapLayer | null = null;
 
-  private addTilemapCollision(
-    avatar: Phaser.GameObjects.GameObject,
-    layer?: Phaser.Tilemaps.TilemapLayer | null) 
-  {
-    if (!layer) return;
-    layer.setCollisionByProperty({ collides: true });
-    this.physics.add.collider(avatar, layer);
-  }
-
   private loadImages(images: [string, string][]) {
     images.forEach(([key, path]) => this.load.image(key, path));
   }
@@ -61,6 +50,7 @@ export class MainScene extends Phaser.Scene {
   preload() {
     this.loadImages(TILE_IMAGES);
     this.load.tilemapTiledJSON("map", "/maps/DanArcadeLast8.tmj");
+    // this.load.image("arcade-machine", "/tilesets/arcade1.png");
     this.load.json("lpc_config", "/assets/lpc_assets.json");
     this.load.image("bg1_1", "/tilesets/bg1_1.png");
 
@@ -70,7 +60,7 @@ export class MainScene extends Phaser.Scene {
       Phaser.Loader.Events.FILE_COMPLETE + "-json-lpc_config",
       (key: string, type: string, data: LPCData) => {
         if (data && data.assets) {
-          // this.loadCharacterAssets(data);
+          this.loadCharacterAssets(data);
         }
       }
     );
@@ -98,11 +88,12 @@ export class MainScene extends Phaser.Scene {
    */
   private createAvatar(): void {
     const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
-    const lpcData = this.cache.json.get("lpc_config") as LpcRootData;
+    const lpcData = this.cache.json.get("lpc_config") as LPCData;
 
     if (savedCustomization && lpcData) {
       try {
-        const customization: CharacterState = JSON.parse(savedCustomization);
+        const customization: CharacterCustomization =
+          JSON.parse(savedCustomization);
         this.avatarManager.createCustomAvatar(
           this.PLAYER_START_X,
           this.PLAYER_START_Y,
@@ -140,8 +131,6 @@ export class MainScene extends Phaser.Scene {
       try {
         const customization: CharacterCustomization =
           JSON.parse(savedCustomization);
-
-        console.log(customization)
         this.assetLoader.loadCustomAssets(customization);
         return;
       } catch (error) {
@@ -221,6 +210,9 @@ export class MainScene extends Phaser.Scene {
     this.object1Layer = this.map.createLayer("object1", tilesets, 0, 0);
     this.object2Layer = this.map.createLayer("object2", tilesets, 0, 0);
 
+    // this.map.createLayer("object2", tilesets, 0, 0);
+    this.physics.world.createDebugGraphic();
+
     this.cameras.main.setBounds(
       0,
       0,
@@ -233,9 +225,45 @@ export class MainScene extends Phaser.Scene {
   private setupCollisions(): void {
     const avatar = this.avatarManager.getContainer();
 
-      this.addTilemapCollision(avatar, this.wallsLayer);
-      this.addTilemapCollision(avatar, this.object1Layer);
-      this.addTilemapCollision(avatar, this.object2Layer);
+    // 1. 벽 충돌
+    if (this.wallsLayer) {
+      this.wallsLayer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, this.wallsLayer);
+    }
+    if (this.object1Layer) {
+      this.object1Layer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, this.object1Layer);
+    }
+    if (this.object2Layer) {
+      this.object2Layer.setCollisionByProperty({ collides: true });
+      this.physics.add.collider(avatar, this.object2Layer);
+    }
+
+    // 2. 게임기 충돌
+    // const machines = this.machineManager.getMachines();
+    // machines.forEach((machine) => {
+    //   this.physics.add.collider(avatar, machine.sprite);
+    // });
+
+    // 3. 기타 오브젝트 충돌
+    const collisionLayer = this.map.getObjectLayer("CollisionObjects");
+    if (collisionLayer) {
+      collisionLayer.objects.forEach((obj) => {
+        const x = obj.x ?? 0;
+        const y = obj.y ?? 0;
+        const width = obj.width ?? 0;
+        const height = obj.height ?? 0;
+
+        const box = this.add.rectangle(
+          x + width / 2,
+          y + height / 2,
+          width,
+          height
+        );
+        this.physics.add.existing(box, true);
+        this.physics.add.collider(avatar, box);
+      });
+    }
   }
 
   private setupInput(): void {
