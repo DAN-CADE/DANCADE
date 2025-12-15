@@ -24,7 +24,7 @@ export interface ArcadeMachine {
  *
  * 역할:
  * 1. Tiled 맵에서 게임기 위치 파싱
- * 2. 게임기 스프라이트 생성 및 배치
+ * 2. 게임기 생성 및 배치
  * 3. 플레이어와의 거리 계산
  * 4. 근처 게임기 하이라이트 효과
  * 5. 충돌 처리를 위한 물리 바디 설정
@@ -47,18 +47,18 @@ export class ArcadeMachineManager {
   /**
    * parseFromMap - Tiled 맵에서 게임기 파싱
    *
-   * Tiled 맵의 "ArcadeMachines" 오브젝트 레이어를 찾아서
+   * Tiled 맵의 "gameObject" 오브젝트 레이어를 찾아서
    * 각 오브젝트를 게임기로 변환
    *
    * @param map - Phaser Tilemap 객체
    */
   parseFromMap(map: Phaser.Tilemaps.Tilemap): void {
-    // Tiled에서 생성한 "ArcadeMachines" 레이어 가져오기
+    // Tiled에서 생성한 "gameObject" 레이어 가져오기
     const objectLayer = map.getObjectLayer("gameObject"); 
 
     if (!objectLayer) {
       // 레이어가 없으면 임시 게임기 생성 (개발용)
-      this.createFallbackMachines();
+      console.log("parseFromMap error")
       return;
     }
 
@@ -68,9 +68,7 @@ export class ArcadeMachineManager {
         this.createFromTiled(obj as TiledObject);
       });
     } catch (error) {
-      // 파싱 실패 시 폴백 게임기 생성
-      console.error(error);
-      this.createFallbackMachines();
+      console.error(error, "createFromTiled error");
     }
   }
 
@@ -110,7 +108,7 @@ export class ArcadeMachineManager {
   }
 
   /**
-   * create - 게임기 스프라이트 생성
+   * create - 게임기 생성
    *
    * 실제 게임기를 화면에 표시하고 물리 바디 추가
    *
@@ -119,21 +117,6 @@ export class ArcadeMachineManager {
    * @param gameConfig - 게임 설정 정보
    */
   private create(x: number, y: number, gameConfig: GameConfig ): void {
-    // 1. 게임기 스프라이트 생성
-    // const sprite = this.scene.add.sprite(x, y, "arcade-machine");
-
-    // 2. 물리 바디 추가 (플레이어가 통과하지 못하게)
-    // true = static body (움직이지 않는 고정 오브젝트)
-    // this.scene.physics.add.existing(sprite, true);
-
-    // 3. 충돌 박스 크기 조정 (스프라이트보다 작게)
-    // const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
-    // if (body) {
-    //   // 스프라이트 크기의 80% 너비, 60% 높이로 설정
-    //   body.setSize(sprite.width * 0.8, sprite.height * 0.6);
-    //   // 충돌 박스를 약간 아래쪽으로 이동 (발판 느낌)
-    //   body.setOffset(sprite.width * 0.1, sprite.height * 0.4);
-    // }
 
     // 4. 게임 이름 라벨 생성 (게임기 위에 표시)
     const nameLabel = this.scene.add
@@ -155,54 +138,6 @@ export class ArcadeMachineManager {
     });
   }
 
-  /**
-   * createFallbackMachines - 임시 게임기 생성 (개발용)
-   *
-   * Tiled 맵이 준비되지 않았을 때 사용
-   * 빨간 사각형으로 게임기 위치 표시
-   */
-  private createFallbackMachines(): void {
-    // 하드코딩된 임시 위치
-    const positions = [
-      { x: 300, y: 300, gameId: "brick-breaker" },
-      { x: 600, y: 300, gameId: "whack-a-mole" },
-      { x: 900, y: 300, gameId: "memory-game" },
-      { x: 1200, y: 300, gameId: "ping-pong" },
-    ];
-
-    positions.forEach((pos) => {
-      const gameConfig = getGameById(pos.gameId);
-      if (gameConfig) {
-        // 빨간 사각형 생성 (임시 게임기)
-           const sprite = this.scene.add.rectangle(
-          pos.x,
-          pos.y,
-          64,
-          64,
-          0xff0000 // 빨간색
-          ) ;
-        // 물리 바디 추가 (충돌 가능하게)
-        this.scene.physics.add.existing(sprite, true);
-
-        // 이름 라벨
-        const nameLabel = this.scene.add
-          .text(pos.x, pos.y - 50, gameConfig.name, {
-            fontSize: "14px",
-            backgroundColor: "#000",
-            padding: { x: 5, y: 3 },
-          })
-          .setOrigin(0.5);
-
-        this.machines.push({
-          // sprite,
-          game: gameConfig,
-          x: pos.x,
-          y: pos.y,
-          nameLabel,
-        });
-      }
-    });
-  }
 
   /**
    * findNearestMachine - 가장 가까운 게임기 찾기
@@ -294,7 +229,6 @@ export class ArcadeMachineManager {
     this.machines.forEach((machine) => {
       machine.highlight?.destroy(); // 하이라이트 원 제거
       machine.nameLabel?.destroy(); // 이름 라벨 제거
-      // machine.sprite?.destroy(); // 스프라이트 제거
     });
     this.machines = []; // 배열 초기화
   }
