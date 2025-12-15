@@ -1,507 +1,128 @@
 // app/character-select/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { CharacterCustomization } from "@/types/character";
-import type { LPCData, LPCStyle } from "@/types/lpc";
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { STORAGE_KEY } from "@/constants/character";
+import { useLPCData } from "@/hooks/useLPCData";
+import { useCharacterCustomization } from "@/hooks/useCharacterCustomization";
+import { ActionButton } from "@/components/character-select/Button";
+import { CustomizationPanel } from "@/components/character-select/CustomizationPanel";
+import { LoadingScreen } from "@/components/character-select/Loading";
+import { ErrorScreen } from "@/components/character-select/Error";
 
+// ------------------------------------------------------------
+// SSR 방지
+// ------------------------------------------------------------
 const AvatarPreview = dynamic(
-  () => import("@/components/avatar/test/AvatarPreview"),
+  () => import("@/components/avatar/ui/AvatarPreview"),
   { ssr: false }
 );
 
-export default function CharacterSelect() {
-  const router = useRouter();
-  const [lpcData, setLpcData] = useState<LPCData | null>(null);
-
-  // 🎯 커스터마이징 상태
-  const [customization, setCustomization] = useState<CharacterCustomization>({
-    gender: "male",
-    skin: "light",
-    hair: { style: "plain", color: "black" },
-    eyes: "blue",
-    torso: { style: "longsleeve", color: "white" },
-    legs: { style: "cuffed", color: "black" },
-    feet: { style: "shoes2", color: "black" },
-  });
-
-  // JSON 로드
-  useEffect(() => {
-    fetch("/assets/lpc_assets.json")
-      .then((res) => res.json())
-      .then((data: LPCData) => setLpcData(data))
-      .catch((err) => console.error("Failed to load LPC config:", err));
-  }, []);
-
-  // 랜덤 생성
-  const handleRandomize = () => {
-    if (!lpcData) return;
-
-    const palettes = lpcData.definitions.palettes;
-    const assets = lpcData.assets;
-
-    const randomGender = Math.random() > 0.5 ? "male" : "female";
-    const randomSkin =
-      palettes.skin_common[
-        Math.floor(Math.random() * palettes.skin_common.length)
-      ];
-
-    // 헤어 (성별 맞는 것만)
-    const hairStyles =
-      assets.hair.styles?.filter(
-        (s: LPCStyle) => !s.genders || s.genders.includes(randomGender)
-      ) || [];
-
-    if (hairStyles.length === 0) return;
-
-    const randomHairStyle =
-      hairStyles[Math.floor(Math.random() * hairStyles.length)];
-    const hairColors = randomHairStyle.colors || palettes.hair_common;
-    const randomHairColor =
-      hairColors[Math.floor(Math.random() * hairColors.length)];
-
-    // 옷
-    const randomTorsoColor =
-      palettes.clothes_common[
-        Math.floor(Math.random() * palettes.clothes_common.length)
-      ];
-    const randomLegsColor =
-      palettes.clothes_common[
-        Math.floor(Math.random() * palettes.clothes_common.length)
-      ];
-    const randomFeetColor =
-      palettes.clothes_common[
-        Math.floor(Math.random() * palettes.clothes_common.length)
-      ];
-
-    setCustomization({
-      gender: randomGender,
-      skin: randomSkin,
-      hair: { style: randomHairStyle.id, color: randomHairColor },
-      eyes: palettes.eye_common[
-        Math.floor(Math.random() * palettes.eye_common.length)
-      ],
+// ------------------------------------------------------------
+// 타입 변환 유틸 함수 (이 파일 내에서만 사용)
+// ------------------------------------------------------------
+/**
+ * CharacterCustomization → CharacterState 변환
+ * AvatarPreview가 필요로 하는 형식으로 변환
+ */
+function convertToCharacterState(customization: CharacterCustomization) {
+  return {
+    gender: customization.gender,
+    parts: {
+      body: {
+        color: customization.skin,
+      },
+      head: {
+        color: customization.skin,
+      },
+      eyes: {
+        color: customization.eyes,
+      },
+      hair: {
+        styleId: customization.hair.style,
+        color: customization.hair.color,
+      },
       torso: {
-        style:
-          assets.torso.styles?.[0]?.path_segment ||
-          assets.torso.styles?.[0]?.id ||
-          "longsleeve",
-        color: randomTorsoColor,
+        styleId: customization.torso.style,
+        color: customization.torso.color,
       },
       legs: {
-        style:
-          assets.legs.styles?.[0]?.path_segment ||
-          assets.legs.styles?.[0]?.id ||
-          "cuffed",
-        color: randomLegsColor,
+        styleId: customization.legs.style,
+        color: customization.legs.color,
       },
       feet: {
-        style:
-          assets.feet.styles?.[0]?.path_segment ||
-          assets.feet.styles?.[0]?.id ||
-          "shoes2",
-        color: randomFeetColor,
+        styleId: customization.feet.style,
+        color: customization.feet.color,
       },
-    });
+    },
   };
+}
 
-  // 게임 시작
-  const handleStartGame = () => {
-    // 🎯 localStorage 저장 확인
-    const customizationString = JSON.stringify(customization);
-    localStorage.setItem("characterCustomization", customizationString);
+// ------------------------------------------------------------
+// 메인 컴포넌트
+// ------------------------------------------------------------
 
-    console.log("💾 Saved customization:", customizationString);
-    console.log(
-      "✅ Verification:",
-      localStorage.getItem("characterCustomization")
-    );
+export default function CharacterSelect() {
+  const router = useRouter();
 
-    // 약간의 딜레이 후 이동 (localStorage 저장 완료 대기)
-    setTimeout(() => {
+  // 1. 상태 관리
+  const { lpcData, isLoading, error } = useLPCData();
+  const {
+    customization,
+    setCustomization,
+    handleRandomize,
+    handleGenderChange,
+  } = useCharacterCustomization(lpcData);
+
+  // 2. 이벤트 핸들러
+  const handleStartGame = useCallback(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
       router.push("/game");
-    }, 100);
-  };
+    } catch {
+      alert("캐릭터 정보 저장에 실패했습니다.");
+    }
+  }, [customization, router]);
 
-  if (!lpcData) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-          backgroundColor: "#1a1a1a",
-          color: "white",
-        }}
-      >
-        <p>로딩중...</p>
-      </div>
-    );
+  // 3. 조건부 렌더링
+  if (isLoading || !customization) {
+    return <LoadingScreen />;
+  }
+  if (error || !lpcData) {
+    return <ErrorScreen error={error} />;
   }
 
+  //
+  const previewState = convertToCharacterState(customization);
+
+  // 4. UI 구성
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        backgroundColor: "#1a1a1a",
-        color: "white",
-      }}
-    >
-      {/* 왼쪽: 미리보기 */}
-      <div
-        style={{
-          width: "50%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "40px",
-        }}
-      >
-        <div
-          style={{
-            width: "400px",
-            height: "400px",
-            border: "3px solid #555",
-            borderRadius: "10px",
-            backgroundColor: "#2d2d2d",
-            overflow: "hidden",
-          }}
-        >
-          <AvatarPreview customization={customization} />
+    <div className="flex min-h-screen bg-[#1a1a1a] text-white font-neo">
+      {/* 왼쪽: 미리보기 영역 */}
+      <div className="w-1/2 flex flex-col items-center justify-center p-10">
+        <div className="w-[400px] h-[400px] border-[3px] border-[#555] rounded-[10px] bg-[#2d2d2d] overflow-hidden">
+          <AvatarPreview customization={previewState} />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "15px",
-            marginTop: "30px",
-          }}
-        >
-          <button
-            onClick={handleRandomize}
-            style={{
-              padding: "12px 25px",
-              fontSize: "18px",
-              fontWeight: "bold",
-              backgroundColor: "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
-            랜덤 생성
-          </button>
-
-          <button
-            onClick={handleStartGame}
-            style={{
-              padding: "12px 25px",
-              fontSize: "18px",
-              fontWeight: "bold",
-              backgroundColor: "#ffff00",
-              color: "#000",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
-            게임 시작
-          </button>
+        {/* 액션 버튼 그룹 */}
+        <div className="flex gap-[15px] mt-[30px]">
+          <ActionButton onClick={handleRandomize}>랜덤 생성</ActionButton>
+          <ActionButton onClick={handleStartGame}>게임 시작</ActionButton>
         </div>
       </div>
 
-      {/* 오른쪽: 커스터마이징 UI */}
-      <div
-        style={{
-          width: "50%",
-          padding: "40px",
-          overflowY: "auto",
-          backgroundColor: "#252525",
-        }}
-      >
+      {/* 오른쪽: 커스터마이징 패널 */}
+      <div className="w-1/2 p-10 overflow-y-auto bg-[#252525]">
         <CustomizationPanel
           lpcData={lpcData}
           customization={customization}
           onChange={setCustomization}
+          onGenderChange={handleGenderChange}
         />
       </div>
     </div>
-  );
-}
-
-// ============================================================
-// 🎨 커스터마이징 패널 컴포넌트
-// ============================================================
-
-interface CustomizationPanelProps {
-  lpcData: LPCData;
-  customization: CharacterCustomization;
-  onChange: (newCustomization: CharacterCustomization) => void;
-}
-
-function CustomizationPanel({
-  lpcData,
-  customization,
-  onChange,
-}: CustomizationPanelProps) {
-  const palettes = lpcData.definitions.palettes;
-  const assets = lpcData.assets;
-
-  // 성별 변경
-  const handleGenderChange = (gender: "male" | "female") => {
-    // 성별에 맞는 헤어로 자동 변경
-    const hairStyles =
-      assets.hair.styles?.filter(
-        (s: LPCStyle) => !s.genders || s.genders.includes(gender)
-      ) || [];
-    if (hairStyles.length === 0) return;
-    const firstHair = hairStyles[0];
-
-    onChange({
-      ...customization,
-      gender,
-      hair: {
-        style: firstHair.id,
-        color: customization.hair.color,
-      },
-    });
-  };
-
-  return (
-    <div>
-      <h2 style={{ fontSize: "24px", marginBottom: "30px" }}>
-        외모 커스터마이징
-      </h2>
-
-      {/* 성별 */}
-      <Section title="성별">
-        <ButtonGroup>
-          <OptionButton
-            active={customization.gender === "male"}
-            onClick={() => handleGenderChange("male")}
-          >
-            남성
-          </OptionButton>
-          <OptionButton
-            active={customization.gender === "female"}
-            onClick={() => handleGenderChange("female")}
-          >
-            여성
-          </OptionButton>
-        </ButtonGroup>
-      </Section>
-
-      {/* 피부색 */}
-      <Section title="피부색">
-        <ColorGrid>
-          {palettes.skin_common.slice(0, 10).map((color: string) => (
-            <ColorButton
-              key={color}
-              color={color}
-              active={customization.skin === color}
-              onClick={() => onChange({ ...customization, skin: color })}
-            >
-              {color}
-            </ColorButton>
-          ))}
-        </ColorGrid>
-      </Section>
-
-      {/* 헤어 스타일 */}
-      <Section title="헤어 스타일">
-        <ButtonGroup>
-          {(assets.hair.styles || [])
-            .filter(
-              (s: LPCStyle) =>
-                !s.genders || s.genders.includes(customization.gender) // ✅ LPCStyle
-            )
-            .map((style: LPCStyle) => (
-              <OptionButton
-                key={style.id}
-                active={customization.hair.style === style.id}
-                onClick={() =>
-                  onChange({
-                    ...customization,
-                    hair: { ...customization.hair, style: style.id },
-                  })
-                }
-              >
-                {style.id}
-              </OptionButton>
-            ))}
-        </ButtonGroup>
-      </Section>
-
-      {/* 헤어 색상 */}
-      <Section title="헤어 색상">
-        <ColorGrid>
-          {palettes.hair_common.slice(0, 12).map((color: string) => (
-            <ColorButton
-              key={color}
-              color={color}
-              active={customization.hair.color === color}
-              onClick={() =>
-                onChange({
-                  ...customization,
-                  hair: { ...customization.hair, color },
-                })
-              }
-            >
-              {color}
-            </ColorButton>
-          ))}
-        </ColorGrid>
-      </Section>
-
-      {/* 상의 색상 */}
-      <Section title="상의 색상">
-        <ColorGrid>
-          {palettes.clothes_common.slice(0, 12).map((color: string) => (
-            <ColorButton
-              key={color}
-              color={color}
-              active={customization.torso.color === color}
-              onClick={() =>
-                onChange({
-                  ...customization,
-                  torso: { ...customization.torso, color },
-                })
-              }
-            >
-              {color}
-            </ColorButton>
-          ))}
-        </ColorGrid>
-      </Section>
-
-      {/* 하의 색상 */}
-      <Section title="하의 색상">
-        <ColorGrid>
-          {palettes.clothes_common.slice(0, 12).map((color: string) => (
-            <ColorButton
-              key={color}
-              color={color}
-              active={customization.legs.color === color}
-              onClick={() =>
-                onChange({
-                  ...customization,
-                  legs: { ...customization.legs, color },
-                })
-              }
-            >
-              {color}
-            </ColorButton>
-          ))}
-        </ColorGrid>
-      </Section>
-    </div>
-  );
-}
-
-// ============================================================
-// UI 컴포넌트들
-// ============================================================
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div style={{ marginBottom: "30px" }}>
-      <h3 style={{ fontSize: "18px", marginBottom: "15px", color: "#ffff00" }}>
-        {title}
-      </h3>
-      {children}
-    </div>
-  );
-}
-
-function ButtonGroup({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-      {children}
-    </div>
-  );
-}
-
-function OptionButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "10px 20px",
-        fontSize: "14px",
-        fontWeight: active ? "bold" : "normal",
-        backgroundColor: active ? "#ffff00" : "#444",
-        color: active ? "#000" : "#fff",
-        border: active ? "2px solid #ffff00" : "2px solid #666",
-        borderRadius: "6px",
-        cursor: "pointer",
-        transition: "all 0.2s",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ColorGrid({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "10px",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function ColorButton({
-  active,
-  onClick,
-  children,
-}: {
-  color: string;
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "8px",
-        fontSize: "12px",
-        backgroundColor: active ? "#ffff00" : "#333",
-        color: active ? "#000" : "#aaa",
-        border: active ? "2px solid #ffff00" : "2px solid #555",
-        borderRadius: "4px",
-        cursor: "pointer",
-        transition: "all 0.2s",
-        textTransform: "capitalize",
-      }}
-    >
-      {children}
-    </button>
   );
 }

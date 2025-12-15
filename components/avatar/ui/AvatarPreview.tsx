@@ -1,37 +1,24 @@
-// components/avatar/AvatarPreview.tsx
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { CharacterCustomization } from "@/types/character";
+import Phaser from "phaser";
+import CharacterCustomScene from "@/components/avatar/ui/CharacterCustomScene";
+import { CharacterState } from "../utils/LpcTypes";
+import PreloadScene from "./PreLoadScene";
 
 interface AvatarPreviewProps {
-  customization: CharacterCustomization;
+  customization: CharacterState | null | undefined;
 }
 
 const AvatarPreview: React.FC<AvatarPreviewProps> = ({ customization }) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 1. 게임 초기화 (마운트 시 한 번만 실행)
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    if (gameRef.current) {
-      gameRef.current.destroy(true);
-      gameRef.current = null;
-    }
+    if (gameRef.current || !containerRef.current) return;
 
     const initPhaser = async () => {
-      if (!containerRef.current) return;
-
-      // 순서 중요: Phaser를 먼저 import
-      await import("phaser");
-
-      // 그 다음 PreviewScene import
-      const { PreviewScene } = await import("@/components/avatar/test/PreviewScene");
-
-      // 이제 Phaser가 전역에 있어서 PreviewScene이 작동함
-      const Phaser = (await import("phaser")).default;
-
       const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.AUTO,
         width: 400,
@@ -42,25 +29,37 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({ customization }) => {
           pixelArt: true,
           roundPixels: true,
         },
-        scene: PreviewScene,
+        physics: {
+          default: "arcade",
+          arcade: {
+              gravity: { x: 0, y: 0 },
+              // debug: false
+          }
+        },
+        scene: [PreloadScene, CharacterCustomScene],
       };
 
       gameRef.current = new Phaser.Game(config);
-      gameRef.current.scene.start("PreviewScene", { customization });
     };
 
-    const timer = setTimeout(() => {
-      initPhaser();
-    }, 100);
+    initPhaser();
 
     return () => {
-      clearTimeout(timer);
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
       }
     };
+  }, []);
+
+  // 2. customization 변경 시 Registry 업데이트
+  useEffect(() => {
+    if (gameRef.current && customization) {
+      // Phaser Registry에 'customization' 키로 데이터 저장
+      gameRef.current.registry.set('customization', customization);
+    }
   }, [customization]);
+  // END 추가
 
   return (
     <div
