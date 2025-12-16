@@ -3,8 +3,13 @@
 
 import { useEffect, useRef } from "react";
 import { createGameConfig } from "@/game/config";
+import { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
-export default function PhaserGame() {
+interface PhaserGameProps {
+  customization: CharacterState;
+}
+
+export default function PhaserGame({ customization }: PhaserGameProps) {
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
@@ -18,16 +23,23 @@ export default function PhaserGame() {
         "@/game/scenes/BrickBreackerScene"
       );
       const { PingPongScene } = await import("@/game/scenes/PingPongScene");
-      const PreloadScene = (await import("../avatar/ui/PreLoadScene")).default;
+      // const PreloadScene = (await import("../avatar/ui/PreLoadScene")).default;
 
       if (gameRef.current) return;
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [PreloadScene, MainScene, StartScene, BrickBreakerScene, PingPongScene],
+        scene: [
+          // PreloadScene,
+          MainScene,
+          StartScene,
+          BrickBreakerScene,
+          PingPongScene,
+        ],
       };
 
       gameRef.current = new Phaser.Game(config);
+      gameRef.current.registry.set("customization", customization);
     };
 
     initPhaser();
@@ -36,7 +48,7 @@ export default function PhaserGame() {
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };
-  }, []);
+  }, [customization]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900">

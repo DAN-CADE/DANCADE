@@ -1,5 +1,5 @@
 // types/character.ts
-export interface CharacterCustomization {
+export interface UICharacterCustomization {
   gender: "male" | "female";
   skin: string;
   hair: {

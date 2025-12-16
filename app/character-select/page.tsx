@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { CharacterCustomization } from "@/types/character";
+import type { UICharacterCustomization } from "@/types/character";
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
@@ -12,6 +12,7 @@ import { ActionButton } from "@/components/character-select/Button";
 import { CustomizationPanel } from "@/components/character-select/CustomizationPanel";
 import { LoadingScreen } from "@/components/character-select/Loading";
 import { ErrorScreen } from "@/components/character-select/Error";
+import { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
 // ------------------------------------------------------------
 // SSR 방지
@@ -28,7 +29,7 @@ const AvatarPreview = dynamic(
  * CharacterCustomization → CharacterState 변환
  * AvatarPreview가 필요로 하는 형식으로 변환
  */
-function convertToCharacterState(customization: CharacterCustomization) {
+function convertToCharacterState(customization: UICharacterCustomization) {
   return {
     gender: customization.gender,
     parts: {
@@ -79,10 +80,20 @@ export default function CharacterSelect() {
 
   // 2. 이벤트 핸들러
   const handleStartGame = useCallback(() => {
+    if (!customization) return;
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
+      const characterState: CharacterState =
+        convertToCharacterState(customization);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(characterState));
+
+      // 저장 확인
+      const saved = localStorage.getItem(STORAGE_KEY);
+      console.log("저장 확인:", JSON.parse(saved!));
+
       router.push("/game");
-    } catch {
+    } catch (error) {
+      console.error("저장 에러:", error);
       alert("캐릭터 정보 저장에 실패했습니다.");
     }
   }, [customization, router]);

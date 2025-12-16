@@ -1,5 +1,5 @@
 // 헬퍼 함수들
-import { CharacterCustomization } from "@/types/character";
+import { UICharacterCustomization } from "@/types/character";
 import { LPCData, LPCStyle } from "@/types/lpc";
 
 /**
@@ -25,7 +25,7 @@ export function getHairStylesByGender(
  */
 export function createInitialCustomization(
   lpcData: LPCData
-): CharacterCustomization {
+): UICharacterCustomization {
   const { palettes } = lpcData.definitions;
   const { assets } = lpcData;
 
@@ -61,7 +61,7 @@ export function createInitialCustomization(
 export function generateRandomCustomization(
   lpcData: LPCData,
   currentGender?: "male" | "female"
-): CharacterCustomization {
+): UICharacterCustomization {
   const { palettes } = lpcData.definitions;
   const { assets } = lpcData;
 

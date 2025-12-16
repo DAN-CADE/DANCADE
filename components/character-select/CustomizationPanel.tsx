@@ -1,4 +1,4 @@
-import { CharacterCustomization } from "@/types/character";
+import { UICharacterCustomization } from "@/types/character";
 import { LPCData, LPCStyle } from "@/types/lpc";
 import { getHairStylesByGender } from "@/utils/character-helpers";
 import { useCallback } from "react";
@@ -8,8 +8,10 @@ import { ButtonGroup, SelectButton } from "./Button";
 // 커스터마이징 패널
 interface CustomizationPanelProps {
   lpcData: LPCData;
-  customization: CharacterCustomization;
-  onChange: React.Dispatch<React.SetStateAction<CharacterCustomization | null>>;
+  customization: UICharacterCustomization;
+  onChange: React.Dispatch<
+    React.SetStateAction<UICharacterCustomization | null>
+  >;
   onGenderChange: (gender: "male" | "female") => void;
 }
 
@@ -29,7 +31,7 @@ export function CustomizationPanel({
 
   // 범용 핸들러 함수
   const handleChange = useCallback(
-    <T extends keyof CharacterCustomization>(
+    <T extends keyof UICharacterCustomization>(
       part: T,
       value: T extends "skin" | "eyes"
         ? string

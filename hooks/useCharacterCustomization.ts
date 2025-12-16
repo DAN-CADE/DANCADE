@@ -1,5 +1,5 @@
 import { createInitialCustomization } from "@/utils/character-helpers";
-import { CharacterCustomization } from "@/types/character";
+import { UICharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
 import { generateRandomCustomization } from "@/utils/character-helpers";
 import { getHairStylesByGender } from "@/utils/character-helpers";
@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export function useCharacterCustomization(lpcData: LPCData | null) {
   const [customization, setCustomization] =
-    useState<CharacterCustomization | null>(null);
+    useState<UICharacterCustomization | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function useCharacterCustomization(lpcData: LPCData | null) {
             style: firstHair.id,
             color: prev.hair.color,
           },
-        } as CharacterCustomization;
+        } as UICharacterCustomization;
       });
     },
     [lpcData, customization]

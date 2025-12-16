@@ -5,7 +5,10 @@ import { AssetLoader } from "@/game/managers/AssetLoader";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
 import CharacterScene from "@/components/avatar/ui/CharacterScene";
-import { CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
+import {
+  CharacterState,
+  LpcRootData,
+} from "@/components/avatar/utils/LpcTypes";
 
 const TILE_IMAGES: Array<[string, string]> = [
   ["CommonTile", "/tilesets/CommonTile.png"],
@@ -43,8 +46,8 @@ export class MainScene extends Phaser.Scene {
 
   private addTilemapCollision(
     avatar: Phaser.GameObjects.GameObject,
-    layer?: Phaser.Tilemaps.TilemapLayer | null) 
-  {
+    layer?: Phaser.Tilemaps.TilemapLayer | null
+  ) {
     if (!layer) return;
     layer.setCollisionByProperty({ collides: true });
     this.physics.add.collider(avatar, layer);
@@ -70,7 +73,7 @@ export class MainScene extends Phaser.Scene {
       Phaser.Loader.Events.FILE_COMPLETE + "-json-lpc_config",
       (key: string, type: string, data: LPCData) => {
         if (data && data.assets) {
-          // this.loadCharacterAssets(data);
+          this.loadCharacterAssets(data);
         }
       }
     );
@@ -87,29 +90,44 @@ export class MainScene extends Phaser.Scene {
     this.scale.on("resize", this.handleResize, this);
   }
   handleResize(gameSize: Phaser.Structs.Size) {
-    // 씬이 활성화되어 있을 때만 실행
+    // ì”¬ì´ í™œì„±í™”ë˜ì–´ ìžˆì„ ë•Œë§Œ ì‹¤í–‰
     if (!this.scene.isActive()) return;
 
     this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
   }
 
   /**
-   * 아바타 생성
+   * ì•„ë°”íƒ€ ìƒì„±
    */
   private createAvatar(): void {
-    const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
-    const lpcData = this.cache.json.get("lpc_config") as LpcRootData;
+    const customizationFromRegistry = this.game.registry.get(
+      "customization"
+    ) as CharacterState | undefined;
+    const savedCustomization = localStorage.getItem("characterCustomization");
 
-    if (savedCustomization && lpcData) {
+    let customization: CharacterState | null =
+      customizationFromRegistry || null;
+
+    if (!customization && savedCustomization) {
       try {
-        const customization: CharacterState = JSON.parse(savedCustomization);
+        customization = JSON.parse(savedCustomization) as CharacterState;
+        console.log("localStorageì—ì„œ íŒŒì‹±:", customization);
+      } catch (error) {
+        console.error("localStorage íŒŒì‹± ì‹¤íŒ¨:", error);
+      }
+    }
+
+    const lpcData = this.cache.json.get("lpc_config") as unknown as LPCData;
+
+    if (customization && lpcData) {
+      try {
         this.avatarManager.createCustomAvatar(
           this.PLAYER_START_X,
           this.PLAYER_START_Y,
           customization
         );
       } catch (error) {
-        console.error(error);
+        console.error("ì»¤ìŠ¤í…€ ì•„ë°”íƒ€ ìƒì„± ì‹¤íŒ¨:", error);
         this.createRandomAvatar(lpcData);
       }
     } else {
@@ -131,7 +149,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   /**
-   * 에셋 로딩
+   * ì—ì…‹ ë¡œë”©
    */
   private loadCharacterAssets(data: LPCData): void {
     const savedCustomization = localStorage.getItem("characterCustomization");
@@ -141,7 +159,7 @@ export class MainScene extends Phaser.Scene {
         const customization: CharacterCustomization =
           JSON.parse(savedCustomization);
 
-        console.log(customization)
+        console.log(customization);
         this.assetLoader.loadCustomAssets(customization);
         return;
       } catch (error) {
@@ -167,7 +185,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   // ============================================================
-  // 맵 & UI
+  // ë§µ & UI
   // ============================================================
 
   private createMap(): void {
@@ -175,7 +193,7 @@ export class MainScene extends Phaser.Scene {
 
     this.add.image(0, 0, "bg1_1").setOrigin(0, 0).setDepth(-1);
 
-    // Tiled tilesets[].name 과 일치하는 이름으로 addTilesetImage
+    // Tiled tilesets[].name ê³¼ ì¼ì¹˜í•˜ëŠ” ì´ë¦„ìœ¼ë¡œ addTilesetImage
     const common = this.map.addTilesetImage("CommonTile", "CommonTile");
     const mainDesk = this.map.addTilesetImage("mainDesk", "mainDesk");
     const desk2 = this.map.addTilesetImage("desk2", "desk2");
@@ -229,13 +247,13 @@ export class MainScene extends Phaser.Scene {
     );
   }
 
-  // 충돌 설정
+  // ì¶©ëŒ ì„¤ì •
   private setupCollisions(): void {
     const avatar = this.avatarManager.getContainer();
 
-      this.addTilemapCollision(avatar, this.wallsLayer);
-      this.addTilemapCollision(avatar, this.object1Layer);
-      this.addTilemapCollision(avatar, this.object2Layer);
+    this.addTilemapCollision(avatar, this.wallsLayer);
+    this.addTilemapCollision(avatar, this.object1Layer);
+    this.addTilemapCollision(avatar, this.object2Layer);
   }
 
   private setupInput(): void {
