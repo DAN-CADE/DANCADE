@@ -2,7 +2,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { CharacterCustomization } from "@/types/character";
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
@@ -20,46 +19,6 @@ const AvatarPreview = dynamic(
   () => import("@/components/avatar/ui/AvatarPreview"),
   { ssr: false }
 );
-
-// ------------------------------------------------------------
-// 타입 변환 유틸 함수 (이 파일 내에서만 사용)
-// ------------------------------------------------------------
-/**
- * CharacterCustomization → CharacterState 변환
- * AvatarPreview가 필요로 하는 형식으로 변환
- */
-function convertToCharacterState(customization: CharacterCustomization) {
-  return {
-    gender: customization.gender,
-    parts: {
-      body: {
-        color: customization.skin,
-      },
-      head: {
-        color: customization.skin,
-      },
-      eyes: {
-        color: customization.eyes,
-      },
-      hair: {
-        styleId: customization.hair.style,
-        color: customization.hair.color,
-      },
-      torso: {
-        styleId: customization.torso.style,
-        color: customization.torso.color,
-      },
-      legs: {
-        styleId: customization.legs.style,
-        color: customization.legs.color,
-      },
-      feet: {
-        styleId: customization.feet.style,
-        color: customization.feet.color,
-      },
-    },
-  };
-}
 
 // ------------------------------------------------------------
 // 메인 컴포넌트
@@ -96,7 +55,7 @@ export default function CharacterSelect() {
   }
 
   //
-  const previewState = convertToCharacterState(customization);
+  const previewState = customization;
 
   // 4. UI 구성
   return (
