@@ -144,7 +144,7 @@ export class PingPongScene extends BaseGameScene {
     this.uiManager.cleanup();
   }
 
-  // ✅ update는 그대로 유지
+  // ✅ update: 게임 로직 실행 (BaseGameScene 생명주기와 독립적)
   update(time: number, delta: number) {
     this.inputManager.update();
 
