@@ -1,15 +1,14 @@
-import { CharacterCustomization } from "@/types/character";
 import { LPCData, LPCStyle } from "@/types/lpc";
 import { getHairStylesByGender } from "@/utils/character-helpers";
 import { useCallback } from "react";
 import { Section } from "./Section";
 import { ButtonGroup, SelectButton } from "./Button";
+import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
-// 커스터마이징 패널
 interface CustomizationPanelProps {
   lpcData: LPCData;
-  customization: CharacterCustomization;
-  onChange: React.Dispatch<React.SetStateAction<CharacterCustomization | null>>;
+  customization: CharacterState;
+  onChange: React.Dispatch<React.SetStateAction<CharacterState | null>>;
   onGenderChange: (gender: "male" | "female") => void;
 }
 
@@ -21,37 +20,37 @@ export function CustomizationPanel({
 }: CustomizationPanelProps) {
   const { palettes } = lpcData.definitions;
   const { assets } = lpcData;
+  const gender = customization.gender as "male" | "female";
 
-  const availableHairStyles = getHairStylesByGender(
-    assets.hair.styles,
-    customization.gender
-  );
+  const availableHairStyles = getHairStylesByGender(assets.hair.styles, gender);
 
   // 범용 핸들러 함수
   const handleChange = useCallback(
-    <T extends keyof CharacterCustomization>(
+    // T는 CharacterState['parts']의 키여야 함 (예: 'body', 'hair', 'torso')
+    <T extends keyof CharacterState["parts"]>(
       part: T,
-      value: T extends "skin" | "eyes"
-        ? string
-        : { style?: string; color?: string }
+      // value는 업데이트될 styleId 또는 color를 포함
+      value: { styleId?: string; color?: string }
     ) => {
       onChange((prev) => {
-        if (!prev) return prev; // prev가 null이면 그대로 반환
+        if (!prev || !prev.parts) return prev;
 
-        // 1. 단순 문자열 속성 (skin, eyes) 처리
-        if (part === "skin" || part === "eyes") {
-          return { ...prev, [part]: value as string };
-        }
-
-        // 2. 객체 속성 (hair, torso, legs, feet) 처리
-        const prevPart = prev[part] as { style: string; color: string };
+        // 1. 현재 파트 상태를 가져옴 (없으면 빈 객체 {})
+        const prevPart = prev.parts[part] || {};
 
         const newPart = {
-          ...prevPart, // 기존의 style/color 유지
-          ...(value as object), // 새로운 style 또는 color만 덮어쓰기
+          ...prevPart,
+          ...value, // 새로운 styleId 또는 color를 덮어씀
         };
 
-        return { ...prev, [part]: newPart };
+        // 2. 불변적으로 업데이트된 상태 반환
+        return {
+          ...prev,
+          parts: {
+            ...prev.parts,
+            [part]: newPart,
+          },
+        } as CharacterState;
       });
     },
     [onChange]
@@ -85,8 +84,8 @@ export function CustomizationPanel({
           {palettes.skin_common.slice(0, 10).map((color: string) => (
             <SelectButton
               key={color}
-              active={customization.skin === color}
-              onClick={() => handleChange("skin", color)}
+              active={customization.parts.body?.color === color}
+              onClick={() => handleChange("body", { color: color })}
             >
               {color}
             </SelectButton>
@@ -100,8 +99,8 @@ export function CustomizationPanel({
           {availableHairStyles.map((style: LPCStyle) => (
             <SelectButton
               key={style.id}
-              active={customization.hair.style === style.id}
-              onClick={() => handleChange("hair", { style: style.id })}
+              active={customization.parts.hair?.styleId === style.id}
+              onClick={() => handleChange("hair", { styleId: style.id })}
             >
               {style.name || style.id}
             </SelectButton>
@@ -115,7 +114,7 @@ export function CustomizationPanel({
           {palettes.hair_common.slice(0, 12).map((color: string) => (
             <SelectButton
               key={color}
-              active={customization.hair.color === color}
+              active={customization.parts.hair?.color === color}
               onClick={() => handleChange("hair", { color: color })}
             >
               {color}
@@ -130,8 +129,8 @@ export function CustomizationPanel({
           {assets.torso.styles?.map((style) => (
             <SelectButton
               key={style.id}
-              active={customization.torso.style === style.id}
-              onClick={() => handleChange("torso", { style: style.id })} // ⭐️ 변경
+              active={customization.parts.torso?.styleId === style.id}
+              onClick={() => handleChange("torso", { styleId: style.id })}
             >
               {style.name || style.id}
             </SelectButton>
@@ -139,14 +138,14 @@ export function CustomizationPanel({
         </ButtonGroup>
       </Section>
 
-      {/* 상의 색상 선택 */}
+      {/* 상의 색상 선택 (Parts: 'torso') */}
       <Section title="상의 색상">
         <ButtonGroup>
           {palettes.clothes_common.slice(0, 12).map((color: string) => (
             <SelectButton
               key={color}
-              active={customization.torso.color === color}
-              onClick={() => handleChange("torso", { color: color })} // ⭐️ 변경
+              active={customization.parts.torso?.color === color}
+              onClick={() => handleChange("torso", { color: color })}
             >
               {color}
             </SelectButton>
@@ -160,8 +159,10 @@ export function CustomizationPanel({
           {assets.legs.styles?.map((style) => (
             <SelectButton
               key={style.id}
-              active={customization.legs.style === style.id}
-              onClick={() => handleChange("legs", { style: style.id })}
+              // ⭐️ 'legs' 파트의 styleId 속성에 접근
+              active={customization.parts.legs?.styleId === style.id}
+              // ⭐️ 'legs' 파트를 대상으로 styleId를 업데이트
+              onClick={() => handleChange("legs", { styleId: style.id })}
             >
               {style.name || style.id}
             </SelectButton>
@@ -175,7 +176,7 @@ export function CustomizationPanel({
           {palettes.clothes_common.slice(0, 12).map((color: string) => (
             <SelectButton
               key={color}
-              active={customization.legs.color === color}
+              active={customization.parts.legs?.color === color}
               onClick={() => handleChange("legs", { color: color })}
             >
               {color}
@@ -190,8 +191,8 @@ export function CustomizationPanel({
           {palettes.eye_common.slice(0, 12).map((color: string) => (
             <SelectButton
               key={color}
-              active={customization.eyes === color}
-              onClick={() => handleChange("eyes", color)}
+              active={customization.parts.eyes?.color === color}
+              onClick={() => handleChange("eyes", { color: color })}
             >
               {color}
             </SelectButton>

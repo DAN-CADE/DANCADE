@@ -1,5 +1,5 @@
 // game/managers/AssetLoader.ts
-import { CharacterCustomization } from "@/types/character";
+import { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
 /**
  * AssetLoader - LPC 에셋 로딩 전담
@@ -15,54 +15,38 @@ export class AssetLoader {
   /**
    * 커스터마이징된 에셋 로드
    */
-  loadCustomAssets(customization: CharacterCustomization): void {
+  loadCustomAssets(customization: CharacterState): void {
     console.log("Loading custom assets for:", customization);
 
+    const parts = customization.parts;
+
     this.scene.load.spritesheet(
-      `body_${customization.skin}`,
-      `/assets/spritesheets/body/teen/${customization.skin}.png`,
+      `body_${parts.body?.color}`,
+      `/assets/spritesheets/body/teen/${parts.body?.color}.png`,
       this.FRAME_CONFIG
     );
 
     this.scene.load.spritesheet(
-      `head_${customization.gender}_${customization.skin}`,
-      `/assets/spritesheets/head/heads/human/${customization.gender}/${customization.skin}.png`,
+      `head_${customization.gender}_${parts.head?.color}`,
+      `/assets/spritesheets/head/heads/human/${customization.gender}/${parts.head?.color}.png`,
       this.FRAME_CONFIG
     );
 
     this.scene.load.spritesheet(
-      `eyes_${customization.eyes}`,
-      `/assets/spritesheets/eyes/human/adult/${customization.eyes}.png`,
+      `eyes_${parts.eyes?.color}`,
+      `/assets/spritesheets/eyes/human/adult/${parts.eyes?.color}.png`,
       this.FRAME_CONFIG
     );
 
     this.scene.load.spritesheet(
-      `nose_${customization.skin}`,
-      `/assets/spritesheets/nose/button/adult/${customization.skin}.png`,
+      `hair_${parts.hair?.styleId}_${customization.gender}_${parts.hair?.color}`,
+      `/assets/spritesheets/hair/${parts.hair?.styleId}/${customization.gender}/${parts.hair?.color}.png`,
       this.FRAME_CONFIG
     );
 
     this.scene.load.spritesheet(
-      `hair_${customization.hair.style}_${customization.gender}_${customization.hair.color}`,
-      `/assets/spritesheets/hair/${customization.hair.style}/${customization.gender}/${customization.hair.color}.png`,
-      this.FRAME_CONFIG
-    );
-
-    this.scene.load.spritesheet(
-      `torso_${customization.torso.style}_${customization.torso.color}`,
-      `/assets/spritesheets/torso/clothes/${customization.torso.style}/teen/${customization.torso.color}.png`,
-      this.FRAME_CONFIG
-    );
-
-    this.scene.load.spritesheet(
-      `legs_${customization.legs.style}_${customization.legs.color}`,
-      `/assets/spritesheets/legs/${customization.legs.style}/teen/${customization.legs.color}.png`,
-      this.FRAME_CONFIG
-    );
-
-    this.scene.load.spritesheet(
-      `feet_${customization.feet.style}_${customization.feet.color}`,
-      `/assets/spritesheets/feet/${customization.feet.style}/thin/${customization.feet.color}.png`,
+      `torso_${parts.torso?.styleId}_${parts.torso?.color}`,
+      `/assets/spritesheets/torso/clothes/${parts.torso?.styleId}/teen/${parts.torso?.color}.png`,
       this.FRAME_CONFIG
     );
 
