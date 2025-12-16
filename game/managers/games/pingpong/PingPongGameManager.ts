@@ -1,5 +1,3 @@
-//게임 로직
-
 // game/managers/pingpong/PingPongGameManager.ts
 import {
   PINGPONG_CONFIG,
