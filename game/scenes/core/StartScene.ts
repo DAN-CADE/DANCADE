@@ -18,7 +18,7 @@ export class StartScene extends BaseScene {
   }
 
   preload() {
-    const basePath = ASSET_PATHS.KENNEY_PUZZLE;
+    const basePath = ASSET_PATHS.GAME.KENNEY_PUZZLE;
 
     this.load.image("game_background", "/assets/background/bg 1.png");
 

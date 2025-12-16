@@ -43,7 +43,9 @@ export class AvatarManager {
     this.avatarContainer = new LpcCharacter(this.scene, x, y, "test");
     this.avatarContainer.setDefaultPart(this.scene, "female");
 
+    this.scene.physics.add.existing(this.avatarContainer);
     this.setupCamera();
+    this.setupInput();
 
     // this.avatarContainer = this.scene.add.container(x, y);
     // this.scene.physics.add.existing(this.avatarContainer);
@@ -75,12 +77,6 @@ export class AvatarManager {
     // this.createRandomCharacter(lpcData);
     // this.setupCamera();
     // this.setupInput();
-    this.avatarContainer = new LpcCharacter(this.scene, x, y, "player");
-    this.avatarContainer.setDefaultPart(this.scene, "female");
-    this.scene.physics.add.existing(this.avatarContainer);
-    this.setupCamera();
-    this.setupInput();
-    console.log("✅ Random avatar created");
   }
 
   /**
@@ -225,8 +221,7 @@ export class AvatarManager {
    * 업데이트 (매 프레임)
    */
   update(delta: number): void {
-    if (!this.avatarContainer) return;
-    // this.avatarContainer.update(delta);
+    this.avatarContainer.update();
     // this.updateMovement(delta);
   }
 
@@ -361,17 +356,10 @@ export class AvatarManager {
 
   // Getter
   getContainer(): Phaser.GameObjects.Container {
-    if (!this.avatarContainer) {
-      console.warn("Avatar container not initialized");
-      this.avatarContainer = new LpcCharacter(this.scene, 0, 0, "temp");
-    }
     return this.avatarContainer;
   }
 
   getPosition(): { x: number; y: number } {
-    if (!this.avatarContainer) {
-      return { x: 0, y: 0 };
-    }
     return { x: this.avatarContainer.x, y: this.avatarContainer.y };
   }
 }
