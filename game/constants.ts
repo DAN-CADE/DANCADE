@@ -1,3 +1,41 @@
 export const ASSET_PATHS = {
-  KENNEY_PUZZLE: "/assets/game/kenney_puzzle-pack/png/",
+  GAME: {
+    BACKGROUND: "/assets/background/bg 1.png",
+    KENNEY_PUZZLE: "/assets/game/kenney_puzzle-pack/png/",
+  },
+  PINGPONG: "/assets/ping-pong/arts/",
+  TILESETS: {
+    BASE: "/tilesets/",
+    COMMON_TILE: "/tilesets/CommonTile.png",
+    PLANTS: "/tilesets/Plants.png",
+    ARCADE1: "/tilesets/arcade1.png",
+    ARCADE2: "/tilesets/arcade2.png",
+    BLUE_CHAIR: "/tilesets/BlueChair.png",
+    BUTTON: "/tilesets/button.png",
+    BUTTON2: "/tilesets/button2.png",
+    DESK1: "/tilesets/desk1.png",
+    DESK2: "/tilesets/desk2.png",
+    ELECTRONIC: "/tilesets/electronic.png",
+    MAIN_DESK: "/tilesets/mainDesk.png",
+    RED_CHAIR: "/tilesets/RedChair.png",
+    STOREFRONT_SIGN: "/tilesets/storefrontSign.png",
+    USER_BUTTON: "/tilesets/userButton.png",
+    BG1_1: "/tilesets/bg1_1.png",
+  },
+  MAPS: {
+    ARCADE: "/maps/DanArcadeLast8.tmj",
+  },
+  LPC: {
+    CONFIG: "/assets/lpc_assets.json",
+    SPRITESHEETS: {
+      BODY: "/assets/spritesheets/body/teen/",
+      HEAD: "/assets/spritesheets/head/heads/human/",
+      EYES: "/assets/spritesheets/eyes/human/adult/",
+      NOSE: "/assets/spritesheets/nose/button/adult/",
+      HAIR: "/assets/spritesheets/hair/",
+      TORSO: "/assets/spritesheets/torso/clothes/",
+      LEGS: "/assets/spritesheets/legs/",
+      FEET: "/assets/spritesheets/feet/",
+    },
+  },
 } as const;

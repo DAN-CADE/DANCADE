@@ -1,10 +1,10 @@
-// game/managers/AssetLoader.ts
-import { CharacterState } from "@/components/avatar/utils/LpcTypes";
+// game/managers/AssetLoaderManager.ts
+import { CharacterCustomization } from "@/types/character";
 
 /**
- * AssetLoader - LPC 에셋 로딩 전담
+ * AssetLoaderManager - LPC 에셋 로딩 전담
  */
-export class AssetLoader {
+export class AssetLoaderManager {
   private scene: Phaser.Scene;
   private readonly FRAME_CONFIG = { frameWidth: 64, frameHeight: 64 };
 

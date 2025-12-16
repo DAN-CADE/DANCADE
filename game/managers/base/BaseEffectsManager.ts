@@ -1,70 +1,38 @@
-// game/managers/brickbracker/BrickBreakerEffectsManager.ts
-
-type TweenableObject = Phaser.GameObjects.GameObject & {
-  setAlpha?: (alpha: number) => Phaser.GameObjects.GameObject;
-  alpha?: number;
-  x?: number;
-  y?: number;
-  scale?: number;
-};
+// game/managers/base/BaseEffectsManager.ts
 
 /**
- * 벽돌깨기 효과 관리
- * - 벽돌 파괴 효과
- * - 각종 애니메이션
+ * 효과 매니저의 베이스 클래스
+ * 공통 애니메이션 및 효과 제공
  */
-export class BrickBreakerEffectsManager {
-  private scene: Phaser.Scene;
+export abstract class BaseEffectsManager {
+  protected scene: Phaser.Scene;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
 
   /**
-   * 벽돌 파괴 효과
-   */
-  createBrickDestroyEffect(
-    x: number,
-    y: number,
-    color: number = 0xffffff
-  ): void {
-    // 간단한 파티클 효과
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      const speed = 50 + Math.random() * 50;
-
-      const particle = this.scene.add.rectangle(x, y, 4, 4, color);
-
-      this.scene.tweens.add({
-        targets: particle,
-        x: x + Math.cos(angle) * speed,
-        y: y + Math.sin(angle) * speed,
-        alpha: 0,
-        duration: 500,
-        ease: "Power2.easeOut",
-        onComplete: () => particle.destroy(),
-      });
-    }
-  }
-
-  /**
    * 깜빡임 효과
    */
-  createBlinkEffect(target: TweenableObject): void {
+  createBlinkEffect(
+    target: Phaser.GameObjects.GameObject,
+    minAlpha: number = 0.3,
+    duration: number = 800
+  ): void {
     this.scene.tweens.add({
       targets: target,
-      alpha: 0.3,
-      duration: 800,
+      alpha: minAlpha,
+      duration: duration,
       yoyo: true,
       repeat: -1,
     });
   }
 
   /**
-   * 펄스 효과
+   * 펄스 효과 (스케일)
    */
   createPulseEffect(
-    target: TweenableObject,
+    target: Phaser.GameObjects.GameObject,
     scale: number = 1.1,
     duration: number = 300
   ): void {
@@ -80,8 +48,11 @@ export class BrickBreakerEffectsManager {
   /**
    * 페이드 인 효과
    */
-  createFadeIn(target: TweenableObject, duration: number = 500): void {
-    if (target.setAlpha) {
+  createFadeIn(
+    target: Phaser.GameObjects.GameObject,
+    duration: number = 500
+  ): void {
+    if ("setAlpha" in target && typeof target.setAlpha === "function") {
       target.setAlpha(0);
     }
     this.scene.tweens.add({
@@ -96,7 +67,7 @@ export class BrickBreakerEffectsManager {
    * 페이드 아웃 효과
    */
   createFadeOut(
-    target: TweenableObject,
+    target: Phaser.GameObjects.GameObject,
     duration: number = 500,
     onComplete?: () => void
   ): void {
@@ -116,12 +87,12 @@ export class BrickBreakerEffectsManager {
    * 슬라이드 인 효과 (위에서 아래로)
    */
   createSlideIn(
-    target: TweenableObject,
+    target: Phaser.GameObjects.GameObject,
     fromY: number,
     toY: number,
     duration: number = 500
   ): void {
-    if ("y" in target && target.y !== undefined) {
+    if ("y" in target && typeof (target as { y?: number }).y === "number") {
       (target as { y: number }).y = fromY;
       this.scene.tweens.add({
         targets: target,
@@ -140,7 +111,7 @@ export class BrickBreakerEffectsManager {
   }
 
   /**
-   * 플래시 효과 (화면 전체)
+   * 화면 플래시 효과
    */
   createScreenFlash(color: number = 0xffffff, duration: number = 100): void {
     this.scene.cameras.main.flash(
@@ -152,7 +123,7 @@ export class BrickBreakerEffectsManager {
   }
 
   /**
-   * 모든 트윈 중지 (정리용)
+   * 모든 트윈 중지
    */
   stopAllTweens(): void {
     this.scene.tweens.killAll();

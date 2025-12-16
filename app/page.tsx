@@ -88,8 +88,8 @@ export default function Home() {
         // localStorage에 게스트 정보 저장
         localStorage.setItem("user", JSON.stringify(guestData));
 
-        // 게임 페이지로 이동
-        router.push("/game");
+        // 캐릭터 선택창으로 이동
+        router.push("/character-select");
         break;
     }
   };

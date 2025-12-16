@@ -1,7 +1,11 @@
 // game/managers/AvatarManager.ts
 import LpcCharacter from "@/components/avatar/core/LpcCharacter";
 import { LpcLoader } from "@/components/avatar/core/LpcLoader";
-import { CharacterState, LpcRootData, PartType } from "@/components/avatar/utils/LpcTypes";
+import {
+  CharacterState,
+  LpcRootData,
+  PartType,
+} from "@/components/avatar/utils/LpcTypes";
 import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData, LPCAssetConfig, LPCPalettes } from "@/types/lpc";
@@ -36,11 +40,13 @@ export class AvatarManager {
     y: number,
     customization?: CharacterState
   ): void {
-    this.avatarContainer = new LpcCharacter(this.scene, x, y, 'test');
+    this.avatarContainer = new LpcCharacter(this.scene, x, y, "test");
     this.avatarContainer.setDefaultPart(this.scene, "female");
 
+    this.scene.physics.add.existing(this.avatarContainer);
     this.setupCamera();
-    
+    this.setupInput();
+
     // this.avatarContainer = this.scene.add.container(x, y);
     // this.scene.physics.add.existing(this.avatarContainer);
 
@@ -51,7 +57,7 @@ export class AvatarManager {
     // }
 
     // this.applyCustomization(customization);
-    
+
     // this.setupInput();
 
     console.log("✅ Custom avatar created");
@@ -63,13 +69,11 @@ export class AvatarManager {
   createRandomAvatar(x: number, y: number, lpcData: LPCData): void {
     // this.avatarContainer = this.scene.add.container(x, y);
     // this.scene.physics.add.existing(this.avatarContainer);
-
     // const body = this.avatarContainer.body as Phaser.Physics.Arcade.Body;
     // if (body) {
     //   body.setSize(32, 48);
     //   body.setOffset(-16, -24);
     // }
-
     // this.createRandomCharacter(lpcData);
     // this.setupCamera();
     // this.setupInput();
@@ -82,31 +86,24 @@ export class AvatarManager {
     // console.log(customization)
     // const gender = customization.gender;
     // let partOrder:any[] = [];
-    
     // Object.keys(customization.parts).forEach(key => {
     //     const partName = key as PartType; // 'body', 'hair', 'legs' ...
     //     const partState = customization.parts[partName];
-
     //     // 데이터가 없으면 스킵
     //     if (!partState) return;
-
     //     // 1. 파라미터 추출
     //     // styleId가 있으면 사용하고, 없으면(body, eyes 등) null 처리
-    //     const styleId = partState.styleId || null; 
+    //     const styleId = partState.styleId || null;
     //     const color = partState.color || undefined;
-
     //     // 2. 요청하신 함수 호출 (Asset Key 생성)
     //     const assetKey = LpcUtils.getAssetKey(
-    //         partName, 
-    //         styleId, 
-    //         gender, 
+    //         partName,
+    //         styleId,
+    //         gender,
     //         color
     //     );
-
     //     partOrder.push({name:partName, assetKey})
-        
     // });
-
     // partOrder.forEach(({ name, key }) => {
     //   if (this.scene.textures.exists(key)) {
     //     const sprite = this.scene.add.sprite(0, 0, key, 130);

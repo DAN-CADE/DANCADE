@@ -1,4 +1,13 @@
-// game/managers/brickbracker/BrickBreakerGameManager.ts
+// game/managers/games/brickbreaker/BrickBreakerGameManager.ts
+
+import { BaseGameManager } from "@/game/managers/base";
+
+// Callback 타입 정의
+interface BrickBreakerCallbacks extends Record<string, unknown> {
+  onScoreUpdate?: (score: number) => void;
+  onGameResult?: (result: GameResult) => void;
+  onBrickDestroy?: () => void;
+}
 
 interface BrickBreakerConfig {
   width: number;
@@ -31,10 +40,10 @@ export type GameResult = "win" | "gameOver";
  * - 점수 계산
  * - 승리/패배 조건
  */
-export class BrickBreakerGameManager {
-  private scene: Phaser.Scene;
-  private gameState: GameState;
-
+export class BrickBreakerGameManager extends BaseGameManager<
+  GameState,
+  BrickBreakerCallbacks
+> {
   // Game Objects (참조)
   private paddle?: Phaser.Physics.Arcade.Sprite;
   private ball?: Phaser.Physics.Arcade.Sprite;
@@ -45,38 +54,24 @@ export class BrickBreakerGameManager {
   private readonly brickLayout: BrickLayoutConfig;
   private readonly pointsPerBrick: number = 10;
 
-  // Callbacks
-  private onScoreUpdate?: (score: number) => void;
-  private onGameResult?: (result: GameResult) => void;
-  private onBrickDestroy?: () => void;
-
   constructor(
     scene: Phaser.Scene,
     gameConfig: BrickBreakerConfig,
     brickLayout: BrickLayoutConfig,
-    callbacks?: {
-      onScoreUpdate?: (score: number) => void;
-      onGameResult?: (result: GameResult) => void;
-      onBrickDestroy?: () => void;
-    }
+    callbacks: BrickBreakerCallbacks = {}
   ) {
-    this.scene = scene;
-    this.gameConfig = gameConfig;
-    this.brickLayout = brickLayout;
-
-    // GameState 초기화
-    this.gameState = {
+    // ✅ 부모 클래스 초기화
+    const initialState: GameState = {
       score: 0,
       isPlaying: true,
       isPaused: false,
     };
 
-    // Callbacks 설정
-    if (callbacks) {
-      this.onScoreUpdate = callbacks.onScoreUpdate;
-      this.onGameResult = callbacks.onGameResult;
-      this.onBrickDestroy = callbacks.onBrickDestroy;
-    }
+    super(scene, initialState, callbacks);
+
+    // ✅ 자식 클래스 속성 초기화
+    this.gameConfig = gameConfig;
+    this.brickLayout = brickLayout;
   }
 
   /**
@@ -136,7 +131,8 @@ export class BrickBreakerGameManager {
   ): void {
     (brick as Phaser.GameObjects.GameObject).destroy();
     this.addScore(this.pointsPerBrick);
-    this.onBrickDestroy?.();
+    // ✅ BaseGameManager의 callCallback 사용
+    this.callCallback("onBrickDestroy");
 
     // 모든 벽돌 제거 시 승리
     if (this.bricks?.countActive() === 0) {
@@ -156,7 +152,8 @@ export class BrickBreakerGameManager {
    */
   private addScore(points: number): void {
     this.gameState.score += points;
-    this.onScoreUpdate?.(this.gameState.score);
+    // ✅ BaseGameManager의 callCallback 사용
+    this.callCallback("onScoreUpdate", this.gameState.score);
   }
 
   /**
@@ -164,7 +161,8 @@ export class BrickBreakerGameManager {
    */
   private handleWin(): void {
     this.stopGame();
-    this.onGameResult?.("win");
+    // ✅ BaseGameManager의 callCallback 사용
+    this.callCallback("onGameResult", "win");
   }
 
   /**
@@ -172,7 +170,8 @@ export class BrickBreakerGameManager {
    */
   private handleGameOver(): void {
     this.stopGame();
-    this.onGameResult?.("gameOver");
+    // ✅ BaseGameManager의 callCallback 사용
+    this.callCallback("onGameResult", "gameOver");
   }
 
   /**
@@ -185,13 +184,6 @@ export class BrickBreakerGameManager {
   }
 
   /**
-   * 게임 상태 가져오기
-   */
-  getGameState(): GameState {
-    return { ...this.gameState };
-  }
-
-  /**
    * 점수 가져오기
    */
   getScore(): number {
@@ -201,11 +193,12 @@ export class BrickBreakerGameManager {
   /**
    * 게임 리셋
    */
-  reset(): void {
+  resetGame(): void {
     this.gameState.score = 0;
     this.gameState.isPlaying = true;
     this.gameState.isPaused = false;
-    this.onScoreUpdate?.(0);
+    // ✅ BaseGameManager의 callCallback 사용
+    this.callCallback("onScoreUpdate", 0);
   }
 }
 
