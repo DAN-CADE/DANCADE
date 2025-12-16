@@ -1,7 +1,7 @@
 // game/managers/base/BaseGameManager.ts
 export abstract class BaseGameManager<
   TGameState = unknown,
-  TCallbacks = unknown
+  TCallbacks extends Record<string, unknown> = Record<string, unknown>
 > {
   protected scene: Phaser.Scene;
   protected gameState: TGameState;
@@ -37,9 +37,9 @@ export abstract class BaseGameManager<
   /**
    * Callback 호출 헬퍼
    */
-  protected callCallback<K extends keyof TCallbacks>(
-    callbackName: K,
-    ...args: TCallbacks[K] extends (...args: infer P) => unknown ? P : never
+  protected callCallback(
+    callbackName: keyof TCallbacks,
+    ...args: unknown[]
   ): void {
     const callback = this.callbacks[callbackName];
     if (typeof callback === "function") {

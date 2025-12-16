@@ -1,27 +1,20 @@
-// game/managers/pingpong/PingPongInputManager.ts
+// game/managers/games/pingpong/PingPongInputManager.ts
+
+import { BaseInputManager } from "@/game/managers/base";
 import {
   PingPongGameState,
   PingPongInputState,
 } from "@/game/types/realPingPong";
 
-type GameMode = "menu" | "colorSelect" | "playing";
-
 /**
  * 탁구 게임 입력 관리
- * - 키보드 입력 처리
- * - 게임 모드별 입력 분기
- * - 서브 준비 입력
  */
-export class PingPongInputManager {
-  private scene: Phaser.Scene;
+export class PingPongInputManager extends BaseInputManager {
   private gameState: PingPongGameState;
   private inputState: PingPongInputState;
 
-  // Keyboard Input
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private spaceKey!: Phaser.Input.Keyboard.Key;
 
-  // Callbacks
   private onSpacePress?: () => void;
   private onColorSelect?: (direction: "left" | "right") => void;
   private onServeAdjust?: (direction: "up" | "down") => void;
@@ -36,7 +29,8 @@ export class PingPongInputManager {
       onServeAdjust?: (direction: "up" | "down") => void;
     }
   ) {
-    this.scene = scene;
+    super(scene);
+
     this.gameState = gameState;
     this.inputState = inputState;
 
@@ -46,22 +40,9 @@ export class PingPongInputManager {
       this.onServeAdjust = callbacks.onServeAdjust;
     }
 
-    this.setupInput();
+    this.spaceKey = this.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)!;
   }
 
-  /**
-   * 입력 설정
-   */
-  private setupInput(): void {
-    this.cursors = this.scene.input.keyboard!.createCursorKeys();
-    this.spaceKey = this.scene.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE
-    );
-  }
-
-  /**
-   * 매 프레임 입력 처리
-   */
   update(): void {
     this.updateInputState();
     this.handleSpaceKey();
@@ -78,27 +59,21 @@ export class PingPongInputManager {
     }
   }
 
-  /**
-   * 입력 상태 업데이트
-   */
   private updateInputState(): void {
+    if (!this.cursors) return;
     this.inputState.upPressed = this.cursors.up.isDown;
     this.inputState.downPressed = this.cursors.down.isDown;
   }
 
-  /**
-   * 스페이스 키 처리
-   */
   private handleSpaceKey(): void {
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.onSpacePress?.();
     }
   }
 
-  /**
-   * 색상 선택 입력 처리
-   */
   private handleColorSelectionInput(): void {
+    if (!this.cursors) return;
+
     if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
       this.onColorSelect?.("left");
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
@@ -106,10 +81,8 @@ export class PingPongInputManager {
     }
   }
 
-  /**
-   * 서브 준비 입력 처리
-   */
   private handleServePreparationInput(): void {
+    if (!this.cursors) return;
     if (this.gameState.servingPlayer !== "player") return;
 
     if (this.cursors.up.isDown) {
@@ -119,9 +92,6 @@ export class PingPongInputManager {
     }
   }
 
-  /**
-   * 플레이어 이동 방향 가져오기
-   */
   getPlayerMoveDirection(): "up" | "down" | null {
     if (!this.gameState.isPlaying) return null;
 
@@ -130,9 +100,6 @@ export class PingPongInputManager {
     return null;
   }
 
-  /**
-   * 재시작 키 리스너 등록
-   */
   registerRestartListener(onRestart: () => void): void {
     const restartHandler = () => {
       if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
@@ -142,12 +109,5 @@ export class PingPongInputManager {
     };
 
     this.scene.input.keyboard?.on("keydown-SPACE", restartHandler);
-  }
-
-  /**
-   * 정리 (메모리 해제)
-   */
-  cleanup(): void {
-    this.scene.input.keyboard?.removeAllListeners();
   }
 }

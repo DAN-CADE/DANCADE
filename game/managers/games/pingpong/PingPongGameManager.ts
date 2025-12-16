@@ -1,4 +1,6 @@
-// game/managers/pingpong/PingPongGameManager.ts
+// game/managers/games/pingpong/PingPongGameManager.ts
+
+import { BaseGameManager } from "@/game/managers/base";
 import {
   PINGPONG_CONFIG,
   PingPongPaddle,
@@ -8,57 +10,37 @@ import {
 
 type Scorer = "player" | "ai";
 
+interface PingPongCallbacks {
+  onScoreUpdate?: (playerScore: number, aiScore: number) => void;
+  onGameOver?: (isPlayerWin: boolean) => void;
+  onPointScored?: (scorer: Scorer) => void;
+  onNetHit?: (x: number, y: number) => void;
+  [key: string]: unknown;
+}
+
 /**
  * 탁구 게임 로직 관리
- * - 패들/볼 업데이트
- * - 충돌 감지
- * - 점수 계산
- * - 승리 조건
  */
-export class PingPongGameManager {
-  private scene: Phaser.Scene;
-  private gameState: PingPongGameState;
-
-  // Game Objects (참조)
+export class PingPongGameManager extends BaseGameManager<
+  PingPongGameState,
+  PingPongCallbacks
+> {
   private playerPaddle!: PingPongPaddle;
   private aiPaddle!: PingPongPaddle;
   private ball!: PingPongBall;
   private board!: Phaser.GameObjects.Image;
 
-  // Internal State
   private aiReactionTimer: number = 0;
   private scoringInProgress: boolean = false;
-
-  // Callbacks
-  private onScoreUpdate?: (playerScore: number, aiScore: number) => void;
-  private onGameOver?: (isPlayerWin: boolean) => void;
-  private onPointScored?: (scorer: Scorer) => void;
-  private onNetHit?: (x: number, y: number) => void;
 
   constructor(
     scene: Phaser.Scene,
     gameState: PingPongGameState,
-    callbacks?: {
-      onScoreUpdate?: (playerScore: number, aiScore: number) => void;
-      onGameOver?: (isPlayerWin: boolean) => void;
-      onPointScored?: (scorer: Scorer) => void;
-      onNetHit?: (x: number, y: number) => void;
-    }
+    callbacks?: PingPongCallbacks
   ) {
-    this.scene = scene;
-    this.gameState = gameState;
-
-    if (callbacks) {
-      this.onScoreUpdate = callbacks.onScoreUpdate;
-      this.onGameOver = callbacks.onGameOver;
-      this.onPointScored = callbacks.onPointScored;
-      this.onNetHit = callbacks.onNetHit;
-    }
+    super(scene, gameState, callbacks ?? {});
   }
 
-  /**
-   * 게임 오브젝트 설정
-   */
   setGameObjects(
     playerPaddle: PingPongPaddle,
     aiPaddle: PingPongPaddle,
@@ -71,9 +53,6 @@ export class PingPongGameManager {
     this.board = board;
   }
 
-  /**
-   * 매 프레임 업데이트
-   */
   update(deltaSeconds: number): void {
     if (!this.shouldUpdate()) return;
 
@@ -84,9 +63,6 @@ export class PingPongGameManager {
     this.checkScore();
   }
 
-  /**
-   * 업데이트 필요 여부 확인
-   */
   private shouldUpdate(): boolean {
     return (
       this.gameState.gameMode === "playing" &&
@@ -95,12 +71,7 @@ export class PingPongGameManager {
     );
   }
 
-  /**
-   * 플레이어 패들 업데이트
-   */
-  updatePlayerPaddle(deltaSeconds: number): void {
-    // 외부에서 inputState를 통해 이동 방향이 설정됨
-    // 여기서는 실제 이동만 처리
+  updatePlayerPaddle(_deltaSeconds: number): void {
     this.clampPaddlePosition(this.playerPaddle);
     this.playerPaddle.sprite?.setPosition(
       this.playerPaddle.x,
@@ -108,9 +79,6 @@ export class PingPongGameManager {
     );
   }
 
-  /**
-   * 플레이어 패들 이동 (외부에서 호출)
-   */
   movePlayerPaddle(direction: "up" | "down", deltaSeconds: number): void {
     if (direction === "up") {
       this.playerPaddle.y -= this.playerPaddle.speed * deltaSeconds;
@@ -119,9 +87,6 @@ export class PingPongGameManager {
     }
   }
 
-  /**
-   * AI 패들 업데이트
-   */
   private updateAIPaddle(deltaSeconds: number): void {
     this.aiReactionTimer += deltaSeconds;
 
@@ -142,9 +107,6 @@ export class PingPongGameManager {
     this.aiPaddle.sprite?.setPosition(this.aiPaddle.x, this.aiPaddle.y);
   }
 
-  /**
-   * 패들 위치 제한
-   */
   private clampPaddlePosition(paddle: PingPongPaddle): void {
     const halfHeight = paddle.height / 2;
     paddle.y = Phaser.Math.Clamp(
@@ -154,9 +116,6 @@ export class PingPongGameManager {
     );
   }
 
-  /**
-   * 볼 업데이트
-   */
   private updateBall(deltaSeconds: number): void {
     this.ball.x += this.ball.velocityX * deltaSeconds;
     this.ball.y += this.ball.velocityY * deltaSeconds;
@@ -166,9 +125,6 @@ export class PingPongGameManager {
     this.updateBallSprite();
   }
 
-  /**
-   * 테이블 경계 충돌 체크
-   */
   private checkTableBoundaryCollision(): void {
     const boardBounds = this.board.getBounds();
     const topBound = boardBounds.top + PINGPONG_CONFIG.BOARD_BOUNDARY_OFFSET;
@@ -188,9 +144,6 @@ export class PingPongGameManager {
     }
   }
 
-  /**
-   * 네트 충돌 체크
-   */
   private checkNetCollision(): void {
     const netX = PINGPONG_CONFIG.GAME_WIDTH / 2;
     const boardBounds = this.board.getBounds();
@@ -213,16 +166,12 @@ export class PingPongGameManager {
       this.ball.velocityX *= -PINGPONG_CONFIG.NET_COLLISION_REDUCTION;
       this.ball.velocityY += PINGPONG_CONFIG.NET_BOUNCE_ADDITION;
 
-      // 네트 히트 효과 콜백
-      this.onNetHit?.(netX, netTopY);
+      this.callCallback("onNetHit", netX, netTopY);
 
       this.ball.x = prevX > netX ? netX + 15 : netX - 15;
     }
   }
 
-  /**
-   * 볼 스프라이트 업데이트
-   */
   private updateBallSprite(): void {
     if (this.ball.sprite) {
       this.ball.sprite.setPosition(this.ball.x, this.ball.y);
@@ -233,9 +182,6 @@ export class PingPongGameManager {
     }
   }
 
-  /**
-   * 충돌 체크
-   */
   private checkCollisions(): void {
     if (this.checkPaddleBallCollision(this.playerPaddle)) {
       this.handlePaddleHit(this.playerPaddle);
@@ -246,9 +192,6 @@ export class PingPongGameManager {
     }
   }
 
-  /**
-   * 패들과 볼 충돌 체크
-   */
   private checkPaddleBallCollision(paddle: PingPongPaddle): boolean {
     const ballLeft = this.ball.x - this.ball.radius;
     const ballRight = this.ball.x + this.ball.radius;
@@ -268,9 +211,6 @@ export class PingPongGameManager {
     );
   }
 
-  /**
-   * 패들 히트 처리
-   */
   private handlePaddleHit(paddle: PingPongPaddle): void {
     const relativeIntersectY = (this.ball.y - paddle.y) / (paddle.height / 2);
     const normalizedRelativeIntersectionY = Phaser.Math.Clamp(
@@ -289,7 +229,6 @@ export class PingPongGameManager {
     this.ball.velocityX = Math.cos(bounceAngle) * this.ball.speed * direction;
     this.ball.velocityY = Math.sin(bounceAngle) * this.ball.speed;
 
-    // 볼 위치 조정
     if (paddle === this.playerPaddle) {
       this.ball.x = paddle.x + paddle.width / 2 + this.ball.radius;
     } else {
@@ -297,9 +236,6 @@ export class PingPongGameManager {
     }
   }
 
-  /**
-   * 점수 체크
-   */
   private checkScore(): void {
     if (this.scoringInProgress) return;
 
@@ -310,9 +246,6 @@ export class PingPongGameManager {
     }
   }
 
-  /**
-   * 득점 처리
-   */
   private handleScoring(scorer: Scorer): void {
     this.scoringInProgress = true;
     this.gameState.isPlaying = false;
@@ -325,26 +258,27 @@ export class PingPongGameManager {
 
     this.gameState.servingPlayer = scorer;
 
-    // 점수 업데이트 콜백
-    this.onScoreUpdate?.(this.gameState.playerScore, this.gameState.aiScore);
+    this.callCallback(
+      "onScoreUpdate",
+      this.gameState.playerScore,
+      this.gameState.aiScore
+    );
+    this.callCallback("onPointScored", scorer);
 
-    // 득점 콜백
-    this.onPointScored?.(scorer);
-
-    // 승리 조건 체크
     if (this.checkWinCondition()) {
       const isPlayerWin =
         this.gameState.playerScore >= PINGPONG_CONFIG.WINNING_SCORE;
-      this.onGameOver?.(isPlayerWin);
+      this.callCallback("onGameOver", isPlayerWin);
     } else {
-      // 다음 라운드 준비
       this.ball.speed = PINGPONG_CONFIG.BALL_INITIAL_SPEED;
+
+      //다음 서브 준비
+      this.scene.time.delayedCall(1000, () => {
+        this.prepareServe();
+      });
     }
   }
 
-  /**
-   * 승리 조건 체크
-   */
   private checkWinCondition(): boolean {
     const playerScore = this.gameState.playerScore;
     const aiScore = this.gameState.aiScore;
@@ -358,9 +292,6 @@ export class PingPongGameManager {
     );
   }
 
-  /**
-   * 서브 준비
-   */
   prepareServe(): void {
     this.gameState.isPlaying = false;
     this.scoringInProgress = false;
@@ -371,16 +302,12 @@ export class PingPongGameManager {
       this.gameState.isPreparingServe = true;
     } else {
       this.gameState.isPreparingServe = false;
-      // AI 자동 서브
       this.scene.time.delayedCall(PINGPONG_CONFIG.SERVE_DELAY, () => {
         this.serve();
       });
     }
   }
 
-  /**
-   * 서브 위치 설정
-   */
   private positionBallForServe(): void {
     if (this.gameState.servingPlayer === "player") {
       this.ball.x = this.playerPaddle.x + 50;
@@ -395,9 +322,6 @@ export class PingPongGameManager {
     this.updateBallSprite();
   }
 
-  /**
-   * 서브 실행
-   */
   serve(): void {
     this.gameState.isPlaying = true;
     this.gameState.isPreparingServe = false;
@@ -409,9 +333,6 @@ export class PingPongGameManager {
     this.ball.velocityY = Math.sin(angle) * this.ball.speed;
   }
 
-  /**
-   * 서브 준비 중 볼 위치 조정
-   */
   adjustServePosition(newY: number): void {
     if (!this.gameState.isPreparingServe) return;
     if (this.gameState.servingPlayer !== "player") return;
@@ -429,18 +350,12 @@ export class PingPongGameManager {
     );
   }
 
-  /**
-   * 점수 리셋
-   */
   resetScores(): void {
     this.gameState.playerScore = 0;
     this.gameState.aiScore = 0;
-    this.onScoreUpdate?.(0, 0);
+    this.callCallback("onScoreUpdate", 0, 0);
   }
 
-  /**
-   * 패들 위치 리셋
-   */
   resetPaddlePositions(): void {
     const centerY = PINGPONG_CONFIG.GAME_HEIGHT / 2;
 
@@ -454,10 +369,7 @@ export class PingPongGameManager {
     this.aiPaddle.sprite?.setPosition(this.aiPaddle.x, this.aiPaddle.y);
   }
 
-  /**
-   * 게임 리셋
-   */
-  reset(): void {
+  resetGame(): void {
     this.resetScores();
     this.resetPaddlePositions();
     this.ball.speed = PINGPONG_CONFIG.BALL_INITIAL_SPEED;

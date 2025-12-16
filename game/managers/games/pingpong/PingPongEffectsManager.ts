@@ -1,25 +1,14 @@
-// game/managers/pingpong/PingPongEffectsManager.ts
+// game/managers/games/pingpong/PingPongEffectsManager.ts
+
+import { BaseEffectsManager } from "@/game/managers/base";
 import { PINGPONG_CONFIG, PingPongPaddle } from "@/game/types/realPingPong";
 
 type Scorer = "player" | "ai";
 
 /**
  * 탁구 게임 효과 관리
- * - 득점 효과 (펄스, 팝업, 플래시)
- * - 네트 히트 효과
- * - 플레이어 인디케이터
- * - 각종 애니메이션
  */
-export class PingPongEffectsManager {
-  private scene: Phaser.Scene;
-
-  constructor(scene: Phaser.Scene) {
-    this.scene = scene;
-  }
-
-  /**
-   * 득점 효과 생성 (통합)
-   */
+export class PingPongEffectsManager extends BaseEffectsManager {
   createScoreEffect(
     scorer: Scorer,
     playerScoreText: Phaser.GameObjects.Text,
@@ -29,19 +18,11 @@ export class PingPongEffectsManager {
     const targetText = isPlayerScore ? playerScoreText : aiScoreText;
     const scoreColor = isPlayerScore ? "#4a90e2" : "#e74c3c";
 
-    // 점수 텍스트 펄스
     this.createScorePulse(targetText);
-
-    // +1 팝업
     this.createPointPopup(targetText.x, targetText.y, scoreColor);
-
-    // 플래시 효과
     this.createFlashEffect(targetText.x, targetText.y, scoreColor);
   }
 
-  /**
-   * 점수 텍스트 펄스 애니메이션
-   */
   private createScorePulse(targetText: Phaser.GameObjects.Text): void {
     this.scene.tweens.add({
       targets: targetText,
@@ -53,9 +34,6 @@ export class PingPongEffectsManager {
     });
   }
 
-  /**
-   * +1 팝업 생성
-   */
   private createPointPopup(x: number, y: number, color: string): void {
     const pointPopup = this.scene.add
       .text(x, y - 20, "+1", {
@@ -78,9 +56,6 @@ export class PingPongEffectsManager {
     });
   }
 
-  /**
-   * 플래시 효과 생성
-   */
   private createFlashEffect(x: number, y: number, color: string): void {
     const flash = this.scene.add.circle(
       x,
@@ -100,9 +75,6 @@ export class PingPongEffectsManager {
     });
   }
 
-  /**
-   * 네트 히트 효과
-   */
   createNetHitEffect(x: number, y: number): void {
     for (let i = 0; i < 5; i++) {
       const particle = this.scene.add.circle(
@@ -123,9 +95,6 @@ export class PingPongEffectsManager {
     }
   }
 
-  /**
-   * 플레이어 위치 표시 (게임 시작 시)
-   */
   showPlayerIndicators(
     playerPaddle: PingPongPaddle,
     aiPaddle: PingPongPaddle
@@ -148,18 +117,13 @@ export class PingPongEffectsManager {
 
     const allElements = [...playerElements, ...aiElements];
 
-    // 페이드 인 및 브리딩 애니메이션
     this.animatePlayerIndicators(allElements);
 
-    // 3초 후 페이드 아웃
     this.scene.time.delayedCall(3000, () => {
       this.fadeOutPlayerIndicators(allElements);
     });
   }
 
-  /**
-   * 개별 플레이어 인디케이터 생성
-   */
   private createPlayerIndicator(
     x: number,
     y: number,
@@ -167,14 +131,12 @@ export class PingPongEffectsManager {
     fillColor: number,
     strokeColor: number
   ): Phaser.GameObjects.GameObject[] {
-    // 패널
     const panel = this.scene.add.graphics();
     panel.fillStyle(fillColor, 0.8);
     panel.fillRoundedRect(x - 50, y - 100, 100, 35, 8);
     panel.lineStyle(2, strokeColor, 1);
     panel.strokeRoundedRect(x - 50, y - 100, 100, 35, 8);
 
-    // 텍스트
     const text = this.scene.add
       .text(x, y - 82, label, {
         fontSize: "14px",
@@ -184,24 +146,18 @@ export class PingPongEffectsManager {
       })
       .setOrigin(0.5);
 
-    // 빔
     const beam = this.scene.add.graphics();
     beam.lineStyle(3, fillColor, 0.8);
     beam.lineBetween(x, y - 65, x, y - 40);
 
-    // 글로우
     const glow = this.scene.add.circle(x, y, 40, fillColor, 0.2);
 
     return [panel, text, beam, glow];
   }
 
-  /**
-   * 플레이어 인디케이터 애니메이션
-   */
   private animatePlayerIndicators(
     elements: Phaser.GameObjects.GameObject[]
   ): void {
-    // 페이드 인
     elements.forEach((element) => {
       if ("setAlpha" in element && typeof element.setAlpha === "function") {
         element.setAlpha(0);
@@ -218,14 +174,12 @@ export class PingPongEffectsManager {
       });
     });
 
-    // 브리딩 효과 (0.6초 후 시작)
     this.scene.time.delayedCall(600, () => {
       elements.forEach((element, index) => {
         let duration: number;
         let targetAlpha: number;
 
         if (element instanceof Phaser.GameObjects.Graphics) {
-          // 패널과 빔
           if (index % 4 === 0 || index % 4 === 2) {
             duration = index % 4 === 0 ? 1500 : 800;
             targetAlpha = index % 4 === 0 ? 0.6 : 0.5;
@@ -236,7 +190,6 @@ export class PingPongEffectsManager {
           duration = 1200;
           targetAlpha = 0.8;
         } else {
-          // 글로우
           this.scene.tweens.add({
             targets: element,
             scaleX: 1.3,
@@ -262,9 +215,6 @@ export class PingPongEffectsManager {
     });
   }
 
-  /**
-   * 플레이어 인디케이터 페이드 아웃
-   */
   private fadeOutPlayerIndicators(
     elements: Phaser.GameObjects.GameObject[]
   ): void {
@@ -281,97 +231,6 @@ export class PingPongEffectsManager {
     });
   }
 
-  /**
-   * 깜빡임 효과 (텍스트용)
-   */
-  createBlinkEffect(target: Phaser.GameObjects.Text): void {
-    this.scene.tweens.add({
-      targets: target,
-      alpha: 0.3,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-    });
-  }
-
-  /**
-   * 스케일 펄스 효과
-   */
-  createPulseEffect(
-    target: Phaser.GameObjects.GameObject,
-    scale: number = 1.1,
-    duration: number = 300
-  ): void {
-    this.scene.tweens.add({
-      targets: target,
-      scale: scale,
-      duration: duration,
-      yoyo: true,
-      repeat: -1,
-    });
-  }
-
-  /**
-   * 페이드 인 효과
-   */
-  createFadeIn(
-    target: Phaser.GameObjects.GameObject,
-    duration: number = 500
-  ): void {
-    if ("setAlpha" in target && typeof target.setAlpha === "function") {
-      target.setAlpha(0);
-    }
-    this.scene.tweens.add({
-      targets: target,
-      alpha: 1,
-      duration: duration,
-      ease: "Power2.easeOut",
-    });
-  }
-
-  /**
-   * 페이드 아웃 효과
-   */
-  createFadeOut(
-    target: Phaser.GameObjects.GameObject,
-    duration: number = 500,
-    onComplete?: () => void
-  ): void {
-    this.scene.tweens.add({
-      targets: target,
-      alpha: 0,
-      duration: duration,
-      ease: "Power2.easeIn",
-      onComplete: () => {
-        target.destroy();
-        onComplete?.();
-      },
-    });
-  }
-
-  /**
-   * 슬라이드 인 효과 (위에서 아래로)
-   */
-  createSlideIn(
-    target: Phaser.GameObjects.GameObject,
-    fromY: number,
-    toY: number,
-    duration: number = 500
-  ): void {
-    if ("y" in target && typeof (target as { y?: number }).y === "number") {
-      (target as { y: number }).y = fromY;
-      this.scene.tweens.add({
-        targets: target,
-        y: toY,
-        duration: duration,
-        ease: "Back.easeOut",
-      });
-    }
-  }
-
-  /**
-   * 회전 효과
-   */
   createRotation(
     target: Phaser.GameObjects.GameObject,
     duration: number = 1000
@@ -385,19 +244,5 @@ export class PingPongEffectsManager {
         ease: "Linear",
       });
     }
-  }
-
-  /**
-   * 흔들림 효과 (화면 쉐이크)
-   */
-  createScreenShake(intensity: number = 5, duration: number = 200): void {
-    this.scene.cameras.main.shake(duration, intensity / 1000);
-  }
-
-  /**
-   * 모든 트윈 중지 (정리용)
-   */
-  stopAllTweens(): void {
-    this.scene.tweens.killAll();
   }
 }

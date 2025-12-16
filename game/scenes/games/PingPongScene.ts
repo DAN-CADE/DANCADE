@@ -418,7 +418,7 @@ export class PingPongScene extends Phaser.Scene {
    */
   private restartGame(): void {
     this.children.removeAll();
-    this.gameManager.reset();
+    this.gameManager.resetGame();
     this.createGameObjects();
     this.uiManager.showGameUI();
     this.gameManager.prepareServe();
