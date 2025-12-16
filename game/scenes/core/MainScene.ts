@@ -1,3 +1,6 @@
+// game/scenes/core/MainScene.ts
+
+import { BaseScene } from "@/game/scenes/base";
 import { type GameConfig } from "@/game/config/gameRegistry";
 import { AvatarManager } from "@/game/managers/global/AvatarManager";
 import { ArcadeMachineManager } from "@/game/managers/global/ArcadeMachineManager";
@@ -26,7 +29,8 @@ const TILE_IMAGES: Array<[string, string]> = [
   ["userButton", "/tilesets/userButton.png"],
 ];
 
-export class MainScene extends Phaser.Scene {
+export class MainScene extends BaseScene {
+  // ✅ BaseScene 상속
   private readonly FADE_DURATION = 1000;
   private readonly PLAYER_START_X = 960;
   private readonly PLAYER_START_Y = 544;
@@ -42,19 +46,6 @@ export class MainScene extends Phaser.Scene {
   private wallsLayer: Phaser.Tilemaps.TilemapLayer | null = null;
   private object1Layer: Phaser.Tilemaps.TilemapLayer | null = null;
   private object2Layer: Phaser.Tilemaps.TilemapLayer | null = null;
-
-  private addTilemapCollision(
-    avatar: Phaser.GameObjects.GameObject,
-    layer?: Phaser.Tilemaps.TilemapLayer | null
-  ) {
-    if (!layer) return;
-    layer.setCollisionByProperty({ collides: true });
-    this.physics.add.collider(avatar, layer);
-  }
-
-  private loadImages(images: [string, string][]) {
-    images.forEach(([key, path]) => this.load.image(key, path));
-  }
 
   constructor() {
     super({ key: "MainScene" });
@@ -86,20 +77,34 @@ export class MainScene extends Phaser.Scene {
     this.createMap();
     this.createAvatar();
     this.finishSetup();
+
     this.scale.on("resize", this.handleResize, this);
   }
-  handleResize(gameSize: Phaser.Structs.Size) {
-    // 씬이 활성화되어 있을 때만 실행
-    if (!this.scene.isActive()) return;
 
+  // ✅ BaseScene의 handleResize를 오버라이드
+  protected handleResize(gameSize: Phaser.Structs.Size): void {
+    if (!this.scene.isActive()) return;
     this.cameras.main.setViewport(0, 0, gameSize.width, gameSize.height);
   }
 
-  /**
-   * 아바타 생성
-   */
+  update(time: number, delta: number): void {
+    this.avatarManager.update(delta);
+    this.checkNearbyArcade();
+    this.handleInteraction();
+    this.updateUI();
+  }
+
+  shutdown(): void {
+    super.shutdown(); // ✅ BaseScene의 shutdown 호출
+    this.machineManager.destroy();
+  }
+
+  // ============================================================
+  // 아바타
+  // ============================================================
+
   private createAvatar(): void {
-    const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
+    const savedCustomization = localStorage.getItem("characterCustomization");
     const lpcData = this.cache.json.get("lpc_config") as LpcRootData;
 
     if (savedCustomization && lpcData) {
@@ -132,9 +137,6 @@ export class MainScene extends Phaser.Scene {
     );
   }
 
-  /**
-   * 에셋 로딩
-   */
   private loadCharacterAssets(data: LPCData): void {
     const savedCustomization = localStorage.getItem("characterCustomization");
 
@@ -154,20 +156,6 @@ export class MainScene extends Phaser.Scene {
     this.assetLoaderManager.loadDefaultAssets(data);
   }
 
-  private finishSetup(): void {
-    this.machineManager.parseFromMap(this.map);
-    this.setupCollisions();
-    this.setupInput();
-    this.createUI();
-  }
-
-  update(time: number, delta: number): void {
-    this.avatarManager.update(delta);
-    this.checkNearbyArcade();
-    this.handleInteraction();
-    this.updateUI();
-  }
-
   // ============================================================
   // 맵 & UI
   // ============================================================
@@ -177,7 +165,6 @@ export class MainScene extends Phaser.Scene {
 
     this.add.image(0, 0, "bg1_1").setOrigin(0, 0).setDepth(-1);
 
-    // Tiled tilesets[].name 과 일치하는 이름으로 addTilesetImage
     const common = this.map.addTilesetImage("CommonTile", "CommonTile");
     const mainDesk = this.map.addTilesetImage("mainDesk", "mainDesk");
     const desk2 = this.map.addTilesetImage("desk2", "desk2");
@@ -231,13 +218,21 @@ export class MainScene extends Phaser.Scene {
     );
   }
 
-  // 충돌 설정
   private setupCollisions(): void {
     const avatar = this.avatarManager.getContainer();
 
     this.addTilemapCollision(avatar, this.wallsLayer);
     this.addTilemapCollision(avatar, this.object1Layer);
     this.addTilemapCollision(avatar, this.object2Layer);
+  }
+
+  private addTilemapCollision(
+    avatar: Phaser.GameObjects.GameObject,
+    layer?: Phaser.Tilemaps.TilemapLayer | null
+  ) {
+    if (!layer) return;
+    layer.setCollisionByProperty({ collides: true });
+    this.physics.add.collider(avatar, layer);
   }
 
   private setupInput(): void {
@@ -257,6 +252,17 @@ export class MainScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(1000);
   }
+
+  private finishSetup(): void {
+    this.machineManager.parseFromMap(this.map);
+    this.setupCollisions();
+    this.setupInput();
+    this.createUI();
+  }
+
+  // ============================================================
+  // 게임 상호작용
+  // ============================================================
 
   private checkNearbyArcade(): void {
     const pos = this.avatarManager.getPosition();
@@ -289,6 +295,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private launchGame(game: GameConfig): void {
+    // ✅ BaseScene의 transitionTo 사용 가능하지만
     this.cameras.main.fadeOut(this.FADE_DURATION, 0, 0, 0);
     this.cameras.main.once("camerafadeoutcomplete", () => {
       this.scene.start(game.sceneKey, {
@@ -298,7 +305,11 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  shutdown(): void {
-    this.machineManager.destroy();
+  // ============================================================
+  // 유틸리티
+  // ============================================================
+
+  private loadImages(images: [string, string][]) {
+    images.forEach(([key, path]) => this.load.image(key, path));
   }
 }

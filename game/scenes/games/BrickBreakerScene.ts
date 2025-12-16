@@ -1,4 +1,6 @@
-// game/scenes/BrickBreakerScene.ts
+// game/scenes/games/BrickBreakerScene.ts
+
+import { BaseGameScene } from "@/game/scenes/base";
 import { GameConfig } from "@/game/config/gameRegistry";
 import { BrickBreakerGameManager } from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
 import { BrickBreakerUIManager } from "@/game/managers/games/brickbreaker/BrickBreakerUIManager";
@@ -12,10 +14,9 @@ import type {
 
 /**
  * 벽돌깨기 게임 씬
- * 매니저들을 조합하여 게임을 구성
  */
-export class BrickBreakerScene extends Phaser.Scene {
-  // Managers (게임로직, UI, 입력, 이펙트)
+export class BrickBreakerScene extends BaseGameScene {
+  // Managers
   private gameManager!: BrickBreakerGameManager;
   private uiManager!: BrickBreakerUIManager;
   private inputManager!: BrickBreakerInputManager;
@@ -30,7 +31,6 @@ export class BrickBreakerScene extends Phaser.Scene {
   private gameConfig?: GameConfig;
 
   // Constants
-  // 게임 기본 설정 (너비, 높이, 속도)
   private readonly GAME_CONFIG: BrickBreakerConfig = {
     width: 800,
     height: 600,
@@ -38,7 +38,6 @@ export class BrickBreakerScene extends Phaser.Scene {
     ballSpeed: 200,
   };
 
-  // 벽돌 배치 설정 (행, 열, 크기, 간격, 시작 Y 좌표)
   private readonly BRICK_LAYOUT: BrickLayoutConfig = {
     cols: 10,
     rows: 5,
@@ -48,7 +47,6 @@ export class BrickBreakerScene extends Phaser.Scene {
     startY: 80,
   };
 
-  // 벽돌 색상 리스트
   private readonly BRICK_COLORS = [
     "element_red_rectangle_glossy",
     "element_yellow_rectangle_glossy",
@@ -57,7 +55,6 @@ export class BrickBreakerScene extends Phaser.Scene {
     "element_purple_rectangle_glossy",
   ];
 
-  // 에셋 경로
   private readonly ASSET_PATH = "/assets/game/kenney_puzzle-pack/png/";
 
   constructor() {
@@ -68,36 +65,7 @@ export class BrickBreakerScene extends Phaser.Scene {
     this.gameConfig = data.gameConfig;
   }
 
-  preload() {
-    this.loadAssets();
-  }
-
-  create() {
-    this.scale.resize(800, 600);
-    this.setupScene();
-    this.initManagers();
-    this.createGameObjects();
-    this.setupCollisions();
-  }
-
-  update() {
-    const direction = this.inputManager.getPaddleMoveDirection();
-    this.gameManager.movePaddle(direction);
-  }
-
-  shutdown() {
-    this.physics.world.off("worldbounds");
-    this.inputManager.cleanup();
-    this.uiManager.cleanup();
-  }
-
-  /**
-   * 에셋 로드
-   */
-  private loadAssets(): void {
-    // 배경 이미지 로드
-    this.load.image("game_background", "/assets/background/bg 1.png");
-
+  protected loadAssets(): void {
     this.load.image("paddle", `${this.ASSET_PATH}paddleBlu.png`);
     this.load.image("ball", `${this.ASSET_PATH}ballBlue.png`);
     this.load.image("buttonDefault", `${this.ASSET_PATH}buttonDefault.png`);
@@ -108,11 +76,9 @@ export class BrickBreakerScene extends Phaser.Scene {
     });
   }
 
-  /**
-   * 씬 기본 설정
-   */
-  private setupScene(): void {
-    // 배경 이미지 추가
+  protected setupScene(): void {
+    this.scale.resize(800, 600);
+
     const background = this.add.image(400, 300, "game_background");
     background.setDisplaySize(800, 600);
     background.setDepth(-1);
@@ -120,17 +86,10 @@ export class BrickBreakerScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#000000");
   }
 
-  /**
-   * 매니저 초기화
-   */
-  private initManagers(): void {
-    // UI Manager
+  protected initManagers(): void {
     this.uiManager = new BrickBreakerUIManager(this);
-
-    // Effects Manager
     this.effectsManager = new BrickBreakerEffectsManager(this);
 
-    // Game Manager
     this.gameManager = new BrickBreakerGameManager(
       this,
       this.GAME_CONFIG,
@@ -140,34 +99,55 @@ export class BrickBreakerScene extends Phaser.Scene {
           this.uiManager.updateScore(score);
         },
         onGameResult: (result) => {
-          this.handleGameResult(result);
+          this.handleGameEnd(result);
         },
         onBrickDestroy: () => {
-          // 벽돌 파괴 효과는 필요시 추가
-          // this.effectsManager.createBrickDestroyEffect(x, y);
+          // 벽돌 파괴 효과
         },
       }
     );
 
-    // Input Manager
     this.inputManager = new BrickBreakerInputManager(this);
   }
 
-  /**
-   * 게임 오브젝트 생성
-   */
-  private createGameObjects(): void {
+  protected createGameObjects(): void {
     this.createPaddle();
     this.createBall();
     this.createBricks();
     this.uiManager.createGameUI();
 
     this.gameManager.setGameObjects(this.paddle, this.ball, this.bricks);
+    this.setupCollisions();
   }
 
-  /**
-   * 패들 생성
-   */
+  protected handleGameEnd(result: string): void {
+    this.uiManager.showEndGameScreen(
+      result as "win" | "gameOver",
+      this.gameManager.getScore(),
+      () => this.restartGame()
+    );
+  }
+
+  protected restartGame(): void {
+    this.scene.restart();
+  }
+
+  protected cleanupManagers(): void {
+    this.physics.world.off("worldbounds");
+    this.inputManager.cleanup();
+    this.uiManager.cleanup();
+  }
+
+  // ✅ update는 그대로 유지
+  update() {
+    const direction = this.inputManager.getPaddleMoveDirection();
+    this.gameManager.movePaddle(direction);
+  }
+
+  // ============================================================
+  // 게임 오브젝트 생성 메서드들
+  // ============================================================
+
   private createPaddle(): void {
     const paddleX = this.GAME_CONFIG.width / 2;
     const paddleY = 550;
@@ -178,9 +158,6 @@ export class BrickBreakerScene extends Phaser.Scene {
     this.paddle.setCollideWorldBounds(true);
   }
 
-  /**
-   * 공 생성
-   */
   private createBall(): void {
     const ballX = this.GAME_CONFIG.width / 2;
     const ballY = 500;
@@ -198,9 +175,6 @@ export class BrickBreakerScene extends Phaser.Scene {
     }
   }
 
-  /**
-   * 벽돌 생성
-   */
   private createBricks(): void {
     this.bricks = this.physics.add.staticGroup();
 
@@ -219,11 +193,7 @@ export class BrickBreakerScene extends Phaser.Scene {
     }
   }
 
-  /**
-   * 충돌 설정
-   */
   private setupCollisions(): void {
-    // 공과 패들 충돌
     this.physics.add.collider(this.ball, this.paddle, (ball, paddle) => {
       this.gameManager.handlePaddleCollision(
         ball as Phaser.Types.Physics.Arcade.GameObjectWithBody,
@@ -231,7 +201,6 @@ export class BrickBreakerScene extends Phaser.Scene {
       );
     });
 
-    // 공과 벽돌 충돌
     this.physics.add.collider(this.ball, this.bricks, (ball, brick) => {
       this.gameManager.handleBrickCollision(
         ball as Phaser.Types.Physics.Arcade.GameObjectWithBody,
@@ -239,27 +208,10 @@ export class BrickBreakerScene extends Phaser.Scene {
       );
     });
 
-    // 바닥 충돌 감지
     this.physics.world.on("worldbounds", (body: Phaser.Physics.Arcade.Body) => {
       if (body.gameObject === this.ball && body.blocked.down) {
         this.gameManager.handleFloorCollision();
       }
     });
-  }
-
-  /**
-   * 게임 결과 처리
-   */
-  private handleGameResult(result: "win" | "gameOver"): void {
-    this.uiManager.showEndGameScreen(result, this.gameManager.getScore(), () =>
-      this.restartGame()
-    );
-  }
-
-  /**
-   * 게임 재시작
-   */
-  private restartGame(): void {
-    this.scene.restart();
   }
 }

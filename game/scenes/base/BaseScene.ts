@@ -1,5 +1,5 @@
 // game/scenes/base/BaseScene.ts
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 
 /**
  * 모든 씬의 최상위 부모 클래스

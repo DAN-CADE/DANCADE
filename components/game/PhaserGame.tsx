@@ -16,7 +16,7 @@ export default function PhaserGame() {
       const { StartScene } = await import("@/game/scenes/core/StartScene");
       const { MainScene } = await import("@/game/scenes/core/MainScene");
       const { BrickBreakerScene } = await import(
-        "@/game/scenes/games/BrickBreackerScene"
+        "@/game/scenes/games/BrickBreakerScene"
       );
       const { PingPongScene } = await import(
         "@/game/scenes/games/PingPongScene"

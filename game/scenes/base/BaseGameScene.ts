@@ -14,7 +14,7 @@ export abstract class BaseGameScene extends BaseScene {
   /**
    * 게임 에셋 로드
    */
-  protected abstract loadAsset(): void;
+  protected abstract loadAssets(): void;
 
   /**
    * 씬 기본 설정 (배경, 카메라 등)
@@ -35,7 +35,7 @@ export abstract class BaseGameScene extends BaseScene {
   // phaser 생명주기 (공통 플로우)
   // =================================
   preload(): void {
-    this.loadAsset();
+    this.loadAssets();
   }
 
   create(): void {
