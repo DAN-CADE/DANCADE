@@ -46,6 +46,10 @@ next-env.d.ts
 *.7z
 *.tar.gz
 
+# backup files
+*.backup.*
+*.backup
+
 # asset previews and docs (keep only necessary game assets)
 public/assets/*/Preview.png
 public/assets/*/README.txt

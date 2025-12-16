@@ -1,14 +1,14 @@
 // game/scenes/BrickBreakerScene.ts
 import { GameConfig } from "@/game/config/gameRegistry";
-import { BrickBreakerGameManager } from "@/game/managers/brickbracker/BrickBreakerGameManager";
-import { BrickBreakerUIManager } from "@/game/managers/brickbracker/BrickBreakerUIManager";
-import { BrickBreakerInputManager } from "@/game/managers/brickbracker/BrickBreakerInputManager";
-import { BrickBreakerEffectsManager } from "@/game/managers/brickbracker/BrickBreakerEffectsManager";
+import { BrickBreakerGameManager } from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
+import { BrickBreakerUIManager } from "@/game/managers/games/brickbreaker/BrickBreakerUIManager";
+import { BrickBreakerInputManager } from "@/game/managers/games/brickbreaker/BrickBreakerInputManager";
+import { BrickBreakerEffectsManager } from "@/game/managers/games/brickbreaker/BrickBreakerEffectsManager";
 
 import type {
   BrickBreakerConfig,
   BrickLayoutConfig,
-} from "@/game/managers/brickbracker/BrickBreakerGameManager";
+} from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
 
 /**
  * 벽돌깨기 게임 씬

@@ -1,4 +1,4 @@
-// game/managers/brickbracker/BrickBreakerUIManager.ts
+// game/managers/brickbreacker/BrickBreakerUIManager.ts
 import { GameResult } from "./BrickBreakerGameManager";
 
 /**

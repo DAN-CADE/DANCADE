@@ -1,4 +1,4 @@
-// game/managers/brickbracker/BrickBreakerGameManager.ts
+// game/managers/brickbreacker/BrickBreakerGameManager.ts
 
 interface BrickBreakerConfig {
   width: number;

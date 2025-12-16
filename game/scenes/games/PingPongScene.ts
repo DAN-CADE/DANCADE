@@ -6,10 +6,10 @@ import {
   PingPongGameState,
   PingPongInputState,
 } from "@/game/types/realPingPong";
-import { PingPongGameManager } from "@/game/managers/pingpong/PingPongGameManager";
-import { PingPongUIManager } from "@/game/managers/pingpong/PingPongUIManager";
-import { PingPongInputManager } from "@/game/managers/pingpong/PingPongInputManager";
-import { PingPongEffectsManager } from "@/game/managers/pingpong/PingPongEffectsManager";
+import { PingPongGameManager } from "@/game/managers/games/pingpong/PingPongGameManager";
+import { PingPongUIManager } from "@/game/managers/games/pingpong/PingPongUIManager";
+import { PingPongInputManager } from "@/game/managers/games/pingpong/PingPongInputManager";
+import { PingPongEffectsManager } from "@/game/managers/games/pingpong/PingPongEffectsManager";
 
 /**
  * Real Ping Pong 게임 씬

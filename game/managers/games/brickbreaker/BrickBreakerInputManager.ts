@@ -1,4 +1,4 @@
-// game/managers/brickbracker/BrickBreakerInputManager.ts
+// game/managers/brickbreacker/BrickBreakerInputManager.ts
 
 /**
  * 벽돌깨기 입력 관리

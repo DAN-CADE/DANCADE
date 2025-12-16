@@ -1,11 +1,13 @@
 import { type GameConfig } from "@/game/config/gameRegistry";
-import { AvatarManager } from "@/game/managers/AvatarManager";
-import { ArcadeMachineManager } from "@/game/managers/ArcadeMachineManager";
-import { AssetLoader } from "@/game/managers/AssetLoader";
+import { AvatarManager } from "@/game/managers/global/AvatarManager";
+import { ArcadeMachineManager } from "@/game/managers/global/ArcadeMachineManager";
+import { AssetLoaderManager } from "@/game/managers/global/AssetLoaderManager";
 import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
-import CharacterScene from "@/components/avatar/ui/CharacterScene";
-import { CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
+import {
+  CharacterState,
+  LpcRootData,
+} from "@/components/avatar/utils/LpcTypes";
 
 const TILE_IMAGES: Array<[string, string]> = [
   ["CommonTile", "/tilesets/CommonTile.png"],
@@ -32,7 +34,7 @@ export class MainScene extends Phaser.Scene {
   private map!: Phaser.Tilemaps.Tilemap;
   private machineManager!: ArcadeMachineManager;
   private avatarManager!: AvatarManager;
-  private assetLoader!: AssetLoader;
+  private assetLoaderManager!: AssetLoaderManager;
 
   private interactKey!: Phaser.Input.Keyboard.Key;
   private interactPrompt!: Phaser.GameObjects.Text;
@@ -43,8 +45,8 @@ export class MainScene extends Phaser.Scene {
 
   private addTilemapCollision(
     avatar: Phaser.GameObjects.GameObject,
-    layer?: Phaser.Tilemaps.TilemapLayer | null) 
-  {
+    layer?: Phaser.Tilemaps.TilemapLayer | null
+  ) {
     if (!layer) return;
     layer.setCollisionByProperty({ collides: true });
     this.physics.add.collider(avatar, layer);
@@ -64,7 +66,7 @@ export class MainScene extends Phaser.Scene {
     this.load.json("lpc_config", "/assets/lpc_assets.json");
     this.load.image("bg1_1", "/tilesets/bg1_1.png");
 
-    this.assetLoader = new AssetLoader(this);
+    this.assetLoaderManager = new AssetLoaderManager(this);
 
     this.load.on(
       Phaser.Loader.Events.FILE_COMPLETE + "-json-lpc_config",
@@ -141,15 +143,15 @@ export class MainScene extends Phaser.Scene {
         const customization: CharacterCustomization =
           JSON.parse(savedCustomization);
 
-        console.log(customization)
-        this.assetLoader.loadCustomAssets(customization);
+        console.log(customization);
+        this.assetLoaderManager.loadCustomAssets(customization);
         return;
       } catch (error) {
         console.error(error);
       }
     }
 
-    this.assetLoader.loadDefaultAssets(data);
+    this.assetLoaderManager.loadDefaultAssets(data);
   }
 
   private finishSetup(): void {
@@ -233,9 +235,9 @@ export class MainScene extends Phaser.Scene {
   private setupCollisions(): void {
     const avatar = this.avatarManager.getContainer();
 
-      this.addTilemapCollision(avatar, this.wallsLayer);
-      this.addTilemapCollision(avatar, this.object1Layer);
-      this.addTilemapCollision(avatar, this.object2Layer);
+    this.addTilemapCollision(avatar, this.wallsLayer);
+    this.addTilemapCollision(avatar, this.object1Layer);
+    this.addTilemapCollision(avatar, this.object2Layer);
   }
 
   private setupInput(): void {

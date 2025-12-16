@@ -1,4 +1,4 @@
-// game/managers/brickbracker/BrickBreakerEffectsManager.ts
+// game/managers/brickbreacker/BrickBreakerEffectsManager.ts
 
 type TweenableObject = Phaser.GameObjects.GameObject & {
   setAlpha?: (alpha: number) => Phaser.GameObjects.GameObject;
