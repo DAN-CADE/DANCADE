@@ -2,10 +2,12 @@ import { type GameConfig } from "@/game/config/gameRegistry";
 import { AvatarManager } from "@/game/managers/AvatarManager";
 import { ArcadeMachineManager } from "@/game/managers/ArcadeMachineManager";
 import { AssetLoader } from "@/game/managers/AssetLoader";
-import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
 import CharacterScene from "@/components/avatar/ui/CharacterScene";
-import { CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
+import {
+  CharacterState,
+  LpcRootData,
+} from "@/components/avatar/utils/LpcTypes";
 
 const TILE_IMAGES: Array<[string, string]> = [
   ["CommonTile", "/tilesets/CommonTile.png"],
@@ -43,8 +45,8 @@ export class MainScene extends Phaser.Scene {
 
   private addTilemapCollision(
     avatar: Phaser.GameObjects.GameObject,
-    layer?: Phaser.Tilemaps.TilemapLayer | null) 
-  {
+    layer?: Phaser.Tilemaps.TilemapLayer | null
+  ) {
     if (!layer) return;
     layer.setCollisionByProperty({ collides: true });
     this.physics.add.collider(avatar, layer);
@@ -98,7 +100,7 @@ export class MainScene extends Phaser.Scene {
    */
   private createAvatar(): void {
     const savedCustomization = localStorage.getItem("characterCustomization"); // {"gender":"male","skinTone":"light",...}
-    const lpcData = this.cache.json.get("lpc_config") as LpcRootData;
+    const lpcData = this.cache.json.get("lpc_config") as LPCData;
 
     if (savedCustomization && lpcData) {
       try {
@@ -138,10 +140,9 @@ export class MainScene extends Phaser.Scene {
 
     if (savedCustomization) {
       try {
-        const customization: CharacterCustomization =
-          JSON.parse(savedCustomization);
+        const customization: CharacterState = JSON.parse(savedCustomization);
 
-        console.log(customization)
+        console.log(customization);
         this.assetLoader.loadCustomAssets(customization);
         return;
       } catch (error) {
@@ -233,9 +234,9 @@ export class MainScene extends Phaser.Scene {
   private setupCollisions(): void {
     const avatar = this.avatarManager.getContainer();
 
-      this.addTilemapCollision(avatar, this.wallsLayer);
-      this.addTilemapCollision(avatar, this.object1Layer);
-      this.addTilemapCollision(avatar, this.object2Layer);
+    this.addTilemapCollision(avatar, this.wallsLayer);
+    this.addTilemapCollision(avatar, this.object1Layer);
+    this.addTilemapCollision(avatar, this.object2Layer);
   }
 
   private setupInput(): void {

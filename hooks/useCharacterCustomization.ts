@@ -1,13 +1,14 @@
 import { createInitialCustomization } from "@/utils/character-helpers";
-import { CharacterCustomization } from "@/types/character";
 import { LPCData } from "@/types/lpc";
 import { generateRandomCustomization } from "@/utils/character-helpers";
 import { getHairStylesByGender } from "@/utils/character-helpers";
 import { useCallback, useEffect, useState } from "react";
+import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
 export function useCharacterCustomization(lpcData: LPCData | null) {
-  const [customization, setCustomization] =
-    useState<CharacterCustomization | null>(null);
+  const [customization, setCustomization] = useState<CharacterState | null>(
+    null
+  );
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export function useCharacterCustomization(lpcData: LPCData | null) {
     try {
       const randomCustomization = generateRandomCustomization(
         lpcData,
-        customization.gender
+        customization.gender as "male" | "female"
       );
       setCustomization(randomCustomization);
     } catch (error) {
@@ -54,18 +55,27 @@ export function useCharacterCustomization(lpcData: LPCData | null) {
       }
 
       const firstHair = hairStyles[0];
+      const defaultColor =
+        lpcData.definitions.palettes.hair_common[0] || "black";
 
       setCustomization((prev) => {
         if (!prev) return null;
 
+        const currentHair = prev.parts.hair || {};
+
         return {
           ...prev,
           gender: gender,
-          hair: {
-            style: firstHair.id,
-            color: prev.hair.color,
+          parts: {
+            // parts 객체에 접근
+            ...prev.parts, // 다른 파츠는 유지
+            hair: {
+              // hair 파트 업데이트
+              styleId: firstHair.id, // style 대신 styleId 사용
+              color: currentHair.color || defaultColor, // prev.parts.hair.color로 접근
+            },
           },
-        } as CharacterCustomization;
+        } as CharacterState;
       });
     },
     [lpcData, customization]

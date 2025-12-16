@@ -1,6 +1,6 @@
 // 헬퍼 함수들
-import { CharacterCustomization } from "@/types/character";
 import { LPCData, LPCStyle } from "@/types/lpc";
+import { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
 /**
  * 랜덤 배열 요소 선택
@@ -23,9 +23,7 @@ export function getHairStylesByGender(
 /**
  * 최소한의 기본 캐릭터 설정을 LPCData를 기반으로 동적으로 생성 및 반환
  */
-export function createInitialCustomization(
-  lpcData: LPCData
-): CharacterCustomization {
+export function createInitialCustomization(lpcData: LPCData): CharacterState {
   const { palettes } = lpcData.definitions;
   const { assets } = lpcData;
 
@@ -34,23 +32,26 @@ export function createInitialCustomization(
 
   return {
     gender: "male",
-    skin: palettes.skin_common[0] || "light",
-    eyes: palettes.eye_common[0] || "blue",
-    hair: {
-      style: maleHair?.id || "plain",
-      color: palettes.hair_common[0] || "black",
-    },
-    torso: {
-      style: assets.torso.styles?.[0]?.id || "longSleeve",
-      color: palettes.clothes_common[0] || "white",
-    },
-    legs: {
-      style: assets.legs.styles?.[0]?.id || "cuffed",
-      color: palettes.clothes_common[0] || "black",
-    },
-    feet: {
-      style: assets.feet.styles?.[0]?.id || "shoes",
-      color: palettes.clothes_common[0] || "black",
+    parts: {
+      body: { color: palettes.skin_common[0] || "light" },
+      head: { color: palettes.skin_common[0] || "light" },
+      eyes: { color: palettes.eye_common[0] || "blue" },
+      hair: {
+        styleId: maleHair?.id || "plain",
+        color: palettes.hair_common[0] || "black",
+      },
+      torso: {
+        styleId: assets.torso.styles?.[0]?.id || "longSleeve",
+        color: palettes.clothes_common[0] || "white",
+      },
+      legs: {
+        styleId: assets.legs.styles?.[0]?.id || "cuffed",
+        color: palettes.clothes_common[0] || "black",
+      },
+      feet: {
+        styleId: assets.feet.styles?.[0]?.id || "shoes",
+        color: palettes.clothes_common[0] || "black",
+      },
     },
   };
 }
@@ -61,7 +62,7 @@ export function createInitialCustomization(
 export function generateRandomCustomization(
   lpcData: LPCData,
   currentGender?: "male" | "female"
-): CharacterCustomization {
+): CharacterState {
   const { palettes } = lpcData.definitions;
   const { assets } = lpcData;
 
@@ -116,11 +117,14 @@ export function generateRandomCustomization(
   // 5. 최종 객체 반환
   return {
     gender: randomGender,
-    skin: randomSkin,
-    hair: { style: randomHairStyle.id, color: randomHairColor },
-    eyes: randomEyeColor,
-    torso: { style: randomTorsoStyle.id, color: randomTorsoColor },
-    legs: { style: randomLegsStyle.id, color: randomLegsColor },
-    feet: { style: randomFeetStyle.id, color: randomFeetColor },
+    parts: {
+      body: { color: randomSkin },
+      head: { color: randomSkin },
+      eyes: { color: randomEyeColor },
+      hair: { styleId: randomHairStyle.id, color: randomHairColor },
+      torso: { styleId: randomTorsoStyle.id, color: randomTorsoColor },
+      legs: { styleId: randomLegsStyle.id, color: randomLegsColor },
+      feet: { styleId: randomFeetStyle.id, color: randomFeetColor },
+    },
   };
 }
