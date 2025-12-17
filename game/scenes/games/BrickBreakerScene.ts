@@ -63,6 +63,7 @@ export class BrickBreakerScene extends BaseGameScene {
 
   init(data: { gameConfig?: GameConfig }) {
     this.gameConfig = data.gameConfig;
+    console.log("데이터 수신 완료:", data);
   }
 
   protected loadAssets(): void {
