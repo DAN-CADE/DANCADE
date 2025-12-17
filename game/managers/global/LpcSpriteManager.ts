@@ -71,9 +71,7 @@ export class LpcSpriteManager {
       assets = lpcSprite.assets;
     } 
     
-    return assets;
-
-      
+    return assets;      
   }
 
   // Lpc Assets 특정 파츠 조회

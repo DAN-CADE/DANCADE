@@ -12,6 +12,9 @@ export class MainScene extends BaseScene {
 
   constructor() {
     super({ key: "MainScene" });
+  }
+
+  init() {
     this.mapManager = new MapManager(this);
     this.avatarManager = new AvatarManager(this)
   }

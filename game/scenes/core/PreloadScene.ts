@@ -8,6 +8,9 @@ export class PreloadScene extends BaseScene {
 
     constructor(){
       super("preloadScene")
+    }
+
+    init() {
       this.avatarManager = new AvatarManager(this)
       this.mapManager = new MapManager(this);
     }
