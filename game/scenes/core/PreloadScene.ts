@@ -1,26 +1,31 @@
+import * as Phaser from "phaser";
 import { MapManager } from "@/game/managers/global/MapManager";
-import { BaseScene } from "../base";
+import { AvatarManager } from "@/game/managers/global/AvatarManager";
 
-export class preloadScene extends BaseScene{
-
+export class PreloadScene extends Phaser.Scene {
     private mapManager!: MapManager;
+    private avatarManager!: AvatarManager;
 
     constructor(){
       super("preloadScene")
-    }
-
-    init() {
+      this.avatarManager = new AvatarManager(this)
       this.mapManager = new MapManager(this);
     }
 
-
     preload(){
       this.mapManager.preloadMap()
+      this.avatarManager.preloadAvatar()
+
       this.load.once('complete', () => {
-      console.log("✅ All Assets Loaded!");
-      // 로딩이 다 끝나면 커스텀 씬으로 데이터 없이 이동 (혹은 기본값 전달)
-      this.scene.start('MainScene'); 
-    });
+        console.log("✅ All Assets Loaded!");
+        if (this.scene.manager.keys["MainScene"]) {
+          this.scene.start("MainScene");
+        } else if (this.scene.manager.keys["CharacterCustomScene"]) { 
+          this.scene.start("CharacterCustomScene");
+        }else {
+          console.error("No next scene found after PreloadScene!");
+        }
+      });
     }
 
 }

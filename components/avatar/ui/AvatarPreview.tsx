@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Phaser from "phaser";
 import CharacterCustomScene from "@/components/avatar/ui/CharacterCustomScene";
 import { CharacterState } from "../utils/LpcTypes";
-// import { PreloadScene } from "@/game/scenes/core/PreloadScene";
+import { PreloadScene } from "@/game/scenes/core/PreloadScene";
 
 interface AvatarPreviewProps {
   customization: CharacterState | null | undefined;
@@ -36,8 +36,7 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({ customization }) => {
               // debug: false
           }
         },
-        // scene: [PreloadScene, CharacterCustomScene],
-        scene: [CharacterCustomScene],
+        scene: [PreloadScene, CharacterCustomScene],
       };
 
       gameRef.current = new Phaser.Game(config);

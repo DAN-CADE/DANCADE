@@ -1,19 +1,19 @@
 // game/scenes/core/MainScene.ts
-
-import { MapManager } from "@/game/managers/global/MapManager";
 import { BaseScene } from "@/game/scenes/base";
+import { MapManager } from "@/game/managers/global/MapManager";
+import { AvatarManager } from "@/game/managers/global/AvatarManager";
 
 export class MainScene extends BaseScene {
-  private mapManager!: MapManager;
+  private readonly PLAYER_START_X = 960;
+  private readonly PLAYER_START_Y = 544;
 
-  
+  private mapManager!: MapManager;
+  private avatarManager!: AvatarManager;
+
   constructor() {
     super({ key: "MainScene" });
-  }
-
-   
-  init() {
     this.mapManager = new MapManager(this);
+    this.avatarManager = new AvatarManager(this)
   }
 
   preload() {
@@ -21,10 +21,11 @@ export class MainScene extends BaseScene {
 
   create() {
     this.mapManager.createMap()
-    // this.mapManager.setupCollisions( 아바타 컨테이너 )
+    this.avatarManager.createAvatar(this.PLAYER_START_X, this.PLAYER_START_Y);
+    this.mapManager.setupCollisions(this.avatarManager.getContainer())
   }
 
-
   update() {
+    this.avatarManager.update();
   }
 }
