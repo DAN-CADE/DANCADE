@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PhaserGame from "@/components/game/PhaserGame";
+import dynamic from "next/dynamic";
+
+const PhaserGame = dynamic(
+  () => import("@/components/game/PhaserGame"),
+  { ssr: false }
+);
+
 
 export default function GamePage() {
   const [nickname, setNickname] = useState<string | null>(null);
