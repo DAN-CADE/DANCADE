@@ -34,8 +34,10 @@ export class AvatarManager {
    */
   createAvatar(x: number, y: number): void {
     try {
-      const characterCustomization = localStorage.getItem("characterCustomization");
-      let customizationData = null;      
+      const characterCustomization = localStorage.getItem(
+        "characterCustomization"
+      );
+      let customizationData = null;
 
       if (characterCustomization) {
         customizationData = JSON.parse(characterCustomization);
@@ -57,14 +59,13 @@ export class AvatarManager {
     console.log("✅ Avatar created");
   }
 
-
   /**
    * 초기 파츠
    */
-  getInitialPart(gender:string = 'male') {
+  getInitialPart(gender: string = "male") {
     const lpcData = this.lpcSpriteManager.getLpcSprite();
     if (lpcData) {
-      const initData = LpcUtils.getInitialState(lpcData, gender)
+      const initData = LpcUtils.getInitialState(lpcData, gender);
       return initData;
     } else {
       return null;
@@ -77,7 +78,7 @@ export class AvatarManager {
   getRandomPart() {
     const lpcData = this.lpcSpriteManager.getLpcSprite();
     if (lpcData) {
-      const randomData = LpcUtils.getRandomState(lpcData)
+      const randomData = LpcUtils.getRandomState(lpcData);
       return randomData;
     } else {
       return null;
@@ -100,3 +101,4 @@ export class AvatarManager {
     return { x: this.avatarContainer.x, y: this.avatarContainer.y };
   }
 }
+import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
