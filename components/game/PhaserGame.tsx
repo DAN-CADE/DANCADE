@@ -3,7 +3,6 @@
 
 import { useEffect, useRef } from "react";
 import { createGameConfig } from "@/game/config";
-import { preloadScene } from "@/game/scenes/core/PreloadScene";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -28,11 +27,7 @@ export default function PhaserGame() {
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-<<<<<<< HEAD
         scene: [PreloadScene, MainScene, StartScene, BrickBreakerScene, PingPongScene],
-=======
-        scene: [preloadScene ,MainScene, StartScene, BrickBreakerScene, PingPongScene],
->>>>>>> 38438fb0d43af91da1f7ca91ddce360f02d135ce
       };
 
       gameRef.current = new Phaser.Game(config);
