@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import { LpcRootData } from '../utils/LpcTypes';
+import { LpcSprite } from '../utils/LpcTypes';
 import { LpcUtils } from '../utils/LpcUtils';
 
 export class LpcLoader {
-    static loadAssets(scene: Phaser.Scene, data: LpcRootData) {
+    static loadAssets(scene: Phaser.Scene, data: LpcSprite) {
         const frameConfig = { frameWidth: 64, frameHeight: 64 };
         const palettes = data.definitions.palettes;
 

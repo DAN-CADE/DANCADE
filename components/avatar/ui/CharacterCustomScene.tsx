@@ -1,15 +1,17 @@
-// scenes/CharacterCustomScene.ts
 import Phaser from 'phaser';
 import LpcCharacter from '../core/LpcCharacter';
-import { CharacterState, LpcRootData, PartType } from '../utils/LpcTypes';
+import { CharacterState, LpcSprite, PartType } from '../utils/LpcTypes';
 import { LpcUtils } from '../utils/LpcUtils';
+import { LpcSpriteManager } from '@/game/managers/global/LpcSpriteManager';
 
 export default class CharacterCustomScene extends Phaser.Scene {
     private character!: LpcCharacter;
-    private lpcData!: LpcRootData;
+    private lpcData!: LpcSprite | null;
+    private lpcSpriteManager!: LpcSpriteManager;
 
     constructor() {
         super('CharacterCustomScene');
+        this.lpcSpriteManager = new LpcSpriteManager();
     }
 
     create() {
@@ -17,10 +19,7 @@ export default class CharacterCustomScene extends Phaser.Scene {
         this.character = new LpcCharacter(this, 200, 200, '');
 
         // 2. LPC 데이터 로드 (PreloadScene에서 이미 로드됨, 파싱만 수행)
-        const storedData = sessionStorage.getItem("lpcRootData");
-        if (storedData) {
-             this.lpcData = JSON.parse(storedData);
-        }
+        this.lpcData = this.lpcSpriteManager.getLpcSprite();
 
         this.cameras.main.setZoom(2.5);
         this.cameras.main.centerOn(200, 200);
@@ -36,7 +35,6 @@ export default class CharacterCustomScene extends Phaser.Scene {
 
         // 4. React에서 registry 값을 바꿀 때마다 실행됨
         this.registry.events.on('changedata-customization', (parent: any, newValue: CharacterState) => {
-            console.log("🎨 React updated customization:", newValue);
             this.updatePlayerVisuals(newValue);
         });
     }
@@ -49,7 +47,7 @@ export default class CharacterCustomScene extends Phaser.Scene {
         Object.keys(state.parts).forEach(key => {
             const partName = key as PartType;
             const partState = state.parts[partName];
-            if (!partState) return;
+            if (!partState || !this.lpcData) return;
 
             const config = this.lpcData.assets[partName];
             let assetKey = '';

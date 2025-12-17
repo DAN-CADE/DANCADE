@@ -1,4 +1,4 @@
-import { AssetConfig, CharacterPartState, ColorDef, LpcRootData, PaletteParams, PartType, StyledPartConfig } from './LpcTypes';
+import { AssetConfig, CharacterPartState, ColorDef, LpcSprite, PaletteParams, PartType, StyledPartConfig } from './LpcTypes';
 
 export class LpcUtils {
     // 타입 가드
@@ -22,8 +22,52 @@ export class LpcUtils {
         return parts.join('_');
     }
 
+    static getInitialState (data: LpcSprite, gender:string) {
+        const parts: Partial<Record<string, CharacterPartState>> = {}; 
+        const palettes = data.definitions.palettes;
+
+        Object.keys(data.assets).forEach(key => {
+            const partName = key;
+            if (partName === 'head' || partName === 'nose') return; // Body 종속
+
+            const config = data.assets[key];
+
+            // 스타일 유무 체크
+            if (this.isStyledPart(config)) {
+                // 해당항목: hair, torso, legs, feet 
+                // 성별에 맞는 스타일 필터링
+                const validStyles = config.styles.filter(s => 
+                    !s.genders || s.genders.length === 0 || s.genders.includes(gender)
+                );
+
+                if (validStyles.length > 0) {
+                    const style = validStyles[0];
+                    const colorDef = style.colors || config.config.default_colors;
+                    const validColors = this.resolveColors(colorDef, palettes);
+                    const color = validColors[0];
+                    
+                    parts[partName] = { styleId: style.id, color };
+                }
+            } else {
+                // 해당항목: head, eyes, nose, body
+                const colors = this.resolveColors(config.colors, palettes);
+                if (colors.length > 0) {
+                    const color = colors[0];
+                    parts[partName] = { color };
+                }
+            }
+        });
+
+        if (parts['body']) {
+            parts['head'] = { color: parts['body'].color };
+            parts['nose'] = { color: parts['body'].color };
+        }
+
+        return { gender, parts };
+    }
+
     // 랜덤 캐릭터 생성 로직
-    static getRandomState(data: LpcRootData) {
+    static getRandomState(data: LpcSprite) {
         const gender = Math.random() > 0.5 ? 'male' : 'female';
         const parts: Partial<Record<string, CharacterPartState>> = {}; 
         const palettes = data.definitions.palettes;

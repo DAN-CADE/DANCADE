@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 import type { LPCData, LPCStyle } from "@/types/lpc";
-import { CharacterCustomization, CharacterState, LpcRootData } from "@/components/avatar/utils/LpcTypes";
+import { CharacterCustomization, CharacterState, LpcSprite } from "@/components/avatar/utils/LpcTypes";
 import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 
 const AvatarPreview = dynamic(
@@ -15,7 +15,7 @@ const AvatarPreview = dynamic(
 
 export default function CharacterSelect() {
   const router = useRouter();
-  const [lpcData, setLpcData] = useState<LpcRootData | null>(null);
+  const [lpcData, setLpcData] = useState<LpcSprite | null>(null);
 
   // 🎯 커스터마이징 상태
   const [customization, setCustomization] = useState<CharacterState>()
@@ -24,7 +24,7 @@ export default function CharacterSelect() {
   useEffect(() => {
     fetch("/assets/lpc_assets.json")
       .then((res) => res.json())
-      .then((data: LpcRootData) => {
+      .then((data: LpcSprite) => {
         setLpcData(data)
         const initialState = LpcUtils.getRandomState(data);
         setCustomization(initialState);

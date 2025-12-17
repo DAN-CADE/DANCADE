@@ -35,6 +35,7 @@ export function createInitialCustomization(lpcData: LPCData): CharacterState {
     parts: {
       body: { color: palettes.skin_common[0] || "light" },
       head: { color: palettes.skin_common[0] || "light" },
+      nose: { color: palettes.skin_common[0] || "light" },
       eyes: { color: palettes.eye_common[0] || "blue" },
       hair: {
         styleId: maleHair?.id || "plain",

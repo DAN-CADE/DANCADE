@@ -85,7 +85,11 @@ export function CustomizationPanel({
             <SelectButton
               key={color}
               active={customization.parts.body?.color === color}
-              onClick={() => handleChange("body", { color: color })}
+              onClick={() => {
+                handleChange("body", { color })
+                handleChange("head", { color })
+                handleChange("nose", { color })
+              }}
             >
               {color}
             </SelectButton>

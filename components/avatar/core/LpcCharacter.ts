@@ -1,5 +1,7 @@
 import * as Phaser from 'phaser';
-import { PartType } from '../utils/LpcTypes';
+import { CharacterState, LpcSprite, PartType } from '../utils/LpcTypes';
+import { LpcUtils } from '../utils/LpcUtils';
+import { LpcSpriteManager } from '@/game/managers/global/LpcSpriteManager';
 
 const DEFAULT_PART: Partial<Record<PartType, string>> = {
     body: 'body_light',
@@ -32,6 +34,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     private nameTag: Phaser.GameObjects.Text;
     private keys!: { [key: string]: Phaser.Input.Keyboard.Key };
     private speed: number = 160;
+    private lpcSpriteManager!: LpcSpriteManager
     
     // 파츠별 스프라이트 저장소
     private parts: Partial<Record<PartType, Phaser.GameObjects.Sprite>> = {};
@@ -47,6 +50,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
 
     constructor(scene: Phaser.Scene, x: number, y: number, name: string) {
         super(scene, x, y);
+        this.lpcSpriteManager = new LpcSpriteManager()
 
         // 1. Scene 및 Physics 등록
         scene.add.existing(this);
@@ -213,7 +217,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         });
     }  
 
-    public setDefaultPart(scene: Phaser.Scene, gender: string) {
+    public setDefaultPart(gender: string) {
         const hair = gender === "male" ? "hair_male_idol_black" : "hair_female_long_straight_black"
         const parts = {
             ...DEFAULT_PART,
@@ -226,8 +230,46 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
             const textureKey = parts[part];
             
             // 텍스처 키가 있고, 실제로 Scene에 로드되어 있는지 확인
-            if (textureKey && scene.textures.exists(textureKey)) {
+            if (textureKey && this.scene.textures.exists(textureKey)) {
                 this.setPart(part, textureKey);
+            }
+        });
+    }
+
+    public setCustomPart(state: CharacterState) {
+        const lpcData = this.lpcSpriteManager.getLpcSprite();
+        if (!lpcData) {
+            console.log("LpcSprite Error")
+            return;
+        }
+        const gender = state.gender;
+        
+        Object.keys(state.parts).forEach(key => {
+            const partName = key as PartType;
+            const partState = state.parts[partName];
+            if (!partState) return;
+
+            const config = lpcData.assets[partName];
+            let assetKey = '';
+
+            if (LpcUtils.isStyledPart(config)) {
+                if (partState.styleId) {
+                    assetKey = LpcUtils.getAssetKey(partName, partState.styleId, gender, partState.color);
+                    // Fallback: 성별 없는 옷
+                    if (!this.scene.textures.exists(assetKey)) {
+                        assetKey = LpcUtils.getAssetKey(partName, partState.styleId, '', partState.color);
+                    }
+                }
+            } else {
+                assetKey = LpcUtils.getAssetKey(partName, null, gender, partState.color);
+                
+                if (!this.scene.textures.exists(assetKey)) {
+                    assetKey = LpcUtils.getAssetKey(partName, null, '', partState.color);
+                }
+            }
+
+            if (this.scene.textures.exists(assetKey)) {
+                this.setPart(partName, assetKey);
             }
         });
     }

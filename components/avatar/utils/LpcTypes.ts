@@ -35,7 +35,7 @@ export interface StyledPartConfig {
 
 export type AssetConfig = StandardPartConfig | StyledPartConfig;
 
-export interface LpcRootData {
+export interface LpcSprite {
     definitions: {
         palettes: PaletteParams;
     };
