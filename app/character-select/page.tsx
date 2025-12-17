@@ -38,12 +38,10 @@ export default function CharacterSelect() {
 
   // 2. 이벤트 핸들러
   const handleStartGame = useCallback(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
-      router.push("/game");
-    } catch {
-      alert("캐릭터 정보 저장에 실패했습니다.");
-    }
+    if (!customization) return;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
+    router.push("/game");
   }, [customization, router]);
 
   // 3. 조건부 렌더링
