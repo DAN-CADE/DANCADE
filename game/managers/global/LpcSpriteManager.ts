@@ -1,36 +1,42 @@
 import { LpcSprite, PartStyle } from "@/components/avatar/utils/LpcTypes";
 import { LpcUtils } from "@/components/avatar/utils/LpcUtils";
 
-export class LpcSpriteManager {  
+export class LpcSpriteManager {
   constructor() {}
 
-  public getLpcSprite(): LpcSprite | null{
-    const LpcSpriteData = localStorage.getItem("LpcSpriteData");
+  private cachedData: LpcSprite | null = null;
+  private readonly STORAGE_KEY = "LpcSpriteData";
 
-    if (LpcSpriteData) {
-      const lpcSprite: LpcSprite = JSON.parse(LpcSpriteData);
-      return lpcSprite;
-    } else {
-      return null;
-    }
-  }
-
+  // 데이터 저장 (AvatarManager에서 호출)
   public setLpcSprite(lpcSprite: LpcSprite) {
-    localStorage.setItem("LpcSpriteData", JSON.stringify(lpcSprite));
+    this.cachedData = lpcSprite;
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(lpcSprite));
   }
 
-  private getStylesByGender(
+  // 데이터를 가져옴 (메모리 우선, 없으면 스토리지)
+  public getLpcSprite(): LpcSprite | null {
+    if (this.cachedData) return this.cachedData;
+
+    const data = localStorage.getItem(this.STORAGE_KEY);
+    if (data) {
+      this.cachedData = JSON.parse(data);
+      return this.cachedData;
+    }
+    return null;
+  }
+
+  public getStylesByGender(
     styles: PartStyle[] | undefined,
     gender: string
   ): PartStyle[] {
     if (!styles) {
-      return []
-    };
+      return [];
+    }
     return styles.filter((s) => !s.genders || s.genders.includes(gender));
   }
 
-  private getPalettesKey(part: string) {
-    return part + "_common"
+  public getPalettesKey(part: string) {
+    return part + "_common";
   }
 
   // Palettes 전체 정보 조회
@@ -38,7 +44,7 @@ export class LpcSpriteManager {
     const lpcSprite = this.getLpcSprite();
 
     if (lpcSprite) {
-      // 포함 항목: hair, skin, eye, clothes 
+      // 포함 항목: hair, skin, eye, clothes
       const palettes = lpcSprite.definitions.palettes;
       return palettes;
     } else {
@@ -51,7 +57,7 @@ export class LpcSpriteManager {
     const lpcSprite = this.getLpcSprite();
 
     if (lpcSprite) {
-      // 포함 항목: hair, skin, eye, clothes 
+      // 포함 항목: hair, skin, eye, clothes
       const palettes = lpcSprite.definitions.palettes;
       const palettesKey = this.getPalettesKey(part);
       const colors = palettes[palettesKey];
@@ -69,29 +75,22 @@ export class LpcSpriteManager {
 
     if (lpcSprite) {
       assets = lpcSprite.assets;
-    } 
-    
-    return assets;      
+    }
+
+    return assets;
   }
 
   // Lpc Assets 특정 파츠 조회
   public getAssetsByPart(part: string, gender: string = "male") {
     const lpcSprite = this.getLpcSprite();
-    if (lpcSprite) {
-      const assets = lpcSprite.assets[part];
-      let sprite = null;
+    if (!lpcSprite) return [];
 
-      if (LpcUtils.isStyledPart(assets)) {
-        if (part === 'hair') {
-          sprite = this.getStylesByGender(assets.styles, gender);
-        } else {
-          sprite = assets.styles;
-        }
-      }
-
-      return sprite;
-    } else {
-      return [];
+    const assets = lpcSprite.assets[part];
+    if (LpcUtils.isStyledPart(assets)) {
+      return (assets.styles || []).filter(
+        (s) => !s.genders || s.genders.includes(gender)
+      );
     }
+    return [];
   }
 }
