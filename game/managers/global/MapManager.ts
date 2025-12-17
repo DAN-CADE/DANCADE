@@ -41,11 +41,14 @@ export class MapManager{
   public preloadMap() {//어느 씬에서 에셋을 등록하건 BaseCache에 저장되고 CacheManager 가 관리한다. 
     this.loadImages(TILE_IMAGES);
     this.scene.load.tilemapTiledJSON("map", MAIN_MAP) 
+    this.scene.load.image("bg1_1", "/tilesets/bg1_1.png")
   }
 
 
   public createMap() {
     this.map = this.scene.make.tilemap({key:"map"}); // this.scene.load.tilemapTiledJSON("map", MAIN_MAP) 에서 등록한 key로 CacheManager에게 등록한 MAIN_MAP 요청
+    this.scene.add.image(0, 0, "bg1_1").setOrigin(0, 0).setDepth(-1);
+
     const tilesetsRaw = TILE_IMAGES.map(([key])=>{
       return this.map!.addTilesetImage(key, key)
     })
