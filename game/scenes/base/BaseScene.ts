@@ -21,7 +21,7 @@ export abstract class BaseScene extends Phaser.Scene {
     fadeDuration: number = 1000
   ): void {
     this.cameras.main.fadeOut(fadeDuration, 0, 0, 0);
-    this.cameras.main.once("camerasoutcomplete", () => {
+    this.cameras.main.once("camerafadeoutcomplete", () => {
       this.scene.start(targetScene, data);
     });
   }

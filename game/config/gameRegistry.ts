@@ -10,21 +10,8 @@ export const GAME_REGISTRY: GameConfig[] = [
   {
     id: "brick-breaker",
     name: "Brick Breaker",
-    // sceneKey: "BrickBreakerScene",
     sceneKey: "StartScene",
     description: "벽돌을 모두 깨세요!",
-  },
-  {
-    id: "whack-a-mole",
-    name: "Whack-a-Mole",
-    sceneKey: "WhackAMole",
-    description: "두더지를 잡으세요!",
-  },
-  {
-    id: "memory-game",
-    name: "Memory Game",
-    sceneKey: "MemoryGame",
-    description: "카드를 맞추세요!",
   },
   {
     id: "ping-pong",
