@@ -20,6 +20,8 @@ export class MainScene extends BaseScene {
   }
 
   create() {
+    this.mapManager.createMap()
+    // this.mapManager.setupCollisions( 아바타 컨테이너 )
   }
 
 

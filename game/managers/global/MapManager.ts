@@ -44,7 +44,7 @@ export class MapManager{
   }
 
 
-  public creatMap() {
+  public createMap() {
     this.map = this.scene.make.tilemap({key:"map"}); // this.scene.load.tilemapTiledJSON("map", MAIN_MAP) 에서 등록한 key로 CacheManager에게 등록한 MAIN_MAP 요청
     const tilesetsRaw = TILE_IMAGES.map(([key])=>{
       return this.map!.addTilesetImage(key, key)
@@ -69,21 +69,21 @@ export class MapManager{
 
 
 
-   public setupCollisions(): void {
+   public setupCollisions(avatar: Phaser.GameObjects.GameObject): void {
 
-    // this.addTilemapCollision(avatar, this.wallsLayer);
-    // this.addTilemapCollision(avatar, this.object1Layer);
-    // this.addTilemapCollision(avatar, this.object2Layer);
+    this.addTilemapCollision(avatar, this.wallsLayer);
+    this.addTilemapCollision(avatar, this.object1Layer);
+    this.addTilemapCollision(avatar, this.object2Layer);
   }
 
 
   private addTilemapCollision(
     avatar: Phaser.GameObjects.GameObject,
-    layer?: Phaser.Tilemaps.TilemapLayer | null
+    layer?: Phaser.Tilemaps.TilemapLayer | null,
   ) {
     if (!layer) return;
     layer.setCollisionByProperty({ collides: true });
-    // this.physics.add.collider(avatar, layer);
+    this.scene.physics.add.collider(avatar, layer);
   }
 
 
