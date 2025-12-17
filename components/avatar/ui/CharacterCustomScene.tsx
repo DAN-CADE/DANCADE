@@ -11,6 +11,9 @@ export default class CharacterCustomScene extends Phaser.Scene {
 
     constructor() {
         super('CharacterCustomScene');
+    }
+
+    init() {
         this.lpcSpriteManager = new LpcSpriteManager();
     }
 
