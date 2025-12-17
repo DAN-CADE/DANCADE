@@ -1,8 +1,8 @@
-import * as Phaser from "phaser";
+import { BaseScene } from "@/game/scenes/base";
 import { MapManager } from "@/game/managers/global/MapManager";
 import { AvatarManager } from "@/game/managers/global/AvatarManager";
 
-export class PreloadScene extends Phaser.Scene {
+export class PreloadScene extends BaseScene {
     private mapManager!: MapManager;
     private avatarManager!: AvatarManager;
 
