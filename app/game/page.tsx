@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
-const PhaserGame = dynamic(
-  () => import("@/components/game/PhaserGame"),
-  { ssr: false }
-);
-
+const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), {
+  ssr: false,
+});
 
 export default function GamePage() {
   const [nickname, setNickname] = useState<string | null>(null);
@@ -26,6 +24,16 @@ export default function GamePage() {
     } else {
       setNickname("");
     }
+
+    // 게임 페이지에서 스크롤 비활성화
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      // 페이지 이동 시 스크롤 복구
+      document.body.style.overflow = "auto";
+      document.documentElement.style.overflow = "auto";
+    };
   }, []);
 
   return (
