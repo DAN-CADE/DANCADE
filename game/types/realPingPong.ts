@@ -52,9 +52,9 @@ export const PINGPONG_CONFIG = {
   BALL_SCALE: 0.6,
 
   // 게임 규칙
-  WINNING_SCORE: 2, // 진짜 탁구는 11점 (테스트 모드: 2점)
+  WINNING_SCORE: 11, // 진짜 탁구는 11점
   DUECE_SCORE: 10, // 듀스 시작 점수
-  WINNING_MARGIN: 0, // 승리 필요 점수 차이 (테스트 모드: 0)
+  WINNING_MARGIN: 2, // 승리 필요 점수 차이
 
   // AI 설정
   AI_SPEED: 350, // AI 속도
