@@ -301,7 +301,10 @@ export class PingPongUIManager extends BaseUIManager {
     });
 
     this.createFinalScoreDisplay(playerScore, aiScore, depth);
+
     this.createRestartButton(onRestart, 400, 440, depth + 1);
+
+    this.createHomeButton(() => {}, 400, 520, depth + 1);
   }
 
   private createFinalScoreDisplay(

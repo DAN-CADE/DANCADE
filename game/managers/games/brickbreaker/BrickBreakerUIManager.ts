@@ -59,6 +59,9 @@ export class BrickBreakerUIManager extends BaseUIManager {
 
     // 재시작 버튼
     this.createRestartButton(onRestart, 400, 400, depth + 1);
+
+    // 홈으로 가기 버튼
+    this.createHomeButton(() => {}, 400, 480, depth + 1);
   }
 
   private getEndGameConfig(result: GameResult) {

@@ -69,6 +69,40 @@ export abstract class BaseUIManager {
   }
 
   /**
+   * 홈 버튼 생성 (공통 패턴)
+   */
+  protected createHomeButton(
+    onHome: () => void,
+    x: number = 750,
+    y: number = 50,
+    depth: number = 0
+  ): void {
+    const homeBtnBg = this.scene.add
+      .rectangle(x, y, 200, 60, 0xffffff)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(depth);
+
+    this.scene.add
+      .text(x, y, "HOME", this.TEXT_STYLE.BUTTON)
+      .setOrigin(0.5)
+      .setDepth(depth);
+
+    homeBtnBg.on("pointerover", () => {
+      homeBtnBg.setFillStyle(0xe0e0e0);
+      homeBtnBg.setScale(1.05);
+    });
+
+    homeBtnBg.on("pointerout", () => {
+      homeBtnBg.setFillStyle(0xffffff);
+      homeBtnBg.setScale(1);
+    });
+
+    homeBtnBg.on("pointerdown", () => {
+      window.location.href = "/game";
+    });
+  }
+
+  /**
    * 오버레이 생성 (공통 패턴)
    */
   protected createOverlay(
