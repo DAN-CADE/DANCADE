@@ -40,9 +40,7 @@ export class LpcSpriteManager {
   }
 
   // Palettes 전체 정보 조회
-  public getPalettes() {
-    const lpcSprite = this.getLpcSprite();
-
+  public getPalettes(lpcSprite:LpcSprite) {
     if (lpcSprite) {
       // 포함 항목: hair, skin, eye, clothes
       const palettes = lpcSprite.definitions.palettes;
@@ -53,9 +51,7 @@ export class LpcSpriteManager {
   }
 
   // 특정 파츠 색상 조회
-  public getPalettesByPart(part: string) {
-    const lpcSprite = this.getLpcSprite();
-
+  public getPalettesByPart(lpcSprite:LpcSprite, part: string) {
     if (lpcSprite) {
       // 포함 항목: hair, skin, eye, clothes
       const palettes = lpcSprite.definitions.palettes;
@@ -69,8 +65,7 @@ export class LpcSpriteManager {
   }
 
   // Lpc Assets 정보 조회
-  public getAssets() {
-    const lpcSprite = this.getLpcSprite();
+  public getAssets(lpcSprite:LpcSprite) {
     let assets = {};
 
     if (lpcSprite) {
@@ -81,8 +76,7 @@ export class LpcSpriteManager {
   }
 
   // Lpc Assets 특정 파츠 조회
-  public getAssetsByPart(part: string, gender: string = "male") {
-    const lpcSprite = this.getLpcSprite();
+  public getAssetsByPart(lpcSprite:LpcSprite, part: string, gender: string = "male") {
     if (!lpcSprite) return [];
 
     const assets = lpcSprite.assets[part];
@@ -92,5 +86,29 @@ export class LpcSpriteManager {
       );
     }
     return [];
+  }
+
+  /**
+   * 초기 파츠
+   */
+  public getInitialPart(lpcSprite:LpcSprite, gender:string = 'male') {
+    if (lpcSprite) {
+      const initData = LpcUtils.getInitialState(lpcSprite, gender)
+      return initData;
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * 랜덤 파츠 정보 생성
+   */
+  public getRandomPart(lpcSprite:LpcSprite,) {
+    if (lpcSprite) {
+      const randomData = LpcUtils.getRandomState(lpcSprite)
+      return randomData;
+    } else {
+      return null;
+    }
   }
 }

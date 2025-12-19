@@ -8,7 +8,6 @@ import type {
   LpcSprite,
 } from "@/components/avatar/utils/LpcTypes";
 import { ASSET_PATHS } from "@/game/constants";
-import { LPCData } from "@/types/lpc";
 
 // 1. 상태 타입 정의 (BaseGameManager 규격)
 interface AvatarManagerState {
@@ -30,7 +29,7 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
     this.scene.load.json("lpc_config", ASSET_PATHS.LPC.CONFIG);
     this.scene.load.once(
       `filecomplete-json-lpc_config`,
-      (key, type, data: LPCData) => {
+      (key:string, type:string, data: LpcSprite) => {
         if (data?.assets) {
           // 수정: 클래스 명이 아니라 생성한 인스턴스를 사용합니다.
           this.lpcSpriteManager.setLpcSprite(data as unknown as LpcSprite);

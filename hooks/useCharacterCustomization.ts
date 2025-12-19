@@ -1,11 +1,12 @@
-import { createInitialCustomization } from "@/utils/character-helpers";
-import { LPCData } from "@/types/lpc";
-import { generateRandomCustomization } from "@/utils/character-helpers";
-import { getHairStylesByGender } from "@/utils/character-helpers";
+// import { createInitialCustomization } from "@/utils/character-helpers";
+// import { generateRandomCustomization } from "@/utils/character-helpers";
+// import { getHairStylesByGender } from "@/utils/character-helpers";
 import { useCallback, useEffect, useState } from "react";
-import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
+import type { CharacterState, LpcSprite } from "@/components/avatar/utils/LpcTypes";
+import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 
-export function useCharacterCustomization(lpcData: LPCData | null) {
+export function useCharacterCustomization(lpcData: LpcSprite | null) {
+  const lpcSpriteManager = new LpcSpriteManager();
   const [customization, setCustomization] = useState<CharacterState | null>(
     null
   );
@@ -15,7 +16,8 @@ export function useCharacterCustomization(lpcData: LPCData | null) {
     if (!lpcData) return;
 
     try {
-      const safeInitial = createInitialCustomization(lpcData);
+      const safeInitial = lpcSpriteManager.getInitialPart(lpcData);
+      // const safeInitial = createInitialCustomization(lpcData);
       setCustomization(safeInitial);
       setIsInitialized(true);
     } catch (error) {
@@ -29,10 +31,11 @@ export function useCharacterCustomization(lpcData: LPCData | null) {
     if (!lpcData || !customization) return;
 
     try {
-      const randomCustomization = generateRandomCustomization(
-        lpcData,
-        customization.gender as "male" | "female"
-      );
+      const randomCustomization = lpcSpriteManager.getRandomPart(lpcData);
+      // const randomCustomization = generateRandomCustomization(
+      //   lpcData,
+      //   customization.gender as "male" | "female"
+      // );
       setCustomization(randomCustomization);
     } catch (error) {
       console.error("랜덤 생성에 실패했습니다:", error);
@@ -44,10 +47,11 @@ export function useCharacterCustomization(lpcData: LPCData | null) {
     (gender: "male" | "female") => {
       if (!lpcData || !customization) return;
 
-      const hairStyles = getHairStylesByGender(
-        lpcData.assets.hair.styles,
-        gender
-      );
+      const hairStyles = lpcSpriteManager.getAssetsByPart(lpcData, "hair", gender);
+      // const hairStyles = getHairStylesByGender(
+      //   lpcData.assets.hair.styles,
+      //   gender
+      // );
 
       if (hairStyles.length === 0) {
         console.warn("성별에 맞는 헤어스타일이 없습니다:", gender);
