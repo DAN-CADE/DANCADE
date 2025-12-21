@@ -5,6 +5,8 @@ import { AvatarManager } from "@/game/managers/global/AvatarManager";
 import { ArcadeMachineManager } from "@/game/managers/global/ArcadeMachineManager";
 import { InteractionManager } from "@/game/managers/global/InteractionManager";
 import { AvatarDataManager } from "@/game/managers/global/AvatarDataManager";
+import LpcCharacter from "@/components/avatar/core/LpcCharacter";
+import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 
 // 플레이어 데이터 타입
@@ -16,6 +18,7 @@ interface OnlinePlayer {
   x: number;
   y: number;
   joinedAt: number;
+  customization?: Record<string, any>; // 아바타 커스텀 정보
 }
 
 // 플레이어 이동 데이터 타입
@@ -31,12 +34,14 @@ export class MainScene extends BaseGameScene {
   private avatarDataManager!: AvatarDataManager;
   private arcadeManager!: ArcadeMachineManager;
   private interactionManager!: InteractionManager;
+  private lpcSpriteManager!: LpcSpriteManager; // 다른 플레이어 아바타용
   private readonly spawnPoint = { x: 960, y: 544 };
 
   // Socket.io 관련
   private socket!: Socket;
   private onlinePlayers = new Map<string, OnlinePlayer>(); // socketId -> player data
-  private playerSprites = new Map<string, Phaser.GameObjects.Container>(); // socketId -> sprite
+  private playerAvatars = new Map<string, LpcCharacter>(); // socketId -> LpcCharacter (실제 아바타)
+  private playerNameTags = new Map<string, Phaser.GameObjects.Text>(); // socketId -> nickname text
 
   // 위치 최적화 (변경이 있을 때만 전송)
   private lastSentPosition = { x: 0, y: 0 };
@@ -53,6 +58,18 @@ export class MainScene extends BaseGameScene {
 
     this.avatarManager = new AvatarManager(this);
     this.avatarManager.preloadAvatar();
+
+    // LPC 아바타 매니저 초기화 (다른 플레이어용)
+    this.lpcSpriteManager = new LpcSpriteManager();
+    this.load.json("lpc_config", "/assets/lpc_assets.json");
+    this.load.once(
+      "filecomplete-json-lpc_config",
+      (key: string, type: string, data: any) => {
+        if (data?.assets) {
+          this.lpcSpriteManager.setLpcSprite(data);
+        }
+      }
+    );
 
     this.setupSocketIO();
   }
@@ -95,13 +112,14 @@ export class MainScene extends BaseGameScene {
 
   // 게임에 입장
   private joinGame(): void {
-    const customization = this.avatarDataManager.customization;
+    const customization = this.avatarDataManager?.customization;
     const userId = "guest-" + Math.random().toString(36).substr(2, 9); // 테스트용
 
     this.socket.emit("player:join", {
       userId,
       username: customization?.gender || "Player",
       avatarId: "default",
+      customization: customization, // 아바타 커스텀 정보 전송
       x: this.spawnPoint.x,
       y: this.spawnPoint.y,
     });
@@ -118,6 +136,7 @@ export class MainScene extends BaseGameScene {
     this.avatarManager = new AvatarManager(this);
     this.arcadeManager = new ArcadeMachineManager(this);
     this.interactionManager = new InteractionManager(this);
+    this.lpcSpriteManager = new LpcSpriteManager();
   }
 
   // 화면에 무엇을 그릴 것인가
@@ -206,39 +225,64 @@ export class MainScene extends BaseGameScene {
 
   // 플레이어 스프라이트 생성
   private createPlayerSprite(player: OnlinePlayer): void {
-    const container = this.add.container(player.x, player.y);
+    // LpcCharacter를 사용하여 실제 아바타 생성
+    const playerAvatar = new LpcCharacter(
+      this,
+      player.x,
+      player.y,
+      `player_${player.socketId}`,
+      this.lpcSpriteManager
+    );
 
-    // 간단한 원 모양으로 표현 (아바타 대신)
-    const circle = this.add.circle(0, 0, 16, 0xff0000);
-    container.add(circle);
+    // 아바타 커스텀 정보가 있으면 적용
+    if (player.customization) {
+      playerAvatar.setCustomPart(player.customization);
+    } else {
+      // 기본 아바타 (여캐)
+      playerAvatar.setDefaultPart("female");
+    }
 
-    // 닉네임 텍스트
+    // 깊이 설정
+    playerAvatar.setDepth(50);
+
+    // 닉네임 텍스트 생성
     const nameText = this.add
-      .text(0, -24, player.username, {
+      .text(player.x, player.y - 40, player.username, {
         fontSize: "14px",
         color: "#ffffff",
         backgroundColor: "#000000",
         padding: { x: 4, y: 2 },
       })
-      .setOrigin(0.5);
-    container.add(nameText);
+      .setOrigin(0.5)
+      .setDepth(51);
 
-    // 깊이 설정 (플레이어가 보이도록)
-    container.setDepth(100);
-
-    this.playerSprites.set(player.socketId, container);
+    this.playerAvatars.set(player.socketId, playerAvatar);
+    this.playerNameTags.set(player.socketId, nameText);
   }
 
   // 플레이어 스프라이트 이동
   private movePlayerSprite(socketId: string, x: number, y: number): void {
-    const sprite = this.playerSprites.get(socketId);
-    if (sprite) {
+    const avatar = this.playerAvatars.get(socketId);
+    const nameTag = this.playerNameTags.get(socketId);
+
+    if (avatar) {
       // 부드러운 이동
       this.tweens.add({
-        targets: sprite,
+        targets: avatar,
         x,
         y,
         duration: 100, // 0.1초
+        ease: "Linear",
+      });
+    }
+
+    if (nameTag) {
+      // 닉네임도 함께 이동
+      this.tweens.add({
+        targets: nameTag,
+        x,
+        y: y - 40,
+        duration: 100,
         ease: "Linear",
       });
     }
@@ -246,10 +290,17 @@ export class MainScene extends BaseGameScene {
 
   // 플레이어 스프라이트 제거
   private removePlayerSprite(socketId: string): void {
-    const sprite = this.playerSprites.get(socketId);
-    if (sprite) {
-      sprite.destroy();
-      this.playerSprites.delete(socketId);
+    const avatar = this.playerAvatars.get(socketId);
+    const nameTag = this.playerNameTags.get(socketId);
+
+    if (avatar) {
+      avatar.destroy();
+      this.playerAvatars.delete(socketId);
+    }
+
+    if (nameTag) {
+      nameTag.destroy();
+      this.playerNameTags.delete(socketId);
     }
   }
 
@@ -266,9 +317,13 @@ export class MainScene extends BaseGameScene {
       this.socket.disconnect();
     }
 
-    // 온라인 플레이어 스프라이트 제거
-    this.playerSprites.forEach((sprite) => sprite.destroy());
-    this.playerSprites.clear();
+    // 온라인 플레이어 아바타 및 닉네임 제거
+    this.playerAvatars.forEach((avatar) => avatar.destroy());
+    this.playerAvatars.clear();
+
+    this.playerNameTags.forEach((nameTag) => nameTag.destroy());
+    this.playerNameTags.clear();
+
     this.onlinePlayers.clear();
   }
 
