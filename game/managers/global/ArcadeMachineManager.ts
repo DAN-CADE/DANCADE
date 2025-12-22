@@ -53,7 +53,10 @@ export class ArcadeMachineManager extends BaseGameManager<
   }
 
   // 매 프레임 플레이어 위치를 받아 가장 가까운 게임기 탐색 및 하이라이트
-  public update(playerPos: { x: number; y: number }): GameConfig | null {
+  public update(playerPos: {
+    x: number;
+    y: number;
+  }): { game: GameConfig; x: number; y: number } | null {
     const nearest = this.findNearest(playerPos.x, playerPos.y);
 
     // 이전과 상태가 달라졌을 때만 콜백 호출
@@ -65,7 +68,8 @@ export class ArcadeMachineManager extends BaseGameManager<
     }
 
     this.updateHighlights(nearest);
-    return nearest ? nearest.game : null;
+    // 게임 정보와 위치 정보를 함께 반환
+    return nearest ? { game: nearest.game, x: nearest.x, y: nearest.y } : null;
   }
 
   private parseTiledObject(obj: TiledObject): ArcadeMachine | null {
