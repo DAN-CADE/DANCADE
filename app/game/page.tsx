@@ -37,10 +37,13 @@ export default function GamePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-900 py-8">
+    <div className="min-h-screen overflow-hidden">
       <main className="container mx-auto px-4">
         {nickname && (
-          <div className="text-white text-right mb-4" suppressHydrationWarning>
+          <div
+            className="text-white text-right mb-4 absolute top-10 z-10 right-10"
+            suppressHydrationWarning
+          >
             환영합니다, <strong>{nickname}</strong>님! 🎮
           </div>
         )}
