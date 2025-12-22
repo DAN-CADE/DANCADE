@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import signupLogo from "@/public/assets/logos/signup-logo.svg";
 import Window from "@/components/common/Window";
 import Link from "next/link";
@@ -24,18 +25,11 @@ const registerSchema = z
       .regex(/^[a-zA-Z0-9_-]+$/, "영문, 숫자, _, -만 사용 가능합니다."),
     password: z
       .string()
-      .min(8, "비밀번호는 최소 8글자 이상이어야 합니다.")
+      .min(6, "영문과 숫자를 포함하여 최소 6글자 이상이어야 합니다.")
       .max(16, "비밀번호는 최대 16글자까지 가능합니다.")
-      .regex(/[a-zA-Z]/, "영문을 포함해야 합니다.")
-      .regex(/[0-9]/, "숫자를 포함해야 합니다.")
-      .regex(/[!@#$%^&*(),.?":{}|<>]/, "특수문자를 포함해야 합니다."),
+      .regex(/[a-zA-Z]/)
+      .regex(/[0-9]/),
     passwordConfirm: z.string(),
-    phoneNumber: z
-      .string()
-      .regex(
-        /^010\d{7,8}$/,
-        "휴대폰 번호는 010으로 시작해야 합니다 (010XXXXXXXX)."
-      ),
   })
   .refine((data) => data.password === data.passwordConfirm, {
     message: "비밀번호가 일치하지 않습니다.",
@@ -57,7 +51,6 @@ export default function RegisterPage() {
     userId: "",
     password: "",
     passwordConfirm: "",
-    phoneNumber: "",
   });
   const [errors, setErrors] = useState<
     Partial<Record<keyof RegisterFormData, string>>
@@ -150,9 +143,40 @@ export default function RegisterPage() {
     }
   };
 
-  // 닉네임 자동생성
-  const generateNickname = () => {
-    const newNickname = generateGuestNickname();
+  // 닉네임 중복 확인 함수
+  const checkNicknameDuplicate = async (nickname: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id")
+        .eq("nickname", nickname)
+        .single();
+
+      // 데이터가 없으면 중복 아님 (사용 가능)
+      if (error?.code === "PGRST116") {
+        return false;
+      }
+
+      // 데이터가 있으면 중복
+      return data !== null;
+    } catch {
+      return false;
+    }
+  };
+
+  // 닉네임 자동생성 (중복 확인)
+  const generateNickname = async () => {
+    let newNickname = generateGuestNickname();
+    let isDuplicate = await checkNicknameDuplicate(newNickname);
+    let attempts = 0;
+
+    // 최대 5번까지 중복되지 않은 닉네임 생성 시도
+    while (isDuplicate && attempts < 5) {
+      newNickname = generateGuestNickname();
+      isDuplicate = await checkNicknameDuplicate(newNickname);
+      attempts++;
+    }
+
     setFormData((prev) => ({ ...prev, nickname: newNickname }));
     const error = validateField("nickname", newNickname);
     setErrors((prev) => ({ ...prev, nickname: error }));
@@ -189,24 +213,73 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Supabase에서 사용자 생성 (휴대폰 번호 기반)
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.phoneNumber || "", // 휴대폰 번호 사용
-        password: formData.password || "",
-        options: {
-          data: {
-            full_name: formData.nickname,
-            user_name: formData.userId,
-            phone_number: formData.phoneNumber,
+      // 닉네임 중복 확인
+      const isNicknameDuplicate = await checkNicknameDuplicate(
+        formData.nickname || ""
+      );
+
+      if (isNicknameDuplicate) {
+        setErrors((prev) => ({
+          ...prev,
+          nickname: "이미 사용 중인 닉네임입니다.",
+        }));
+        setIsLoading(false);
+        return;
+      }
+
+      // 아이디 중복 확인
+      const { data: existingUser, error: checkError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("userid", formData.userId)
+        .single();
+
+      if (!checkError?.code || checkError.code !== "PGRST116") {
+        // PGRST116이 아니면서 에러가 있거나, 데이터가 있으면 중복
+        if (existingUser) {
+          setErrors((prev) => ({
+            ...prev,
+            userId: "이미 사용 중인 아이디입니다.",
+          }));
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // UUID 생성 (간단한 UUID v4 생성)
+      const generateUUID = () => {
+        return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+          /[xy]/g,
+          function (c) {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          }
+        );
+      };
+
+      // 비밀번호 암호화
+      const hashedPassword = await bcrypt.hash(formData.password || "", 10);
+
+      // public.users 테이블에 직접 저장
+      const { data, error } = await supabase
+        .from("users")
+        .insert([
+          {
+            id: generateUUID(),
+            userid: formData.userId,
+            nickname: formData.nickname,
+            password: hashedPassword,
+            total_points: 0,
           },
-        },
-      });
+        ])
+        .select();
 
       if (error) {
         throw error;
       }
 
-      if (data.user) {
+      if (data && data.length > 0) {
         setSuccessMessage("회원가입이 완료되었습니다!");
         // 로컬스토리지에서 저장된 데이터 제거
         localStorage.removeItem("registerFormData");
@@ -219,17 +292,10 @@ export default function RegisterPage() {
     } catch (error) {
       console.error("회원가입 실패:", error);
       if (error instanceof Error) {
-        if (error.message.includes("already registered")) {
-          setErrors((prev) => ({
-            ...prev,
-            phoneNumber: "이미 가입된 번호입니다.",
-          }));
-        } else {
-          setErrors((prev) => ({
-            ...prev,
-            phoneNumber: error.message || "회원가입 중 오류가 발생했습니다.",
-          }));
-        }
+        setErrors((prev) => ({
+          ...prev,
+          userId: error.message || "회원가입 중 오류가 발생했습니다.",
+        }));
       }
     } finally {
       setIsLoading(false);
@@ -246,12 +312,10 @@ export default function RegisterPage() {
     formData.userId &&
     formData.password &&
     formData.passwordConfirm &&
-    formData.phoneNumber &&
     !errors.nickname &&
     !errors.userId &&
     !errors.password &&
-    !errors.passwordConfirm &&
-    !errors.phoneNumber;
+    !errors.passwordConfirm;
 
   return (
     <main className="signup-page">
@@ -297,38 +361,6 @@ export default function RegisterPage() {
                     className="pixelBtn pixelBtn--gray px-5 py-2 cursor-pointer font-medium text-sm"
                   >
                     NO
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 로컬스토리지 저장 데이터 확인 모달 */}
-          {isMounted && showLocalStoragePrompt && savedUserData && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4">
-              <div className="w-full max-w-[515px] p-4 bg-blue-100 border border-blue-500 rounded-lg">
-                <p className="text-blue-700 mb-4 text-center font-semibold">
-                  이전에 저장된 회원가입 정보가 있습니다.
-                </p>
-                <div className="text-blue-600 text-sm mb-4 space-y-1">
-                  <p>• 닉네임: {savedUserData.nickname}</p>
-                  <p>• 아이디: {savedUserData.userId}</p>
-                  <p>• 휴대폰: {savedUserData.phoneNumber}</p>
-                </div>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    type="button"
-                    onClick={loadSavedData}
-                    className="pixelBtn pixelBtn--cyan px-4 py-2 cursor-pointer"
-                  >
-                    불러오기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={ignoreSavedData}
-                    className="pixelBtn pixelBtn--gray px-4 py-2 cursor-pointer"
-                  >
-                    새로 작성
                   </button>
                 </div>
               </div>
@@ -458,7 +490,7 @@ export default function RegisterPage() {
               <div className="form-field flex flex-col lg:flex-row lg:items-start">
                 <label
                   htmlFor="passwordConfirm"
-                  className="text-[var(--color-black)] mb-2 lg:mb-0 lg:w-[140px] text-lg lg:pt-4"
+                  className="text-[var(--color-black)] mb-2 lg:mb-0 lg:w-[140px] text-lg lg:pt-1"
                 >
                   비밀번호 <br /> 확인
                 </label>
@@ -477,34 +509,6 @@ export default function RegisterPage() {
                   {errors.passwordConfirm && (
                     <p className="text-left text-[var(--color-pink)] text-sm mt-2">
                       {errors.passwordConfirm}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* 휴대폰 번호 */}
-              <div className="form-field flex flex-col lg:flex-row lg:items-start">
-                <label
-                  htmlFor="phoneNumber"
-                  className="text-[var(--color-black)] mb-2 lg:mb-0 lg:w-[140px] text-lg lg:pt-4"
-                >
-                  휴대폰
-                </label>
-                <div className="w-full">
-                  <input
-                    id="phoneNumber"
-                    type="tel"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    placeholder="휴대폰 번호를 입력하세요. (010XXXXXXXX)"
-                    autoComplete="tel"
-                    className="w-full py-4 px-4 border border-[var(--color-navy)]
-                               placeholder:text-slate-gray text-black 
-                               focus:outline-none focus:ring-2 focus:ring-[var(--color-cyan)] focus:border-transparent"
-                  />
-                  {errors.phoneNumber && (
-                    <p className="text-left text-[var(--color-pink)] text-sm mt-2">
-                      {errors.phoneNumber}
                     </p>
                   )}
                 </div>

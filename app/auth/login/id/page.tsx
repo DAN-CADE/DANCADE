@@ -3,13 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import bcrypt from "bcryptjs";
 import logo from "@/public/assets/logos/logo.svg";
 import brickBreaker from "@/public/assets/screenshots/brick-breaker.png";
 import pingPong from "@/public/assets/screenshots/ping-pong.png";
 import Window from "@/components/common/Window";
+import { createBrowserClient } from "@supabase/ssr";
+import { clearGuestSession } from "@/lib/utils/guestSession";
 
 export default function LoginIdPage() {
   const router = useRouter();
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const [formData, setFormData] = useState({
     username: "",
@@ -43,11 +51,76 @@ export default function LoginIdPage() {
     setIsLoading(true);
 
     try {
-      // ******************** Supabase 로그인
-      console.log("로그인 시도:", formData);
+      // public.users 테이블에서 사용자 정보 조회
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("userid", formData.username)
+        .single();
+
+      if (error) {
+        setErrorMessage("아이디 또는 비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      // 비밀번호 확인 (bcrypt 비교)
+      const isPasswordValid = await bcrypt.compare(
+        formData.password,
+        data.password
+      );
+
+      if (!isPasswordValid) {
+        setErrorMessage("아이디 또는 비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      // 로그인 성공 - 게스트 데이터 마이그레이션
+      const guestUser = localStorage.getItem("user");
+      let guestData = null;
+
+      if (guestUser) {
+        try {
+          const parsedUser = JSON.parse(guestUser);
+          // 게스트 사용자인지 확인 (isGuest 필드 확인)
+          if (parsedUser.isGuest) {
+            guestData = parsedUser;
+          }
+        } catch {
+          console.error("게스트 데이터 파싱 실패");
+        }
+      }
+
+      // 게스트 데이터가 있다면 점수 마이그레이션
+      if (guestData && guestData.points && guestData.points > 0) {
+        const migratedPoints =
+          (data.total_points || 0) + (guestData.points || 0);
+
+        // 사용자의 총 포인트 업데이트
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ total_points: migratedPoints })
+          .eq("id", data.id);
+
+        if (!updateError) {
+          // 업데이트된 데이터로 사용자 정보 갱신
+          data.total_points = migratedPoints;
+          console.log(
+            `게스트 포인트 마이그레이션: ${guestData.points} -> 총 ${migratedPoints}점`
+          );
+        }
+      }
+
+      // 사용자 정보를 로컬스토리지에 저장
+      localStorage.setItem("user", JSON.stringify(data));
+
+      // 게스트 세션 데이터 초기화
+      clearGuestSession();
+
+      // 메인 페이지로 이동
+      router.push("/character-select");
     } catch (error) {
       setErrorMessage("아이디 또는 비밀번호가 일치하지 않습니다.");
-      console.log(error);
+      console.error("로그인 오류:", error);
     } finally {
       setIsLoading(false);
     }

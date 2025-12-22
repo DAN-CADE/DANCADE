@@ -4,9 +4,9 @@ export interface GuestSession {
   nickname: string;
   createdAt: string;
   lastActivity: string;
-  todos?: any[];
-  notes?: any[];
-  [key: string]: any;
+  todos?: Record<string, unknown>[];
+  notes?: Record<string, unknown>[];
+  [key: string]: unknown;
 }
 
 // 게스트 세션 생성
@@ -51,11 +51,12 @@ export const updateGuestSession = (updates: Partial<GuestSession>) => {
 };
 
 // 게스트 데이터에 항목 추가
-export const addGuestData = (key: string, data: any) => {
+export const addGuestData = (key: string, data: Record<string, unknown>) => {
   const session = getGuestSession();
   if (!session) return null;
 
-  const currentData = session[key] || [];
+  const currentData =
+    (session[key] as Record<string, unknown>[] | undefined) || [];
   const updated = {
     ...session,
     [key]: [...currentData, data],
