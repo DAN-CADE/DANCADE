@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
 import { useLPCData } from "@/hooks/useLPCData";
@@ -26,6 +26,7 @@ const AvatarPreview = dynamic(
 
 export default function CharacterSelect() {
   const router = useRouter();
+  const [isAssetLoading, setIsAssetLoading] = useState(true);
 
   // 1. 상태 관리
   const { lpcData, isLoading, error } = useLPCData();
@@ -36,7 +37,12 @@ export default function CharacterSelect() {
     handleGenderChange,
   } = useCharacterCustomization(lpcData);
 
-  // 2. 이벤트 핸들러
+  // 2. 아바타 렌더링이 완료되면 실행될 함수
+  const handleAvatarLoaded = useCallback(() => {
+    setIsAssetLoading(false);
+  }, []);
+
+  // 3. 이벤트 핸들러
   const handleStartGame = useCallback(() => {
     if (!customization) return;
 
@@ -44,7 +50,7 @@ export default function CharacterSelect() {
     router.push("/game");
   }, [customization, router]);
 
-  // 3. 조건부 렌더링
+  // 4. 조건부 렌더링
   if (isLoading || !customization) {
     return <LoadingScreen />;
   }
@@ -57,11 +63,20 @@ export default function CharacterSelect() {
 
   // 4. UI 구성
   return (
-    <div className="flex min-h-screen bg-[#1a1a1a] text-white font-neo">
+    <div className="flex items-start min-h-screen bg-[#1a1a1a] text-white font-neo">
       {/* 왼쪽: 미리보기 영역 */}
-      <div className="w-1/2 flex flex-col items-center justify-center p-10">
-        <div className="w-[400px] h-[400px] border-[3px] border-[#555] rounded-[10px] bg-[#2d2d2d] overflow-hidden">
-          <AvatarPreview customization={previewState} />
+      <div className="w-1/2 flex flex-col items-center justify-center p-10 sticky top-1/2 -translate-y-1/2">
+        <div className="w-[400px] h-[400px] border-[3px] border-[#555] rounded-[10px] bg-[#2d2d2d] overflow-hidden relative">
+          {isAssetLoading && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
+          <AvatarPreview
+            customization={previewState}
+            onLoad={handleAvatarLoaded}
+          />
         </div>
 
         {/* 액션 버튼 그룹 */}

@@ -31,6 +31,22 @@ interface GameState {
   isPaused: boolean;
 }
 
+export const BRICKBREAKER_CONFIG: BrickBreakerConfig = {
+  width: 800,
+  height: 600,
+  paddleSpeed: 300,
+  ballSpeed: 200,
+};
+
+export const BRICK_LAYOUT: BrickLayoutConfig = {
+  cols: 10,
+  rows: 5,
+  width: 64,
+  height: 32,
+  spacing: 4,
+  startY: 80,
+};
+
 export type GameResult = "win" | "gameOver";
 
 /**

@@ -192,6 +192,30 @@ export class MainScene extends BaseGameScene {
     if (map) this.arcadeManager.setGameObjects(map);
 
     this.mapManager.setupCollisions(this.avatarManager.getContainer());
+
+    // ------------------------------ 추후 지울 것
+    // [테스트용 코드] 'O' 키를 누르면 오목 씬으로 강제 이동
+    if (this.input.keyboard) {
+      this.input.keyboard.on("keydown-O", () => {
+        console.log("오목 씬 테스트 이동");
+        this.transitionTo("OmokScene");
+      });
+    }
+
+    // [테스트용 코드] 'B' 키를 누르면 벽돌 깨기 씬으로 강제 이동
+    if (this.input.keyboard) {
+      this.input.keyboard.on("keydown-B", () => {
+        this.transitionTo("StartScene");
+      });
+    }
+
+    // [테스트용 코드] 'B' 키를 누르면 핑퐁 씬으로 강제 이동
+    if (this.input.keyboard) {
+      this.input.keyboard.on("keydown-P", () => {
+        this.transitionTo("PingPongScene");
+      });
+    }
+    // ------------------------------ END 추후 지울 것
   }
 
   update(): void {
@@ -209,7 +233,7 @@ export class MainScene extends BaseGameScene {
       // 씬 전환 전, 혹시 모르니 현재 상태 저장
       this.avatarDataManager.saveToStorage();
       // 상호작용 성공 시 transitionTo로 부드럽게 게임 전환
-      this.transitionTo(nearby.sceneKey);
+      this.transitionTo(nearby.game.sceneKey);
     }
 
     // 서버에 위치 전송 (변경이 있을 때만)

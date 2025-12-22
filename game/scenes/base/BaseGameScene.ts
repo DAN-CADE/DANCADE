@@ -7,6 +7,28 @@ import { BaseScene } from "@/game/scenes/base/BaseScene";
  * 게임 씬의 공통 구조 정의
  */
 export abstract class BaseGameScene extends BaseScene {
+  // 모든 게임에서 공통으로 사용할 기준 크기
+  protected readonly GAME_WIDTH = 800;
+  protected readonly GAME_HEIGHT = 600;
+
+  // 중앙 정렬을 위한 오프셋 (게터)
+  protected get offsetX(): number {
+    return (this.scale.width - this.GAME_WIDTH) / 2;
+  }
+
+  protected get offsetY(): number {
+    return (this.scale.height - this.GAME_HEIGHT) / 2;
+  }
+
+  // 상대 좌표 변환 헬퍼 메서드
+  protected getRelativeX(x: number): number {
+    return x + this.offsetX;
+  }
+
+  protected getRelativeY(y: number): number {
+    return y + this.offsetY;
+  }
+
   // =================================
   // 생명 주기 (각 게임에서 구현)
   // =================================

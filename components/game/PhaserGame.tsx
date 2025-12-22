@@ -1,11 +1,12 @@
-// components/game/PhaserGame.tsx (거의 그대로)
+// components/game/PhaserGame.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createGameConfig } from "@/game/config";
 
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (gameRef.current) return;
@@ -13,7 +14,7 @@ export default function PhaserGame() {
     const initPhaser = async () => {
       const Phaser = await import("phaser");
 
-      const { PreloadScene } = (await import("@/game/scenes/core/PreloadScene"));
+      const { PreloadScene } = await import("@/game/scenes/core/PreloadScene");
       const { StartScene } = await import("@/game/scenes/core/StartScene");
       const { MainScene } = await import("@/game/scenes/core/MainScene");
       const { BrickBreakerScene } = await import(
@@ -22,12 +23,20 @@ export default function PhaserGame() {
       const { PingPongScene } = await import(
         "@/game/scenes/games/PingPongScene"
       );
+      const { OmokScene } = await import("@/game/scenes/games/OmokScene");
 
       if (gameRef.current) return;
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [PreloadScene, MainScene, StartScene, BrickBreakerScene, PingPongScene],
+        scene: [
+          PreloadScene,
+          MainScene,
+          StartScene,
+          BrickBreakerScene,
+          PingPongScene,
+          OmokScene,
+        ],
       };
 
       gameRef.current = new Phaser.Game(config);
@@ -41,12 +50,35 @@ export default function PhaserGame() {
     };
   }, []);
 
+  // Listen for Phaser preload completion (dispatched from PreloadScene)
+  useEffect(() => {
+    const onPreloadComplete = () => setLoading(false);
+    window.addEventListener(
+      "phaser:preloadComplete",
+      onPreloadComplete as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "phaser:preloadComplete",
+        onPreloadComplete as EventListener
+      );
+  }, []);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900">
+    <div className="relative flex flex-col items-center justify-center min-h-screen">
       <div
         id="game-container"
-        className="rounded-lg overflow-hidden shadow-2xl"
+        className="rounded-lg overflow-hidden shadow-2xl w-screen h-screen"
       />
+
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="text-white">로딩 중...</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

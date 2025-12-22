@@ -6,6 +6,16 @@ export class InteractionManager extends BaseInputManager {
   private interactPrompt: Phaser.GameObjects.Text | undefined;
   private currentNearbyGame: GameConfig | null = null;
 
+  private readonly PROMPT_CONFIG = {
+    Y_OFFSET: 120, // 게임기 위로 60px
+    Y_POSITION: 150,
+    FONT_SIZE: "16px",
+    BACKGROUND_COLOR: "#000",
+    TEXT_COLOR: "#ffff00",
+    PADDING: { x: 10, y: 5 },
+    DEPTH: 1000,
+  };
+
   constructor(scene: Phaser.Scene) {
     super(scene); // BaseInputManager의 생성자 호출
     this.setupInteractKey();
@@ -19,26 +29,37 @@ export class InteractionManager extends BaseInputManager {
 
   private createPrompt(): void {
     this.interactPrompt = this.scene.add
-      .text(this.scene.cameras.main.width / 2, 100, "", {
-        fontSize: "16px",
-        backgroundColor: "#000",
-        padding: { x: 10, y: 5 },
-        color: "#ffff00",
-      })
+      .text(
+        0, // 초기 위치는 0으로
+        0,
+        "",
+        {
+          fontSize: this.PROMPT_CONFIG.FONT_SIZE,
+          backgroundColor: this.PROMPT_CONFIG.BACKGROUND_COLOR,
+          padding: this.PROMPT_CONFIG.PADDING,
+          color: this.PROMPT_CONFIG.TEXT_COLOR,
+        }
+      )
       .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(1000)
+      .setScrollFactor(1) // 1로 변경 (월드 좌표 기준)
+      .setDepth(this.PROMPT_CONFIG.DEPTH)
       .setVisible(false);
   }
 
-  public update(nearbyGame: GameConfig | null): void {
-    // ArcadeMachineManager로부터 받은 정보를 담고 있으면서,
-    // 현재 플레이어가 게임기 근처에 있는지를 판단하는 기준을 가짐.
-    this.currentNearbyGame = nearbyGame;
+  public update(
+    nearbyInfo: { game: GameConfig; x: number; y: number } | null
+  ): void {
+    this.currentNearbyGame = nearbyInfo?.game || null;
 
-    if (nearbyGame) {
+    if (nearbyInfo) {
+      // 게임기 위치 기준으로 텍스트 배치 (게임기 위쪽에 표시)
+      this.interactPrompt?.setPosition(
+        nearbyInfo.x,
+        nearbyInfo.y - this.PROMPT_CONFIG.Y_OFFSET // Y_OFFSET: 60 정도
+      );
+
       if (!this.interactPrompt?.visible) {
-        this.showPrompt(`Press E to play ${nearbyGame.name}`);
+        this.showPrompt(`Press E to play ${nearbyInfo.game.name}`);
       }
     } else {
       this.hidePrompt();

@@ -1,11 +1,8 @@
-// game/scenes/core/StartScene.ts
-
-import { BaseScene } from "@/game/scenes/base";
+import { BaseGameScene } from "@/game/scenes/base/BaseGameScene"; // 경로 확인
 import { GameConfig } from "@/game/config/gameRegistry";
 import { ASSET_PATHS } from "@/game/constants";
 
-export class StartScene extends BaseScene {
-  // ✅ BaseScene 상속
+export class StartScene extends BaseGameScene {
   private startButton?: Phaser.GameObjects.Image;
   private gameConfig?: GameConfig;
 
@@ -17,49 +14,54 @@ export class StartScene extends BaseScene {
     this.gameConfig = data.gameConfig;
   }
 
-  preload() {
+  // 1. 에셋 로드 (BaseGameScene의 preload에서 자동 실행)
+  protected loadAssets(): void {
     const basePath = ASSET_PATHS.GAME.KENNEY_PUZZLE;
-
     this.load.image("game_background", "/assets/background/bg 1.png");
-
     this.load.image("ball", `${basePath}ballBlue.png`);
     this.load.image("paddle", `${basePath}paddleBlu.png`);
     this.load.image("buttonDefault", `${basePath}buttonDefault.png`);
     this.load.image("buttonSelected", `${basePath}buttonSelected.png`);
 
-    this.load.image("brick_red", `${basePath}element_red_rectangle_glossy.png`);
-    this.load.image(
-      "brick_yellow",
-      `${basePath}element_yellow_rectangle_glossy.png`
-    );
-    this.load.image(
-      "brick_green",
-      `${basePath}element_green_rectangle_glossy.png`
-    );
-    this.load.image(
-      "brick_blue",
-      `${basePath}element_blue_rectangle_glossy.png`
-    );
-    this.load.image(
-      "brick_purple",
-      `${basePath}element_purple_rectangle_glossy.png`
-    );
+    ["red", "yellow", "green", "blue", "purple"].forEach((color) => {
+      this.load.image(
+        `brick_${color}`,
+        `${basePath}element_${color}_rectangle_glossy.png`
+      );
+    });
   }
 
-  create() {
-    this.scale.resize(800, 600);
+  // 2. 씬 설정 (배경색, 테두리 등)
+  protected setupScene(): void {
+    this.cameras.main.setBackgroundColor("#000");
+    this.fadeIn();
 
-    const background = this.add.image(400, 300, "game_background");
-    background.setDisplaySize(800, 600);
+    // 배경 이미지
+    const background = this.add.image(
+      this.getRelativeX(400),
+      this.getRelativeY(300),
+      "game_background"
+    );
+    background.setDisplaySize(this.GAME_WIDTH, this.GAME_HEIGHT);
     background.setDepth(-1);
 
-    this.cameras.main.setBackgroundColor("#000000");
+    // 핑크색 테두리
+    const graphics = this.add.graphics();
+    graphics.lineStyle(2, 0xff006e, 1);
+  }
 
+  // 3. 매니저 초기화 (StartScene은 필요 없으므로 비워둠)
+  protected initManagers(): void {}
+
+  // 4. 오브젝트 생성 (UI 요소들)
+  protected createGameObjects(): void {
     this.createTitle();
     this.createPreview();
     this.createStartButton();
     this.createInstructions();
   }
+
+  // --- 기존 UI 생성 로직 (getRelativeX/Y 사용) ---
 
   private createTitle(): void {
     const titleStyle = {
@@ -67,28 +69,24 @@ export class StartScene extends BaseScene {
       fontSize: "32px",
       color: "#ffffff",
     };
-
-    const subtitleStyle = {
+    const subStyle = {
       fontFamily: '"Press Start 2P"',
       fontSize: "12px",
       color: "#aaaaaa",
     };
-
-    const descriptionStyle = {
-      fontFamily: '"Press Start 2P"',
-      fontSize: "14px",
-      color: "#00ff88",
-    };
-
     const gameName = this.gameConfig?.name.toUpperCase() || "BRICK BREAKER";
-    this.add.text(400, 80, gameName, titleStyle).setOrigin(0.5);
-    this.add.text(400, 130, "ARCADE GAME", subtitleStyle).setOrigin(0.5);
 
-    if (this.gameConfig?.description) {
-      this.add
-        .text(400, 160, this.gameConfig.description, descriptionStyle)
-        .setOrigin(0.5);
-    }
+    this.add
+      .text(this.getRelativeX(400), this.getRelativeY(80), gameName, titleStyle)
+      .setOrigin(0.5);
+    this.add
+      .text(
+        this.getRelativeX(400),
+        this.getRelativeY(130),
+        "ARCADE GAME",
+        subStyle
+      )
+      .setOrigin(0.5);
   }
 
   private createPreview(): void {
@@ -99,26 +97,29 @@ export class StartScene extends BaseScene {
       "brick_blue",
       "brick_purple",
     ];
-    const brickWidth = 64;
-    const brickSpacing = 4;
-    const cols = 5;
-    const totalWidth = cols * brickWidth + (cols - 1) * brickSpacing;
-    const startX = (800 - totalWidth) / 2 + brickWidth / 2;
+    const startX = (this.GAME_WIDTH - 5 * 68) / 2 + 34;
 
     for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < cols; col++) {
-        const x = startX + col * (brickWidth + brickSpacing);
-        const y = 210 + row * 30;
-        this.add.image(x, y, brickColors[col]);
+      for (let col = 0; col < 5; col++) {
+        this.add.image(
+          this.getRelativeX(startX + col * 68),
+          this.getRelativeY(210 + row * 30),
+          brickColors[col]
+        );
       }
     }
 
-    this.add.image(400, 360, "paddle").setScale(1.2);
-
-    const ball = this.add.image(400, 320, "ball");
+    this.add
+      .image(this.getRelativeX(400), this.getRelativeY(360), "paddle")
+      .setScale(1.2);
+    const ball = this.add.image(
+      this.getRelativeX(400),
+      this.getRelativeY(320),
+      "ball"
+    );
     this.tweens.add({
       targets: ball,
-      y: 340,
+      y: this.getRelativeY(340),
       duration: 600,
       yoyo: true,
       repeat: -1,
@@ -127,71 +128,50 @@ export class StartScene extends BaseScene {
   }
 
   private createStartButton(): void {
-    const buttonStyle = {
-      fontFamily: '"Press Start 2P"',
-      fontSize: "16px",
-      color: "#333333",
-    };
-
+    const x = this.getRelativeX(400),
+      y = this.getRelativeY(450);
     this.startButton = this.add
-      .image(400, 450, "buttonDefault")
+      .image(x, y, "buttonDefault")
       .setScale(2)
       .setInteractive({ useHandCursor: true });
+    this.add
+      .text(x, y, "START", {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "16px",
+        color: "#333333",
+      })
+      .setOrigin(0.5);
 
-    this.add.text(400, 450, "START", buttonStyle).setOrigin(0.5);
-
-    this.startButton.on("pointerover", () => {
-      this.startButton?.setTexture("buttonSelected");
-      this.startButton?.setScale(2.1);
-    });
-
-    this.startButton.on("pointerout", () => {
-      this.startButton?.setTexture("buttonDefault");
-      this.startButton?.setScale(2);
-    });
-
-    this.startButton.on("pointerdown", () => {
-      this.startGame();
-    });
-
-    this.input.keyboard?.once("keydown-SPACE", () => {
-      this.startGame();
-    });
+    this.startButton.on("pointerover", () =>
+      this.startButton?.setScale(2.1).setTexture("buttonSelected")
+    );
+    this.startButton.on("pointerout", () =>
+      this.startButton?.setScale(2).setTexture("buttonDefault")
+    );
+    this.startButton.on("pointerdown", () => this.startGame());
   }
 
   private createInstructions(): void {
-    const infoStyle = {
-      fontFamily: '"Press Start 2P"',
-      fontSize: "10px",
-      color: "#888888",
-    };
-
-    this.add.text(400, 520, "◀︎  ▶︎ USE ARROW KEYS", infoStyle).setOrigin(0.5);
-
     this.add
-      .text(400, 550, "PRESS SPACE TO START", {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "8px",
-        color: "#666666",
-      })
+      .text(
+        this.getRelativeX(400),
+        this.getRelativeY(520),
+        "◀︎  ▶︎ USE ARROW KEYS",
+        {
+          fontFamily: '"Press Start 2P"',
+          fontSize: "10px",
+          color: "#888888",
+        }
+      )
       .setOrigin(0.5);
   }
 
   private startGame(): void {
     const sceneKey = this.gameConfig?.sceneKey || "BrickBreakerScene";
-
-    // ✅ BaseScene의 transitionTo 활용 가능 (선택)
-    // this.transitionTo(sceneKey, { gameConfig: this.gameConfig });
-
-    // 기존 방식 유지
-    if (sceneKey === "StartScene") {
-      this.scene.start("BrickBreakerScene", {
-        gameConfig: this.gameConfig,
-      });
-    } else {
-      this.scene.start(sceneKey, {
-        gameConfig: this.gameConfig,
-      });
-    }
+    this.transitionTo(sceneKey, { gameConfig: this.gameConfig });
   }
+
+  // --- BaseGameScene 의무 구현 메서드 (필요 없으면 비워둠) ---
+  protected handleGameEnd(): void {}
+  protected restartGame(): void {}
 }

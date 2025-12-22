@@ -59,9 +59,29 @@ export class PingPongScene extends BaseGameScene {
     );
   }
 
+  // 매개변수 타입을 'string'으로 지정해야 에러가 나지 않습니다.
+  protected centerViewport(backgroundColor: string = "#2c2c2c"): void {
+    const { width: screenWidth, height: screenHeight } = this.scale;
+
+    // 1. 브라우저 캔버스 배경색 설정 (뷰포트 바깥 영역)
+    if (this.game && this.game.canvas) {
+      this.game.canvas.style.backgroundColor = backgroundColor;
+    }
+
+    // 2. Phaser 카메라 배경색 설정 (뷰포트 안쪽 영역)
+    this.cameras.main.setBackgroundColor(backgroundColor);
+
+    // 3. 뷰포트 위치와 크기 설정 (중앙 정렬)
+    this.cameras.main.setViewport(
+      (screenWidth - this.GAME_WIDTH) / 2,
+      (screenHeight - this.GAME_HEIGHT) / 2,
+      this.GAME_WIDTH,
+      this.GAME_HEIGHT
+    );
+  }
+
   protected setupScene(): void {
-    this.scale.resize(800, 600);
-    this.cameras.main.setBackgroundColor(PINGPONG_CONFIG.BACKGROUND_COLOR);
+    this.centerViewport(PINGPONG_CONFIG.BACKGROUND_COLOR);
     this.initGameState();
   }
 
