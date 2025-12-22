@@ -27,12 +27,13 @@ io.on("connection", (socket) => {
 
   // 1. 플레이어 입장
   socket.on("player:join", (data) => {
-    const { userId, username, avatarId, customization, x, y } = data;
+    const { userId, username, gender, avatarId, customization, x, y } = data;
 
     players.set(socket.id, {
       socketId: socket.id,
       userId,
       username,
+      gender,
       avatarId,
       customization, // 아바타 커스텀 정보 저장
       x,
@@ -60,6 +61,24 @@ io.on("connection", (socket) => {
         socketId: socket.id,
         x,
         y,
+      });
+    }
+  });
+
+  // 2-1. 플레이어 애니메이션 상태 업데이트
+  socket.on("player:animation", (data) => {
+    const { direction, isMoving } = data;
+    const player = players.get(socket.id);
+
+    if (player) {
+      player.direction = direction;
+      player.isMoving = isMoving;
+
+      // 모든 클라이언트에게 애니메이션 상태 전송
+      io.emit("player:animationUpdate", {
+        socketId: socket.id,
+        direction,
+        isMoving,
       });
     }
   });

@@ -29,7 +29,7 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
     this.scene.load.json("lpc_config", ASSET_PATHS.LPC.CONFIG);
     this.scene.load.once(
       `filecomplete-json-lpc_config`,
-      (key:string, type:string, data: LpcSprite) => {
+      (key: string, type: string, data: LpcSprite) => {
         if (data?.assets) {
           // 수정: 클래스 명이 아니라 생성한 인스턴스를 사용합니다.
           this.lpcSpriteManager.setLpcSprite(data as unknown as LpcSprite);
@@ -50,16 +50,28 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
       // 1. 데이터 우선순위 결정: 인자로 받은 데이터 > 로컬 스토리지 > 기본값
       const finalData = data;
 
-      // 2. 캐릭터 컨테이너 생성
+      // 2. 로컬스토리지에서 닉네임 가져오기
+      let playerName = "Player";
+      try {
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          playerName = parsedUser.nickname || "Player";
+        }
+      } catch (error) {
+        console.error("사용자 정보 로드 오류:", error);
+      }
+
+      // 3. 캐릭터 컨테이너 생성
       this.avatarContainer = new LpcCharacter(
         this.scene,
         x,
         y,
-        "player_avatar",
+        playerName,
         this.lpcSpriteManager
       );
 
-      // 3. 파츠 적용
+      // 4. 파츠 적용
       if (finalData) {
         // 데이터가 있으면 커스텀 파츠 적용
         this.avatarContainer.setCustomPart(finalData);
@@ -68,7 +80,7 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
         this.avatarContainer.setDefaultPart("female");
       }
 
-      // 4. 물리 엔진 및 카메라 설정
+      // 5. 물리 엔진 및 카메라 설정
       this.scene.physics.add.existing(this.avatarContainer);
       this.scene.cameras.main.startFollow(this.avatarContainer, true, 0.1, 0.1);
 

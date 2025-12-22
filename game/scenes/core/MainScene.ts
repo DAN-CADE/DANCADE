@@ -14,6 +14,7 @@ interface OnlinePlayer {
   socketId: string;
   userId: string;
   username: string;
+  gender?: string;
   avatarId: string;
   x: number;
   y: number;
@@ -46,6 +47,10 @@ export class MainScene extends BaseGameScene {
   // 위치 최적화 (변경이 있을 때만 전송)
   private lastSentPosition = { x: 0, y: 0 };
   private readonly positionUpdateThreshold = 5; // 5픽셀 이상 이동했을 때만 전송
+  private lastSentAnimation: {
+    direction: "up" | "down" | "left" | "right";
+    isMoving: boolean;
+  } | null = null;
 
   constructor() {
     super({ key: "MainScene" });
@@ -104,6 +109,24 @@ export class MainScene extends BaseGameScene {
       }
     });
 
+    // 다른 플레이어 애니메이션 상태 업데이트
+    this.socket.on(
+      "player:animationUpdate",
+      (data: {
+        socketId: string;
+        direction: "up" | "down" | "left" | "right";
+        isMoving: boolean;
+      }) => {
+        if (data.socketId !== this.socket.id) {
+          this.updatePlayerAnimation(
+            data.socketId,
+            data.direction,
+            data.isMoving
+          );
+        }
+      }
+    );
+
     // 연결 끊김
     this.socket.on("disconnect", () => {
       console.log("❌ Socket.io 연결 끊김");
@@ -113,11 +136,26 @@ export class MainScene extends BaseGameScene {
   // 게임에 입장
   private joinGame(): void {
     const customization = this.avatarDataManager?.customization;
-    const userId = "guest-" + Math.random().toString(36).substr(2, 9); // 테스트용
+
+    // localStorage에서 사용자 정보 가져오기
+    let nickname = "Player";
+    let userId = "guest-" + Math.random().toString(36).substr(2, 9);
+
+    try {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        nickname = parsedUser.nickname || "Player";
+        userId = parsedUser.userId || userId;
+      }
+    } catch (error) {
+      console.error("사용자 정보 로드 오류:", error);
+    }
 
     this.socket.emit("player:join", {
       userId,
-      username: customization?.gender || "Player",
+      username: nickname,
+      gender: customization?.gender || "female",
       avatarId: "default",
       customization: customization, // 아바타 커스텀 정보 전송
       x: this.spawnPoint.x,
@@ -191,6 +229,23 @@ export class MainScene extends BaseGameScene {
         });
         this.lastSentPosition = { x: playerPos.x, y: playerPos.y };
       }
+
+      // 애니메이션 상태 전송 (변경이 있을 때만)
+      const playerAvatar = this.avatarManager.getContainer();
+      if (playerAvatar) {
+        const currentAnimation = playerAvatar.getAnimationState();
+        if (
+          !this.lastSentAnimation ||
+          this.lastSentAnimation.direction !== currentAnimation.direction ||
+          this.lastSentAnimation.isMoving !== currentAnimation.isMoving
+        ) {
+          this.socket.emit("player:animation", {
+            direction: currentAnimation.direction,
+            isMoving: currentAnimation.isMoving,
+          });
+          this.lastSentAnimation = { ...currentAnimation };
+        }
+      }
     }
   }
 
@@ -230,7 +285,7 @@ export class MainScene extends BaseGameScene {
       this,
       player.x,
       player.y,
-      `player_${player.socketId}`,
+      player.username,
       this.lpcSpriteManager
     );
 
@@ -250,8 +305,9 @@ export class MainScene extends BaseGameScene {
       .text(player.x, player.y - 40, player.username, {
         fontSize: "14px",
         color: "#ffffff",
-        backgroundColor: "#000000",
-        padding: { x: 4, y: 2 },
+        stroke: "#000000",
+        strokeThickness: 3,
+        align: "center",
       })
       .setOrigin(0.5)
       .setDepth(51);
@@ -285,6 +341,18 @@ export class MainScene extends BaseGameScene {
         duration: 100,
         ease: "Linear",
       });
+    }
+  }
+
+  // 플레이어 애니메이션 상태 업데이트
+  private updatePlayerAnimation(
+    socketId: string,
+    direction: "up" | "down" | "left" | "right",
+    isMoving: boolean
+  ): void {
+    const avatar = this.playerAvatars.get(socketId);
+    if (avatar) {
+      avatar.setAnimationState(direction, isMoving);
     }
   }
 

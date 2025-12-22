@@ -90,7 +90,7 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     this.nameTag = scene.add
       .text(0, -40, name, {
         fontSize: "14px",
-        color: "#ffffff",
+        color: "#00d9b8",
         stroke: "#000000",
         strokeThickness: 3,
         align: "center",
@@ -357,5 +357,39 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     this.currentDirection = direction;
     this.isMoving = false; // 걷지 않고 서있는 상태
     this.playLayeredAnimations(true);
+  }
+
+  /**
+   * 원격 플레이어 애니메이션 상태 설정 (소켓으로부터)
+   * @param direction 캐릭터 방향
+   * @param isMoving 이동 상태 (true: 걷기, false: 정지)
+   */
+  public setAnimationState(
+    direction: "up" | "down" | "left" | "right",
+    isMoving: boolean
+  ): void {
+    const oldDirection = this.currentDirection;
+    const oldMoving = this.isMoving;
+
+    this.currentDirection = direction;
+    this.isMoving = isMoving;
+
+    // 상태 변화 시에만 애니메이션 업데이트
+    if (oldDirection !== this.currentDirection || oldMoving !== this.isMoving) {
+      this.playLayeredAnimations();
+    }
+  }
+
+  /**
+   * 현재 애니메이션 상태 반환
+   */
+  public getAnimationState(): {
+    direction: "up" | "down" | "left" | "right";
+    isMoving: boolean;
+  } {
+    return {
+      direction: this.currentDirection,
+      isMoving: this.isMoving,
+    };
   }
 }
