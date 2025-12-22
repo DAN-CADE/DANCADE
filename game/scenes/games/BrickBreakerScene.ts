@@ -1,8 +1,12 @@
 // game/scenes/games/BrickBreakerScene.ts
 
-import { BaseGameScene } from "@/game/scenes/base";
+import { BaseGameScene } from "@/game/scenes/base/BaseGameScene";
 import { GameConfig } from "@/game/config/gameRegistry";
-import { BrickBreakerGameManager } from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
+import {
+  BrickBreakerGameManager,
+  BRICK_LAYOUT,
+  BRICKBREAKER_CONFIG,
+} from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
 import { BrickBreakerUIManager } from "@/game/managers/games/brickbreaker/BrickBreakerUIManager";
 import { BrickBreakerInputManager } from "@/game/managers/games/brickbreaker/BrickBreakerInputManager";
 import { BrickBreakerEffectsManager } from "@/game/managers/games/brickbreaker/BrickBreakerEffectsManager";
@@ -12,9 +16,6 @@ import type {
   BrickLayoutConfig,
 } from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
 
-/**
- * 벽돌깨기 게임 씬
- */
 export class BrickBreakerScene extends BaseGameScene {
   // Managers
   private gameManager!: BrickBreakerGameManager;
@@ -30,22 +31,8 @@ export class BrickBreakerScene extends BaseGameScene {
   // Game Meta
   private gameConfig?: GameConfig;
 
-  // Constants
-  private readonly GAME_CONFIG: BrickBreakerConfig = {
-    width: 800,
-    height: 600,
-    paddleSpeed: 300,
-    ballSpeed: 200,
-  };
-
-  private readonly BRICK_LAYOUT: BrickLayoutConfig = {
-    cols: 10,
-    rows: 5,
-    width: 64,
-    height: 32,
-    spacing: 4,
-    startY: 80,
-  };
+  private readonly GAME_CONFIG: BrickBreakerConfig = BRICKBREAKER_CONFIG;
+  private readonly BRICK_LAYOUT: BrickLayoutConfig = BRICK_LAYOUT;
 
   private readonly BRICK_COLORS = [
     "element_red_rectangle_glossy",
@@ -63,9 +50,9 @@ export class BrickBreakerScene extends BaseGameScene {
 
   init(data: { gameConfig?: GameConfig }) {
     this.gameConfig = data.gameConfig;
-    console.log("데이터 수신 완료:", data);
   }
 
+  // 1. 에셋 로드
   protected loadAssets(): void {
     this.load.image("paddle", `${this.ASSET_PATH}paddleBlu.png`);
     this.load.image("ball", `${this.ASSET_PATH}ballBlue.png`);
@@ -77,19 +64,49 @@ export class BrickBreakerScene extends BaseGameScene {
     });
   }
 
-  protected setupScene(): void {
-    this.scale.resize(800, 600);
+  protected centerViewport(backgroundColor: string = "#000000"): void {
+    const { width: screenWidth, height: screenHeight } = this.scale;
 
-    const background = this.add.image(400, 300, "game_background");
-    background.setDisplaySize(800, 600);
-    background.setDepth(-1);
+    // 1. 캔버스 자체 스타일 수정 (뷰포트 바깥 영역)
+    if (this.game && this.game.canvas) {
+      this.game.canvas.style.backgroundColor = backgroundColor;
+    }
 
-    this.cameras.main.setBackgroundColor("#000000");
+    // 2. 카메라 배경색 설정
+    this.cameras.main.setBackgroundColor(backgroundColor);
+
+    // 3. 뷰포트 설정 (중앙 정렬)
+    this.cameras.main.setViewport(
+      (screenWidth - this.GAME_WIDTH) / 2,
+      (screenHeight - this.GAME_HEIGHT) / 2,
+      this.GAME_WIDTH,
+      this.GAME_HEIGHT
+    );
   }
 
+  // 2. 씬 기본 설정
+  protected setupScene(): void {
+    this.centerViewport("#000000");
+
+    // 뷰포트 안쪽은 이제 무조건 800x600
+    this.physics.world.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+
+    // 배경 이미지
+    const background = this.add.image(400, 300, "game_background");
+    background.setDisplaySize(this.GAME_WIDTH, this.GAME_HEIGHT);
+    background.setDepth(-1);
+
+    // 핑크색 테두리 (가이드라인)
+    const graphics = this.add.graphics();
+    graphics.lineStyle(2, 0xff006e, 1);
+    graphics.strokeRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+  }
+
+  // 3. 매니저 초기화
   protected initManagers(): void {
     this.uiManager = new BrickBreakerUIManager(this);
     this.effectsManager = new BrickBreakerEffectsManager(this);
+    this.inputManager = new BrickBreakerInputManager(this);
 
     this.gameManager = new BrickBreakerGameManager(
       this,
@@ -107,10 +124,9 @@ export class BrickBreakerScene extends BaseGameScene {
         },
       }
     );
-
-    this.inputManager = new BrickBreakerInputManager(this);
   }
 
+  // 4. 게임 오브젝트 생성
   protected createGameObjects(): void {
     this.createPaddle();
     this.createBall();
@@ -121,6 +137,7 @@ export class BrickBreakerScene extends BaseGameScene {
     this.setupCollisions();
   }
 
+  // 5. 게임 종료 및 재시작 로직
   protected handleGameEnd(result: string): void {
     this.uiManager.showEndGameScreen(
       result as "win" | "gameOver",
@@ -139,8 +156,7 @@ export class BrickBreakerScene extends BaseGameScene {
     this.uiManager.cleanup();
   }
 
-  // ✅ update는 그대로 유지
-  update() {
+  update(): void {
     const direction = this.inputManager.getPaddleMoveDirection();
     this.gameManager.movePaddle(direction);
   }
@@ -154,9 +170,7 @@ export class BrickBreakerScene extends BaseGameScene {
     const paddleY = 550;
 
     this.paddle = this.physics.add.sprite(paddleX, paddleY, "paddle");
-    this.paddle.setScale(1.2);
-    this.paddle.setImmovable(true);
-    this.paddle.setCollideWorldBounds(true);
+    this.paddle.setScale(1.2).setImmovable(true).setCollideWorldBounds(true);
   }
 
   private createBall(): void {
@@ -164,8 +178,7 @@ export class BrickBreakerScene extends BaseGameScene {
     const ballY = 500;
 
     this.ball = this.physics.add.sprite(ballX, ballY, "ball");
-    this.ball.setCollideWorldBounds(true);
-    this.ball.setBounce(1);
+    this.ball.setCollideWorldBounds(true).setBounce(1);
     this.ball.setVelocity(
       this.GAME_CONFIG.ballSpeed,
       -this.GAME_CONFIG.ballSpeed
@@ -181,7 +194,7 @@ export class BrickBreakerScene extends BaseGameScene {
 
     const { cols, width, spacing, startY, height } = this.BRICK_LAYOUT;
     const totalWidth = cols * width + (cols - 1) * spacing;
-    const startX = (this.GAME_CONFIG.width - totalWidth) / 2 + width / 2;
+    const startX = (800 - totalWidth) / 2 + width / 2;
 
     for (let row = 0; row < this.BRICK_LAYOUT.rows; row++) {
       for (let col = 0; col < cols; col++) {
@@ -195,6 +208,7 @@ export class BrickBreakerScene extends BaseGameScene {
   }
 
   private setupCollisions(): void {
+    // 1. 패들 충돌
     this.physics.add.collider(this.ball, this.paddle, (ball, paddle) => {
       this.gameManager.handlePaddleCollision(
         ball as Phaser.Types.Physics.Arcade.GameObjectWithBody,
@@ -202,6 +216,7 @@ export class BrickBreakerScene extends BaseGameScene {
       );
     });
 
+    // 2. 벽돌 충돌
     this.physics.add.collider(this.ball, this.bricks, (ball, brick) => {
       this.gameManager.handleBrickCollision(
         ball as Phaser.Types.Physics.Arcade.GameObjectWithBody,
@@ -209,6 +224,7 @@ export class BrickBreakerScene extends BaseGameScene {
       );
     });
 
+    // 3. 바닥 충돌 (월드 경계)
     this.physics.world.on("worldbounds", (body: Phaser.Physics.Arcade.Body) => {
       if (body.gameObject === this.ball && body.blocked.down) {
         this.gameManager.handleFloorCollision();
