@@ -84,7 +84,13 @@ export default function Home() {
     <main className="login-page relative min-h-screen">
       <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
       <Window title="LOGIN">
-        <Image src={logo} alt="DAN-CADE 로고" width={262} height={185} />
+        <Image
+          src={logo}
+          alt="DAN-CADE 로고"
+          width={262}
+          height={185}
+          className="floating-logo"
+        />
         <div className="text-black flex flex-col gap-4 w-full items-center">
           {LOGIN_BUTTONS.map((button) => (
             <button
@@ -93,14 +99,9 @@ export default function Home() {
               className={`${
                 button.style
               } py-5 max-w-[320px] w-full cursor-pointer ${
-                button.type === "guest" ? "text-white" : ""
-              } ${button.type === "google" ? "relative" : ""}`}
+                button.type === "guest" ? "text-white" : "text-black"
+              }`}
             >
-              {button.type === "google" && (
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 p-2.5 inline-block bg-white rounded-md">
-                  <Image src={google} alt="Google" width={24} height={24} />
-                </span>
-              )}
               {button.label}
             </button>
           ))}
