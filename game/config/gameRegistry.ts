@@ -19,6 +19,12 @@ export const GAME_REGISTRY: GameConfig[] = [
     sceneKey: "PingPongScene",
     description: "실제 탁구 게임을 즐겨보세요!",
   },
+  {
+    id: "Omok",
+    name: "Omok",
+    sceneKey: "OmokScene",
+    description: "친구들과 오목을 즐겨보세요!",
+  },
   // 새 게임 추가는 여기에만
 ];
 
@@ -27,6 +33,6 @@ export function getGameById(id: string): GameConfig | undefined {
   return GAME_REGISTRY.find((game) => game.id === id);
 }
 
-export function getGameBySceneKey(sceneKey: string): GameConfig | undefined {
-  return GAME_REGISTRY.find((game) => game.sceneKey === sceneKey);
-}
+// export function getGameBySceneKey(sceneKey: string): GameConfig | undefined {
+//   return GAME_REGISTRY.find((game) => game.sceneKey === sceneKey);
+// }
