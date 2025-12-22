@@ -81,8 +81,23 @@ export class MainScene extends BaseGameScene {
 
   // Socket.io 연결 및 이벤트 설정
   private setupSocketIO(): void {
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+    // TODO: 프로덕션 배포 시 다음 수정 필요
+    // 1. NEXT_PUBLIC_SOCKET_URL 환경변수를 프로덕션 도메인으로 설정
+    // 2. server.js의 CORS를 특정 도메인으로 제한
+    // 3. HTTPS 프로토콜 사용 (wss://)
+    // 현재는 개발/테스트 환경에서만 자동 호스트 감지 사용
+
+    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+
+    // 환경변수가 없으면 현재 호스트 기반으로 자동 결정 (개발 환경용)
+    if (!socketUrl) {
+      const host =
+        typeof window !== "undefined" ? window.location.hostname : "localhost";
+      const port = 3001;
+      socketUrl = `http://${host}:${port}`;
+    }
+
+    console.log("🔗 Socket.io URL:", socketUrl);
     this.socket = io(socketUrl, {
       reconnection: true,
       reconnectionDelay: 1000,

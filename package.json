@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "server": "node server.js",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
+    "server": "node server.js",
     "build": "next build",
     "start": "next start",
+    "prod:all": "npm run build && concurrently \"npm run server\" \"npm start\"",
     "lint": "eslint"
   },
   "dependencies": {

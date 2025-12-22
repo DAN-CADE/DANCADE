@@ -2,12 +2,50 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
+const os = require("os");
 
 const app = express();
 const server = http.createServer(app);
+
+// TODO: 프로덕션 배포 시 다음 수정 필요
+// 1. CORS를 환경변수로 특정 도메인만 허용
+// 2. 로컬 IP 자동 감지 제거
+// 예시:
+// const allowedOrigins = process.env.SOCKET_ALLOWED_ORIGINS?.split(",") || [
+//   "https://yourdomain.com",
+//   "https://www.yourdomain.com"
+// ];
+// 현재는 개발/테스트 환경에서만 모든 로컬 IP 허용
+
+// 동적 CORS 설정 (개발 환경용 - 모든 로컬 IP 허용)
+const getLocalIPs = () => {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      // IPv4 주소만 필터링
+      if (iface.family === "IPv4") {
+        ips.push(iface.address);
+      }
+    }
+  }
+
+  return ips;
+};
+
+const localIPs = getLocalIPs();
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  ...localIPs.map((ip) => `http://${ip}:3000`),
+];
+
+console.log("🔐 CORS 허용 오리진:", allowedOrigins);
+
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
   },
 });
