@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import logo from "@/public/assets/logos/logo.svg";
-import google from "@/public/assets/icons/google.svg";
 import Window from "@/components/common/Window";
 import {
   generateGuestId,
@@ -21,12 +20,6 @@ export default function Home() {
       type: "email" as const,
     },
     {
-      id: "google",
-      label: "구글 로그인",
-      style: "bg-[var(--color-blue)]",
-      type: "google" as const,
-    },
-    {
       id: "guest",
       label: "게스트 로그인",
       style: "border border-[var(--color-cyan)]",
@@ -34,17 +27,10 @@ export default function Home() {
     },
   ] as const;
 
-  const handleLogin = (type: "email" | "google" | "guest") => {
+  const handleLogin = (type: "email" | "guest") => {
     switch (type) {
       case "email":
-        console.log("아이디 로그인");
-        // 아이디 로그인 처리 후 게임 페이지로 이동
-        router.push("/game");
-        break;
-      case "google":
-        console.log("구글 로그인");
-        // 구글 OAuth 처리 후 게임 페이지로 이동
-        router.push("/game");
+        router.push("/auth/login/id");
         break;
       case "guest":
         // 기존 게스트 정보가 있는지 확인

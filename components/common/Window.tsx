@@ -1,4 +1,5 @@
 // 공통 윈도우 디자인 창
+"use client";
 
 import Image from "next/image";
 import windowClose from "@/public/assets/icons/window-close.svg";
@@ -65,7 +66,7 @@ export default function Window({
             src={back}
             alt="뒤로가기"
             className="absolute left-5 top-5 cursor-pointer"
-            onClick={() => router.back()}
+            onClick={() => router.push("/")}
           />
           {children}
         </div>
