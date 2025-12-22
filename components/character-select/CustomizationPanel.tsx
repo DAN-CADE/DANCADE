@@ -1,12 +1,11 @@
-import { LPCData, LPCStyle } from "@/types/lpc";
-import { getHairStylesByGender } from "@/utils/character-helpers";
 import { useCallback } from "react";
 import { Section } from "./Section";
 import { ButtonGroup, SelectButton } from "./Button";
-import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
+import type { CharacterState, LpcSprite, PartStyle } from "@/components/avatar/utils/LpcTypes";
+import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 
 interface CustomizationPanelProps {
-  lpcData: LPCData;
+  lpcData: LpcSprite;
   customization: CharacterState;
   onChange: React.Dispatch<React.SetStateAction<CharacterState | null>>;
   onGenderChange: (gender: "male" | "female") => void;
@@ -18,11 +17,14 @@ export function CustomizationPanel({
   onChange,
   onGenderChange,
 }: CustomizationPanelProps) {
+  const lpcSpriteManager = new LpcSpriteManager();
   const { palettes } = lpcData.definitions;
   const { assets } = lpcData;
   const gender = customization.gender as "male" | "female";
 
-  const availableHairStyles = getHairStylesByGender(assets.hair.styles, gender);
+  const availableHairStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'hair', gender);
+  const availableTorsoStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'torso', gender);
+  const availableLegsStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'legs', gender);
 
   // 범용 핸들러 함수
   const handleChange = useCallback(
@@ -97,10 +99,25 @@ export function CustomizationPanel({
         </ButtonGroup>
       </Section>
 
+      {/* 눈 색상 선택 */}
+      <Section title="눈 색상">
+        <ButtonGroup>
+          {palettes.eye_common.slice(0, 12).map((color: string) => (
+            <SelectButton
+              key={color}
+              active={customization.parts.eyes?.color === color}
+              onClick={() => handleChange("eyes", { color: color })}
+            >
+              {color}
+            </SelectButton>
+          ))}
+        </ButtonGroup>
+      </Section>
+
       {/* 헤어 스타일 선택 */}
       <Section title="헤어 스타일">
         <ButtonGroup>
-          {availableHairStyles.map((style: LPCStyle) => (
+          {availableHairStyles.map((style: PartStyle) => (
             <SelectButton
               key={style.id}
               active={customization.parts.hair?.styleId === style.id}
@@ -130,7 +147,7 @@ export function CustomizationPanel({
       {/* 상의 스타일 선택 */}
       <Section title="상의 스타일">
         <ButtonGroup>
-          {assets.torso.styles?.map((style) => (
+          {availableTorsoStyles.map((style) => (
             <SelectButton
               key={style.id}
               active={customization.parts.torso?.styleId === style.id}
@@ -160,7 +177,7 @@ export function CustomizationPanel({
       {/* 하의 스타일 선택 */}
       <Section title="하의 스타일">
         <ButtonGroup>
-          {assets.legs.styles?.map((style) => (
+          {availableLegsStyles.map((style) => (
             <SelectButton
               key={style.id}
               // ⭐️ 'legs' 파트의 styleId 속성에 접근
@@ -189,14 +206,14 @@ export function CustomizationPanel({
         </ButtonGroup>
       </Section>
 
-      {/* 눈 색상 선택 */}
-      <Section title="눈 색상">
+       {/* 하의 색상 선택 */}
+      <Section title="신발 색상">
         <ButtonGroup>
-          {palettes.eye_common.slice(0, 12).map((color: string) => (
+          {palettes.clothes_common.slice(0, 12).map((color: string) => (
             <SelectButton
               key={color}
-              active={customization.parts.eyes?.color === color}
-              onClick={() => handleChange("eyes", { color: color })}
+              active={customization.parts.feet?.color === color}
+              onClick={() => handleChange("feet", { color: color })}
             >
               {color}
             </SelectButton>

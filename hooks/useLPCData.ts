@@ -1,10 +1,10 @@
 // LPC 데이터 로딩 훅
+import { LpcSprite } from "@/components/avatar/utils/LpcTypes";
 import { LPC_ASSETS_PATH } from "@/constants/character";
-import { LPCData } from "@/types/lpc";
 import { useEffect, useState } from "react";
 
 export function useLPCData() {
-  const [lpcData, setLpcData] = useState<LPCData | null>(null);
+  const [lpcData, setLpcData] = useState<LpcSprite | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -14,7 +14,7 @@ export function useLPCData() {
         if (!res.ok) throw new Error("LPC를 가져오지 못했습니다.");
         return res.json();
       })
-      .then((data: LPCData) => {
+      .then((data: LpcSprite) => {
         setLpcData(data);
         setIsLoading(false);
       })
