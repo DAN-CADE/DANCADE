@@ -227,9 +227,6 @@ export class MainScene extends BaseGameScene {
       });
     }
 
-
-
-
   }
 
   update(): void {

@@ -1,45 +1,42 @@
 "use client";
 
-import { useState } from "react";
-
-interface InventoryItemCardProps {
-  id: number;
-  label: string;
+type InventoryProps = {
+  name: string;
+  imageUrl: string;
   isEquipped: boolean;
-  onToggle: (id: number) => void;
-}
+};
 
-export default function InventoryItemCard({   id,
-  label,
+export default function InventoryItemCard({
+  name,
+  imageUrl,
   isEquipped,
-  onToggle, }: InventoryItemCardProps) {
-  const [equipped, setEquipped] = useState(false);
-
-  const handleDoubleClick = () => {
-    setEquipped((prev) => !prev);
-  };
-
+}: InventoryProps) {
   return (
     <div
-      onDoubleClick={() => onToggle(id)}
       className={`
         h-[72px]
         rounded
         flex
         items-center
         justify-center
-        text-xs
         cursor-pointer
         transition
         select-none
+        border
         ${
           isEquipped
-            ? "bg-green-500 text-black"
-            : "bg-white/10 text-white/60 hover:bg-white/20"
+            ? "border-green-400 bg-green-500/20"
+            : "border-white/20 bg-white/10 hover:bg-white/20"
         }
       `}
     >
-      {isEquipped ? "Equipped" : label}
+      {/* <p>{name}</p> */}
+      <img
+        src={imageUrl}
+        alt={name}
+        className="w-12 h-12 object-contain"
+        draggable={false}
+      />
     </div>
   );
 }

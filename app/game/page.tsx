@@ -51,6 +51,7 @@ export default function GamePage() {
 
         <div className="flex justify-center mb-8">
           <PhaserGame />
+          {/* 인벤토리 컴포넌트 추가*/}
           <Inventory />
         </div>
       </main>
