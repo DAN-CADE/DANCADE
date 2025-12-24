@@ -1,17 +1,15 @@
 "use client";
 import TransparentFrame from "@/components/common/TransparentFrame";
 import ProductList from "@/components/shop/ProductList";
+import { useProducts } from "@/hooks/shop/useProducts";
 
 export default function ShopPage(){
 
+  const { products, isLoading } = useProducts();
 
 
-  const MOCK_PRODUCTS = [
-  { id: "1", name: "Red Hair", price: 100 },
-  { id: "2", name: "Blue Hair", price: 120 },
-  { id: "3", name: "Green Shirt", price: 200 },
-  { id: "4", name: "Black Pants", price: 180 },
-];
+  if(isLoading) return <div>로딩중...</div>
+
 
 return(
   <>
@@ -27,7 +25,7 @@ return(
         {/* 카드 리스트 영역 */}
         <section className="shop-content flex-1">
           {/* 나중에 아이템 카드 그리드 */}
-          <ProductList products={MOCK_PRODUCTS} />
+          <ProductList products={products} />
 
         </section>
       </div>

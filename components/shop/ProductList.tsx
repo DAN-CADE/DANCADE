@@ -13,6 +13,12 @@ interface ProductListProps {
 }
 
 export default function ProductList({ products }: ProductListProps) {
+
+  
+
+
+
+
   return (
     <div
       className="

@@ -11,7 +11,6 @@ export default function TransparentFrame({
 }: TransparentFrameProps) {
   return (
     <section className="relative min-h-screen py-12 px-5 font-neo">
-      {/* 공통 배경 */}
       <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
 
       {/* 중앙 투명 프레임 */}
