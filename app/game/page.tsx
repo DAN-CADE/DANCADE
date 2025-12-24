@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Inventory from "@/components/inventory/Inventory";
 
 const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), {
   ssr: false,
@@ -50,6 +51,7 @@ export default function GamePage() {
 
         <div className="flex justify-center mb-8">
           <PhaserGame />
+          <Inventory />
         </div>
       </main>
     </div>

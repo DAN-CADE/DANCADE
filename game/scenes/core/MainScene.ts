@@ -216,6 +216,20 @@ export class MainScene extends BaseGameScene {
       });
     }
     // ------------------------------ END 추후 지울 것
+
+
+    // 인벤토리 HUD 토글 (I 키)
+    if (this.input.keyboard) {
+      this.input.keyboard.on("keydown-I", () => {
+        window.dispatchEvent(
+          new CustomEvent("inventory-toggle")
+        );
+      });
+    }
+
+
+
+
   }
 
   update(): void {

@@ -198,19 +198,22 @@
         {
           "id": "shortSleevePolo",
           "path_segment": "shortsleeve/polo",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "반팔 Polo 티셔츠"
         },
         {
           "id": "shortSleeveScoop",
           "path_segment": "shortsleeve/scoop",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "반팔 Scoop 티셔츠"
         },
         {
           "id": "shortSleeveVneck",
           "path_segment": "shortsleeve/vneck",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "반팔 Vneck 티셔츠"
         },
         {
@@ -228,25 +231,29 @@
         {
           "id": "longSleeveCardigan",
           "path_segment": "longsleeve/cardigan",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "긴팔 cardigan 티셔츠"
         },
         {
           "id": "longSleevePolo",
           "path_segment": "longsleeve/polo",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "긴팔 Polo 티셔츠"
         },
         {
           "id": "longSleeveScoop",
           "path_segment": "longsleeve/scoop",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "긴팔 Scoop 티셔츠"
         },
         {
           "id": "longSleeveVneck",
           "path_segment": "longsleeve/vneck",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "긴팔 vneck 티셔츠"
         }
       ]
@@ -267,13 +274,15 @@
         {
           "id": "pants",
           "path_segment": "pants",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "팬츠"
         },
         {
           "id": "formal",
           "path_segment": "formal",
-          "tier": "basic",
+          "tier": "point",
+          "price": 400,
           "name": "정장바지"
         }
       ]
