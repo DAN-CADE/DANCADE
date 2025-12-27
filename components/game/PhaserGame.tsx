@@ -4,6 +4,7 @@
 import { useEffect, useRef } from "react";
 import { createGameConfig } from "@/game/config";
 
+
 export default function PhaserGame() {
   const gameRef = useRef<Phaser.Game | null>(null);
 
@@ -16,6 +17,7 @@ export default function PhaserGame() {
       const { PreloadScene } = (await import("@/game/scenes/core/PreloadScene"));
       const { StartScene } = await import("@/game/scenes/core/StartScene");
       const { MainScene } = await import("@/game/scenes/core/MainScene");
+      const { ModalScene } = await import("@/game/scenes/core/ModalScene");
       const { BrickBreakerScene } = await import(
         "@/game/scenes/games/BrickBreakerScene"
       );
@@ -27,7 +29,7 @@ export default function PhaserGame() {
 
       const config: Phaser.Types.Core.GameConfig = {
         ...createGameConfig(Phaser),
-        scene: [PreloadScene, MainScene, StartScene, BrickBreakerScene, PingPongScene],
+        scene: [PreloadScene, MainScene, ModalScene, StartScene, BrickBreakerScene, PingPongScene],
       };
 
       gameRef.current = new Phaser.Game(config);
