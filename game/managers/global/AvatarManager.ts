@@ -8,6 +8,8 @@ import type {
   LpcSprite,
 } from "@/components/avatar/utils/LpcTypes";
 import { ASSET_PATHS } from "@/game/constants";
+import { NPC_CONFIG, NpcType } from "@/components/avatar/core/LpcNpc";
+import { MainScene } from "@/game/scenes/core/MainScene";
 
 // 1. 상태 타입 정의 (BaseGameManager 규격)
 interface AvatarManagerState {
@@ -17,6 +19,8 @@ interface AvatarManagerState {
 export class AvatarManager extends BaseGameManager<AvatarManagerState> {
   private lpcSpriteManager: LpcSpriteManager;
   private avatarContainer!: LpcCharacter;
+  private isInteracting!: boolean;
+  public npcType?: NpcType
 
   constructor(scene: Phaser.Scene) {
     // 부모 클래스 초기화 (초기 상태: 아직 생성 안 됨)
@@ -44,7 +48,8 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
   public createAvatar(
     x: number,
     y: number,
-    data?: CharacterState | null
+    data?: CharacterState | null,
+    isNpc?: boolean
   ): void {
     try {
       // 1. 데이터 우선순위 결정: 인자로 받은 데이터 > 로컬 스토리지 > 기본값
@@ -71,12 +76,15 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
         this.lpcSpriteManager
       );
 
-      // 4. 파츠 적용
-      if (finalData) {
-        // 데이터가 있으면 커스텀 파츠 적용
-        this.avatarContainer.setCustomPart(finalData);
+      if (!isNpc) {
+        if (finalData) {
+          this.avatarContainer.setCustomPart(finalData);
+        } else {
+          this.avatarContainer.setDefaultPart("female");
+        }
+        this.scene.physics.add.existing(this.avatarContainer);
+        this.scene.cameras.main.startFollow(this.avatarContainer, true, 0.1, 0.1);
       } else {
-        // 데이터가 아예 없는 경우 방어 코드로 기본 캐릭터 설정
         this.avatarContainer.setDefaultPart("female");
       }
 
@@ -90,6 +98,91 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
       console.error("캐릭터 생성 중 오류 발생", error);
     }
   }
+
+   // NPC 전용 생성 메서드
+  public createNPC(x: number, y: number, type: NpcType): AvatarManager {
+    const config = NPC_CONFIG[type];
+    this.npcType = type;
+    
+    // 부모의 createAvatar 호출
+    this.avatarContainer = new LpcCharacter(
+      this.scene,
+      x,
+      y,
+      config.name,
+      this.lpcSpriteManager
+    );
+
+    // this.createAvatar(x, y, null, config.name, true)
+    this.avatarContainer.setDefaultPart("female");
+
+    return this;
+  }
+
+ // Player 클래스 내부 (또는 상호작용 로직 담당 클래스)
+public tryInteract(targetNpcManagers: AvatarManager[]) {
+    // 1. 플레이어 컨테이너가 없으면 중단
+    if (!this.avatarContainer) {
+      console.error("플레이어 아바타가 로드되지 않았습니다.");
+      return;
+    }
+
+    if (this.isInteracting) return;
+
+    let closestNpc: AvatarManager | null = null;
+    let minDistance = 80;
+
+    targetNpcManagers.forEach((npcMgr) => {
+      // 2. npcMgr이나 내부 컨테이너가 존재하는지 엄격히 체크
+      const npcContainer = npcMgr?.getContainer?.();
+      
+      if (!npcContainer || !npcContainer.x) {
+        console.warn("유효하지 않은 NPC 객체가 포함되어 있습니다.");
+        return;
+      }
+
+      const distance = Phaser.Math.Distance.Between(
+        this.avatarContainer.x, 
+        this.avatarContainer.y,
+        npcContainer.x, 
+        npcContainer.y
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestNpc = npcMgr;
+      }
+    });
+
+    if (closestNpc) {
+      this.handleNPCInteraction(closestNpc);
+    }
+  }
+
+public handleNPCInteraction(targetNpcManager: AvatarManager) {
+    const type = targetNpcManager.npcType;
+    if (!type || !NPC_CONFIG[type]) return;
+
+    this.isInteracting = true;
+
+    // 1. NPC 전용 인터랙션 실행 (Container를 넘겨줌)
+    NPC_CONFIG[type].interaction(this.scene as MainScene, targetNpcManager);
+
+    // 2. NPC 이름표 변경 등의 피드백 (커스텀 메서드 확인 필요)
+    // targetNpcManager.getContainer()가 setDisplayName이라는 메서드를 가지고 있는지 확인하세요.
+    // 보통은 container 내부의 text 객체를 수정해야 합니다.
+    const nameTag = (targetNpcManager as any).nameTag; // 예시
+    if (nameTag) nameTag.setText("!");
+
+    // 3. 상호작용 해제 로직
+    // 가위바위보의 경우 UI를 닫을 때 false로 해주는 것이 좋으나, 
+    // 우선 간단하게 타이머로 구현 시 길이를 조절하세요.
+    this.scene.time.delayedCall(1000, () => {
+        this.isInteracting = false;
+        // 다시 원래 이름으로 복구
+        if (nameTag) nameTag.setText(NPC_CONFIG[type].name);
+    });
+}
 
   public update(): void {
     if (this.gameState.isCreated && this.avatarContainer) {
