@@ -1,280 +1,149 @@
 // game/managers/games/Omok/OmokUIManager.ts
 import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
-import {
-  OMOK_CONFIG,
-  OmokMode,
-  OmokUIState,
-  PlayerInfoUI,
-  PlayerProfile,
-} from "@/game/types/realOmok";
+import { OmokModeSelectionRenderer } from "./ui/OmokModeSelectionRenderer";
+import { OmokPlayerProfileRenderer } from "./ui/OmokPlayerProfileRenderer";
+import { OmokMessageRenderer } from "./ui/OmokMessageRenderer";
+import { OmokEndGameRenderer } from "./ui/OmokEndGameRenderer";
+import type { OmokUIState, OmokMode } from "@/game/types/omok";
 
+/**
+ * OmokUIManager
+ * - UI 렌더러들을 조합하여 관리
+ * - 실제 렌더링은 각 렌더러에 위임
+ */
 export class OmokUIManager extends BaseGameManager<OmokUIState> {
-  private playerInfoUI: PlayerInfoUI = {};
+  // 렌더러들
+  private modeSelectionRenderer: OmokModeSelectionRenderer;
+  private profileRenderer: OmokPlayerProfileRenderer;
+  private messageRenderer: OmokMessageRenderer;
+  private endGameRenderer: OmokEndGameRenderer;
 
   constructor(scene: Phaser.Scene) {
-    super(
-      scene,
-      {
-        modeSelectionContainer: undefined,
-        forbiddenText: undefined,
-      },
-      {}
-    );
+    super(scene, {
+      modeSelectionContainer: undefined,
+      forbiddenText: undefined,
+    });
+
+    // 렌더러 초기화
+    this.modeSelectionRenderer = new OmokModeSelectionRenderer(scene);
+    this.profileRenderer = new OmokPlayerProfileRenderer(scene);
+    this.messageRenderer = new OmokMessageRenderer(scene);
+    this.endGameRenderer = new OmokEndGameRenderer(scene);
   }
 
-  // 필수 구현: 초기 UI 설정
-  setGameObjects(): void {
-    // UI는 동적으로 생성되므로 초기 설정 불필요
+  // =====================================================================
+  // BaseGameManager 구현
+  // =====================================================================
+
+  public setGameObjects(): void {
+    // UI 매니저는 게임 오브젝트를 직접 설정하지 않음
   }
 
-  resetGame(): void {
-    // 모드 선택 컨테이너 정리
-    if (this.gameState.modeSelectionContainer) {
-      this.gameState.modeSelectionContainer.destroy();
-      this.gameState.modeSelectionContainer = undefined;
-    }
+  public resetGame(): void {
+    this.modeSelectionRenderer.clear();
+    this.profileRenderer.clearProfiles();
+    this.messageRenderer.clearMessage();
+    this.endGameRenderer.clear();
 
-    // 금수 메시지 정리
-    if (this.gameState.forbiddenText) {
-      this.gameState.forbiddenText.destroy();
-      this.gameState.forbiddenText = undefined;
-    }
-
-    // 플레이어 정보 UI 정리
-    this.playerInfoUI = {};
+    // 레거시 상태 초기화
+    this.gameState.modeSelectionContainer = undefined;
+    this.gameState.forbiddenText = undefined;
   }
 
-  // 1. 모드 선택 화면 표시
+  // =====================================================================
+  // 모드 선택
+  // =====================================================================
+
+  /**
+   * 모드 선택 UI 표시
+   * @param onSelect - 모드 선택 콜백
+   */
   public showModeSelection(onSelect: (mode: OmokMode) => void): void {
-    const { width, height } = this.scene.scale;
-
-    const titleText = this.scene.add
-      .text(0, -120, "오목 대전", {
-        fontSize: "48px",
-        color: "#ffffff",
-        stroke: "#000",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-
-    const createBtn = (
-      y: number,
-      label: string,
-      mode: OmokMode
-    ): Phaser.GameObjects.GameObject[] => {
-      const bg = this.scene.add
-        .rectangle(0, y, 320, 80, 0x000000, 0.8)
-        .setStrokeStyle(2, 0xffffff);
-
-      const txt = this.scene.add
-        .text(0, y, label, { fontSize: "26px", color: "#ffffff" })
-        .setOrigin(0.5);
-
-      bg.setInteractive({ useHandCursor: true })
-        .on("pointerover", () => {
-          bg.setFillStyle(0x333333, 0.9);
-          bg.setStrokeStyle(3, OMOK_CONFIG.COLORS.HIGHLIGHT);
-        })
-        .on("pointerout", () => {
-          bg.setFillStyle(0x000000, 0.8);
-          bg.setStrokeStyle(2, 0xffffff);
-        })
-        .on("pointerdown", () => {
-          this.gameState.modeSelectionContainer?.destroy();
-          this.gameState.modeSelectionContainer = undefined;
-          onSelect(mode);
-        });
-
-      return [bg, txt];
-    };
-
-    this.gameState.modeSelectionContainer = this.scene.add
-      .container(width / 2, height / 2, [
-        titleText,
-        ...createBtn(0, "혼자하기 (VS AI)", OmokMode.SINGLE),
-        ...createBtn(100, "둘이하기 (Local)", OmokMode.LOCAL),
-      ])
-      .setDepth(OMOK_CONFIG.DEPTH.UI);
+    this.modeSelectionRenderer.show(onSelect);
   }
 
-  // 2. 플레이어 프로필 생성
-  public createPlayerProfiles(currentMode: OmokMode): void {
-    const { width, height } = this.scene.scale;
-    const opponentName = currentMode === OmokMode.SINGLE ? "GPT" : "상대방";
+  // =====================================================================
+  // 플레이어 프로필
+  // =====================================================================
 
-    this.playerInfoUI.opponent = this.addPlayerProfile(
-      width / 2,
-      80,
-      opponentName,
-      OMOK_CONFIG.COLORS.WHITE
-    );
-    this.playerInfoUI.me = this.addPlayerProfile(
-      width / 2,
-      height - 80,
-      "나",
-      OMOK_CONFIG.COLORS.BLACK
-    );
+  /**
+   * 플레이어 프로필 생성
+   * @param mode - 게임 모드
+   * @param myColor - 온라인 모드일 때 내 돌 색깔
+   */
+  public createPlayerProfiles(mode: OmokMode, myColor?: number): void {
+    this.profileRenderer.createProfiles(mode, myColor);
   }
 
-  private addPlayerProfile(
-    x: number,
-    y: number,
-    name: string,
-    stoneColor: number
-  ): PlayerProfile {
-    const container = this.scene.add.container(x, y);
-
-    const bg = this.scene.add
-      .rectangle(0, 0, 350, 100, 0x000000, 0.6)
-      .setStrokeStyle(2, 0xffffff);
-
-    const nameTxt = this.scene.add.text(-150, -20, name, {
-      fontSize: "18px",
-      color: "#ffffff",
-    });
-
-    const stoneIndicator = this.scene.add
-      .circle(140, 0, 18, stoneColor)
-      .setStrokeStyle(1, 0x888888);
-
-    const statusTxt = this.scene.add.text(-150, 15, "대기 중", {
-      fontSize: "16px",
-      color: "#aaaaaa",
-    });
-
-    container.add([bg, nameTxt, stoneIndicator, statusTxt]);
-    container.setDepth(OMOK_CONFIG.DEPTH.UI);
-
-    return { bg, statusTxt };
-  }
-
-  // 3. 턴 업데이트
+  /**
+   * 턴 UI 업데이트
+   * @param currentTurn - 현재 턴 (1: 흑, 2: 백)
+   */
   public updateTurnUI(currentTurn: number): void {
-    if (!this.playerInfoUI.me || !this.playerInfoUI.opponent) return;
-
-    const isMyTurn = currentTurn === 1;
-
-    // 내 프로필 업데이트
-    this.playerInfoUI.me.bg.setStrokeStyle(
-      isMyTurn ? 4 : 2,
-      isMyTurn ? OMOK_CONFIG.COLORS.HIGHLIGHT : 0xffffff
-    );
-    this.playerInfoUI.me.statusTxt
-      .setText(isMyTurn ? "내 차례!" : "대기 중")
-      .setColor(isMyTurn ? "#ffcc00" : "#aaaaaa");
-
-    // 상대 프로필 업데이트
-    this.playerInfoUI.opponent.bg.setStrokeStyle(
-      !isMyTurn ? 4 : 2,
-      !isMyTurn ? OMOK_CONFIG.COLORS.HIGHLIGHT : 0xffffff
-    );
-    this.playerInfoUI.opponent.statusTxt
-      .setText(!isMyTurn ? "상대방 차례..." : "대기 중")
-      .setColor(isMyTurn ? "#ffcc00" : "#aaaaaa");
+    this.profileRenderer.updateTurn(currentTurn);
   }
 
-  // 4. 금수 메시지
-  public showForbiddenMessage(reason: string): void {
-    // 기존 메시지가 있으면 제거
-    if (this.gameState.forbiddenText) {
-      this.gameState.forbiddenText.destroy();
-    }
+  // =====================================================================
+  // 메시지
+  // =====================================================================
 
-    this.gameState.forbiddenText = this.scene.add
-      .text(
-        this.scene.scale.width / 2,
-        this.scene.scale.height / 2,
-        `⚠️ ${reason}`,
-        {
-          fontSize: "28px",
-          color: OMOK_CONFIG.COLORS.FORBIDDEN,
-          backgroundColor: "#000000aa",
-          padding: { x: 20, y: 10 },
-        }
-      )
-      .setOrigin(0.5)
-      .setDepth(OMOK_CONFIG.DEPTH.MESSAGE);
-
-    // 1.5초 후 자동 제거
-    this.scene.time.delayedCall(1500, () => {
-      if (this.gameState.forbiddenText) {
-        this.gameState.forbiddenText.destroy();
-        this.gameState.forbiddenText = undefined;
-      }
-    });
+  /**
+   * 금수 메시지 표시
+   * @param message - 표시할 메시지
+   */
+  public showForbiddenMessage(message: string): void {
+    this.messageRenderer.showForbiddenMessage(message);
   }
 
-  // 5. 게임 종료 UI
+  /**
+   * 대기 메시지 표시
+   * @param message - 표시할 메시지
+   */
+  public showWaitingMessage(message: string): void {
+    this.messageRenderer.showWaitingMessage(message);
+  }
+
+  /**
+   * 메시지 제거
+   */
+  public clearMessage(): void {
+    this.messageRenderer.clearMessage();
+  }
+
+  /**
+   * 대기 메시지 숨김 (레거시 호환)
+   */
+  public hideWaitingMessage(): void {
+    this.messageRenderer.clearMessage();
+  }
+
+  // =====================================================================
+  // 게임 종료
+  // =====================================================================
+
+  /**
+   * 게임 종료 UI 표시
+   * @param winnerName - 승자 이름
+   * @param onRestart - 재시작 콜백
+   * @param onExit - 나가기 콜백
+   */
   public showEndGameUI(
     winnerName: string,
     onRestart: () => void,
-    onHome: () => void
+    onExit: () => void
   ): void {
-    const { width, height } = this.scene.scale;
-
-    // 결과 텍스트
-    this.scene.add
-      .text(width / 2, 150, `🏆 ${winnerName} 승리!`, {
-        fontSize: "52px",
-        color: "#ffffff",
-        stroke: "#000000",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5)
-      .setDepth(OMOK_CONFIG.DEPTH.MESSAGE);
-
-    // 버튼 배치
-    this.createStyledBtn(
-      width / 2 - 120,
-      height - 100,
-      "🔄 다시하기",
-      onRestart
-    );
-    this.createStyledBtn(width / 2 + 120, height - 100, "🏠 홈으로", onHome);
+    this.endGameRenderer.show(winnerName, onRestart, onExit);
   }
 
-  private createStyledBtn(
-    x: number,
-    y: number,
-    label: string,
-    callback: () => void
-  ): void {
-    const container = this.scene.add.container(x, y);
-    const bg = this.scene.add.graphics();
+  // =====================================================================
+  // 정리
+  // =====================================================================
 
-    const drawBg = (color: number) => {
-      bg.clear()
-        .fillStyle(color, 0.9)
-        .fillRoundedRect(-100, -30, 200, 60, 20)
-        .lineStyle(2, 0xffffff)
-        .strokeRoundedRect(-100, -30, 200, 60, 20);
-    };
-
-    drawBg(0x222222);
-
-    const txt = this.scene.add
-      .text(0, 0, label, { fontSize: "22px", color: "#ffffff" })
-      .setOrigin(0.5);
-
-    container
-      .setInteractive(
-        new Phaser.Geom.Rectangle(-100, -30, 200, 60),
-        Phaser.Geom.Rectangle.Contains
-      )
-      .on("pointerover", () => {
-        drawBg(0x444444);
-        container.setScale(1.05);
-      })
-      .on("pointerout", () => {
-        drawBg(0x222222);
-        container.setScale(1.0);
-      })
-      .on("pointerdown", () => {
-        drawBg(0x666666);
-        callback();
-      });
-
-    container.add([bg, txt]);
-    container.setDepth(OMOK_CONFIG.DEPTH.MESSAGE);
+  /**
+   * 모든 UI 정리
+   */
+  public cleanup(): void {
+    this.resetGame();
+    console.log("[OmokUIManager] UI 정리 완료");
   }
 }
