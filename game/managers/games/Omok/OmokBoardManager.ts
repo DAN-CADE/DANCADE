@@ -1,12 +1,28 @@
 // game/managers/games/Omok/OmokBoardManager.ts
 import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
-import { OmokManager } from "./OmokManager";
-import { OMOK_CONFIG, OmokBoardState } from "@/game/types/realOmok";
+import type { OmokManager } from "./OmokManager";
+import type { OmokBoardState } from "@/game/types/omok";
+import { OmokBoardRenderer } from "./renderers/OmokBoardRenderer";
+import { OmokStoneRenderer } from "./renderers/OmokStoneRenderer";
+import { OmokForbiddenMarkerRenderer } from "./renderers/OmokForbiddenMarkerRenderer";
+import { OmokCoordinateConverter } from "./utils/OmokCoordinateConverter";
 
+/**
+ * OmokBoardManager
+ * - 오목 보드 관리의 중재자 역할
+ * - 실제 렌더링은 각 렌더러에 위임
+ * - 좌표 변환은 컨버터에 위임
+ */
 export class OmokBoardManager extends BaseGameManager<OmokBoardState> {
-  private boardOffsetX: number = 0;
-  private boardOffsetY: number = 0;
   private omokManager: OmokManager;
+
+  // 렌더러들
+  private boardRenderer: OmokBoardRenderer;
+  private stoneRenderer: OmokStoneRenderer;
+  private forbiddenMarkerRenderer: OmokForbiddenMarkerRenderer;
+
+  // 좌표 변환기
+  private coordinateConverter: OmokCoordinateConverter;
 
   constructor(scene: Phaser.Scene, omokManager: OmokManager) {
     super(
@@ -20,164 +36,147 @@ export class OmokBoardManager extends BaseGameManager<OmokBoardState> {
     );
 
     this.omokManager = omokManager;
-    this.calculateOffsets();
-  }
 
-  // 1. 초기 오프셋 계산
-  public calculateOffsets(): void {
+    // 좌표 변환기 초기화
     const { width, height } = this.scene.scale;
-    const boardTotalSize = (OMOK_CONFIG.BOARD_SIZE - 1) * OMOK_CONFIG.CELL_SIZE;
-    this.boardOffsetX = (width - boardTotalSize) / 2;
-    this.boardOffsetY = (height - boardTotalSize) / 2;
+    this.coordinateConverter = new OmokCoordinateConverter(width, height);
+
+    // 렌더러 초기화
+    const { offsetX, offsetY } = this.coordinateConverter.getOffsets();
+    this.boardRenderer = new OmokBoardRenderer(scene, offsetX, offsetY);
+    this.stoneRenderer = new OmokStoneRenderer(scene);
+    this.forbiddenMarkerRenderer = new OmokForbiddenMarkerRenderer(
+      scene,
+      omokManager
+    );
   }
 
-  // 2. BaseGameManager 추상 메서드 구현: 바둑판 그리기
+  // =====================================================================
+  // 보드 렌더링
+  // =====================================================================
+
+  /**
+   * 바둑판 렌더링
+   */
+  public renderBoard(): void {
+    this.setGameObjects();
+  }
+
+  /**
+   * 바둑판 그리기 (BaseGameManager 구현)
+   */
   public setGameObjects(): void {
-    const graphics = this.scene.add.graphics().lineStyle(2, 0x000000, 0.8);
-    const totalSize = (OMOK_CONFIG.BOARD_SIZE - 1) * OMOK_CONFIG.CELL_SIZE;
-
-    // 가로선 그리기
-    for (let i = 0; i < OMOK_CONFIG.BOARD_SIZE; i++) {
-      const pos = i * OMOK_CONFIG.CELL_SIZE;
-      graphics.lineBetween(
-        this.boardOffsetX,
-        this.boardOffsetY + pos,
-        this.boardOffsetX + totalSize,
-        this.boardOffsetY + pos
-      );
-    }
-
-    // 세로선 그리기
-    for (let i = 0; i < OMOK_CONFIG.BOARD_SIZE; i++) {
-      const pos = i * OMOK_CONFIG.CELL_SIZE;
-      graphics.lineBetween(
-        this.boardOffsetX + pos,
-        this.boardOffsetY,
-        this.boardOffsetX + pos,
-        this.boardOffsetY + totalSize
-      );
-    }
-
-    // 화점 그리기 (선택사항)
-    this.drawStarPoints(graphics);
+    this.boardRenderer.render();
   }
 
-  // 화점(星) 그리기 - 오목판 기준점
-  private drawStarPoints(graphics: Phaser.GameObjects.Graphics): void {
-    const starPoints = [
-      [3, 3],
-      [3, 11],
-      [11, 3],
-      [11, 11],
-      [7, 7],
-    ];
+  // =====================================================================
+  // 돌 렌더링
+  // =====================================================================
 
-    graphics.fillStyle(0x000000, 1);
-    for (const [row, col] of starPoints) {
-      const { x, y } = this.gridToWorld(row, col);
-      graphics.fillCircle(x, y, 4);
-    }
-  }
-
-  // 3. 돌 렌더링
+  /**
+   * 돌 렌더링
+   * @param row - 행 (0~14)
+   * @param col - 열 (0~14)
+   * @param turn - 턴 (1: 흑, 2: 백)
+   */
   public renderStone(row: number, col: number, turn: number): void {
-    const { x, y } = this.gridToWorld(row, col);
-    const color =
-      turn === 1 ? OMOK_CONFIG.COLORS.BLACK : OMOK_CONFIG.COLORS.WHITE;
-    const textColor = turn === 1 ? "#ffffff" : "#000000";
+    const { x, y } = this.coordinateConverter.gridToWorld(row, col);
+    this.stoneRenderer.renderStone(x, y, turn);
 
-    this.gameState.moveCount++;
-
-    // 돌 그리기
-    this.scene.add
-      .circle(x, y, OMOK_CONFIG.STONE_RADIUS, color)
-      .setStrokeStyle(1, 0x888888)
-      .setDepth(OMOK_CONFIG.DEPTH.STONE);
-
-    // 수순 텍스트 (처음엔 숨김)
-    const numText = this.scene.add
-      .text(x, y, this.gameState.moveCount.toString(), {
-        fontSize: "18px",
-        color: textColor,
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(OMOK_CONFIG.DEPTH.STONE + 1)
-      .setVisible(false);
-
-    this.gameState.stoneNumbers.push(numText);
+    // 상태 동기화
+    this.syncGameState();
   }
 
-  // 4. 금수 마커 업데이트 (최적화: 흑돌 턴일 때만)
+  /**
+   * 복기용 수순 번호 표시
+   */
+  public showMoveNumbers(): void {
+    this.stoneRenderer.showMoveNumbers();
+  }
+
+  // =====================================================================
+  // 금수 마커
+  // =====================================================================
+
+  /**
+   * 금수 마커 업데이트
+   * @param currentTurn - 현재 턴
+   * @param isGameStarted - 게임 시작 여부
+   */
   public updateForbiddenMarkers(
     currentTurn: number,
     isGameStarted: boolean
   ): void {
-    // 기존 마커 제거
-    this.gameState.forbiddenMarkers.forEach((marker) => marker.destroy());
-    this.gameState.forbiddenMarkers = [];
+    this.forbiddenMarkerRenderer.update(
+      currentTurn,
+      isGameStarted,
+      (row, col) => this.coordinateConverter.gridToWorld(row, col)
+    );
 
-    // 흑돌(1) 턴이고 게임이 시작된 경우만 금수 체크
-    if (currentTurn !== 1 || !isGameStarted) return;
-
-    const board = this.omokManager.getBoardState();
-    if (!board || board.length === 0) return;
-
-    // 빈 칸만 체크하여 성능 최적화
-    for (let r = 0; r < OMOK_CONFIG.BOARD_SIZE; r++) {
-      if (!board[r]) continue;
-      for (let c = 0; c < OMOK_CONFIG.BOARD_SIZE; c++) {
-        if (board[r][c] !== 0) continue;
-
-        const check = this.omokManager.checkForbidden(r, c, 1);
-        if (!check.can) {
-          const { x, y } = this.gridToWorld(r, c);
-          const marker = this.scene.add
-            .text(x, y, "✕", {
-              fontSize: "20px",
-              color: "#ff3333",
-              fontStyle: "bold",
-            })
-            .setOrigin(0.5)
-            .setDepth(OMOK_CONFIG.DEPTH.BOARD + 1)
-            .setAlpha(0.6);
-
-          this.gameState.forbiddenMarkers.push(marker);
-        }
-      }
-    }
+    // 상태 동기화
+    this.syncGameState();
   }
 
-  // 5. 게임 리셋
+  // =====================================================================
+  // 좌표 변환
+  // =====================================================================
+
+  /**
+   * 오프셋 재계산 (화면 크기 변경 시)
+   */
+  public calculateOffsets(): void {
+    const { width, height } = this.scene.scale;
+    this.coordinateConverter.calculateOffsets(width, height);
+
+    // 보드 렌더러 오프셋 업데이트
+    const { offsetX, offsetY } = this.coordinateConverter.getOffsets();
+    this.boardRenderer.updateOffsets(offsetX, offsetY);
+  }
+
+  /**
+   * 그리드 좌표 → 월드 좌표
+   */
+  public gridToWorld(row: number, col: number): { x: number; y: number } {
+    return this.coordinateConverter.gridToWorld(row, col);
+  }
+
+  /**
+   * 월드 좌표 → 그리드 좌표
+   */
+  public worldToGrid(x: number, y: number): { row: number; col: number } {
+    return this.coordinateConverter.worldToGrid(x, y);
+  }
+
+  // =====================================================================
+  // 게임 리셋
+  // =====================================================================
+
+  /**
+   * 게임 리셋
+   */
   public resetGame(): void {
-    this.gameState.stoneNumbers.forEach((n) => n.destroy());
-    this.gameState.forbiddenMarkers.forEach((m) => m.destroy());
+    this.stoneRenderer.reset();
+    this.forbiddenMarkerRenderer.clear();
+
+    // 상태 초기화
     this.gameState.stoneNumbers = [];
     this.gameState.forbiddenMarkers = [];
     this.gameState.moveCount = 0;
+
+    console.log("[OmokBoardManager] 보드 UI 초기화 완료");
   }
 
-  // 6. 좌표 변환 유틸리티
-  public gridToWorld(row: number, col: number): { x: number; y: number } {
-    return {
-      x: this.boardOffsetX + col * OMOK_CONFIG.CELL_SIZE,
-      y: this.boardOffsetY + row * OMOK_CONFIG.CELL_SIZE,
-    };
-  }
+  // =====================================================================
+  // 상태 동기화
+  // =====================================================================
 
-  public worldToGrid(x: number, y: number): { row: number; col: number } {
-    return {
-      col: Math.round((x - this.boardOffsetX) / OMOK_CONFIG.CELL_SIZE),
-      row: Math.round((y - this.boardOffsetY) / OMOK_CONFIG.CELL_SIZE),
-    };
-  }
-
-  // 복기용 숫자 보이기
-  public showMoveNumbers(): void {
-    this.gameState.stoneNumbers.forEach((txt) => {
-      txt.setVisible(true);
-      txt.setColor("#ffcc00");
-      txt.setShadow(2, 2, "#000000", 2);
-    });
+  /**
+   * 렌더러 상태를 gameState에 동기화
+   * (기존 코드와의 호환성 유지)
+   */
+  private syncGameState(): void {
+    this.gameState.stoneNumbers = this.stoneRenderer.getStoneNumbers();
+    this.gameState.forbiddenMarkers = this.forbiddenMarkerRenderer.getMarkers();
+    this.gameState.moveCount = this.stoneRenderer.getMoveCount();
   }
 }

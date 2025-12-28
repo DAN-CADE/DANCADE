@@ -341,6 +341,11 @@ export class MainScene extends BaseGameScene {
 
   // 플레이어 스프라이트 생성
   private createPlayerSprite(player: OnlinePlayer): void {
+    if (!this.physics || !this.add) {
+      console.warn("메인 씬의 물리 시스템이 아직 준비되지 않았습니다.");
+      return;
+    }
+
     // LpcCharacter를 사용하여 실제 아바타 생성
     const playerAvatar = new LpcCharacter(
       this,
