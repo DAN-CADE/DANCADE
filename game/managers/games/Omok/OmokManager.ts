@@ -1,10 +1,29 @@
 // game/managers/games/Omok/OmokManager.ts
 import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
-import { GptManager } from "@/game/managers/global/gpt/GptManager";
-import { OmokCallbacks, OmokState, Threat } from "@/game/types/realOmok";
+import { OmokAIManager } from "./OmokAIManager";
+import {
+  type OmokCallbacks,
+  type OmokState,
+  type Threat,
+  DIRECTIONS,
+} from "@/game/types/omok";
 
+/**
+ * OmokManager
+ * - 오목 게임 로직 관리 (승리 판정, 금수 체크)
+ * - AI 로직은 OmokAIManager에 위임
+ * - UI와 분리된 순수 비즈니스 로직
+ */
 export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
-  private gptManager: GptManager;
+  private aiManager: OmokAIManager;
+
+  // 게임 규칙 상수
+  private readonly GAME_RULES = {
+    WIN_COUNT: 5, // 승리 조건 (5개 연속)
+    OVERLINE_LIMIT: 5, // 장목 제한
+    MIN_THREAT_PRIORITY: 2, // 긴급 위협 우선순위
+    MAX_THREAT_COUNT: 20, // GPT에 전달할 최대 위협 개수
+  } as const;
 
   constructor(scene: Phaser.Scene, size: number, callbacks: OmokCallbacks) {
     super(
@@ -15,15 +34,32 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
       },
       callbacks
     );
-    this.gptManager = new GptManager();
+    this.aiManager = new OmokAIManager();
   }
 
-  // --- BaseGameManager 구현 ---
+  // =====================================================================
+  // BaseGameManager 구현
+  // =====================================================================
 
   public setGameObjects(): void {
-    // 초기화 시 필요한 오브젝트 설정이 있다면 여기에 작성
+    // 게임 오브젝트 초기화 (필요시 구현)
   }
 
+  /**
+   * 보드만 초기화 (게임 상태 유지)
+   */
+  public resetBoard(): void {
+    const size = this.gameState.size;
+    this.gameState.board = Array.from({ length: size }, () =>
+      Array(size).fill(0)
+    );
+    this.gameState.lastMove = undefined;
+    console.log("[OmokManager] 보드 초기화 완료");
+  }
+
+  /**
+   * 게임 전체 초기화 (보드 크기 변경 가능)
+   */
   public resetGame(newSize?: number): void {
     const size = newSize || this.gameState.size;
     this.gameState = {
@@ -31,67 +67,49 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
       size: size,
       lastMove: undefined,
     };
+    console.log(`[OmokManager] 게임 초기화 완료 (크기: ${size})`);
   }
 
-  // --- AI 및 로직 핵심 ---
+  // =====================================================================
+  // AI 위임
+  // =====================================================================
 
+  /**
+   * AI의 다음 수 결정 (AI 매니저에 위임)
+   */
   public async getNextMove(
     threats: Threat[] = []
   ): Promise<{ row: number; col: number }> {
-    try {
-      // 1. GPT에게 물어보기
-      const result = await this.gptManager.getResponse("OMOK", {
-        board: this.gameState.board,
-        threats: threats,
-        lastMove: this.gameState.lastMove,
-      });
-
-      // 2. 위기 상황(상대방 3목/4목) 체크
-      const urgentDefend = threats.find((t) => t.priority <= 2);
-
-      // 3. GPT 응답 검증 및 지능 보정
-      if (
-        result &&
-        this.isWithinBoard(result.row, result.col) &&
-        this.gameState.board[result.row][result.col] === 0
-      ) {
-        // 위기인데 GPT가 딴청 피우면 강제로 수비 좌표 리턴
-        if (
-          urgentDefend &&
-          (result.row !== urgentDefend.row || result.col !== urgentDefend.col)
-        ) {
-          console.warn(
-            `[지능 보정] GPT가 위협을 무시하여 강제 수비합니다: (${urgentDefend.row}, ${urgentDefend.col})`
-          );
-          return { row: urgentDefend.row, col: urgentDefend.col };
-        }
-        return result;
-      }
-
-      // 4. GPT가 멍청한 답을 주면 위협 리스트 중 최우선 순위 선택
-      if (threats.length > 0) {
-        return { row: threats[0].row, col: threats[0].col };
-      }
-
-      return { row: -1, col: -1 };
-    } catch (error) {
-      console.error("[AI Error] GPT 호출 실패:", error);
-      // 에러 발생 시 최우선 위협 반환, 없으면 -1
-      if (threats.length > 0) {
-        return { row: threats[0].row, col: threats[0].col };
-      }
-      return { row: -1, col: -1 };
-    }
+    return this.aiManager.getNextMove(
+      this.gameState.board,
+      threats,
+      this.gameState.lastMove,
+      (r, c) => this.isWithinBoard(r, c)
+    );
   }
 
+  /**
+   * 랜덤 수 선택 (AI 매니저에 위임)
+   */
+  public getRandomMove(): { row: number; col: number } | null {
+    return this.aiManager.getRandomMove(this.gameState.board);
+  }
+
+  // =====================================================================
+  // 게임 로직
+  // =====================================================================
+
+  /**
+   * 돌 놓기
+   * @returns 성공 여부
+   */
   public placeStone(row: number, col: number, color: number): boolean {
-    if (!this.isWithinBoard(row, col)) return false;
-    if (this.gameState.board[row][col] !== 0) return false;
+    if (!this.canPlaceStone(row, col)) return false;
 
     this.gameState.board[row][col] = color;
     this.gameState.lastMove = { row, col };
 
-    // Scene에 돌을 그리라고 알림
+    // Scene에 돌 렌더링 요청
     this.callCallback("onMove", row, col, color);
 
     // 승리 체크
@@ -102,65 +120,48 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
     return true;
   }
 
-  public getThreats(color: number): Threat[] {
-    const threats: Threat[] = [];
-    const opponent = color === 1 ? 2 : 1;
-    const size = this.gameState.size;
-
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if (this.gameState.board[r][c] === 0) {
-          const opMax = this.getMaxContinuous(r, c, opponent);
-          const myMax = this.getMaxContinuous(r, c, color);
-
-          if (myMax >= 5) {
-            threats.push({ row: r, col: c, type: "WIN", priority: 0 });
-          } else if (opMax >= 5) {
-            threats.push({
-              row: r,
-              col: c,
-              type: "MUST_DEFEND_4",
-              priority: 1,
-            });
-          } else if (opMax >= 4) {
-            // 상대 돌 3개 나란히 있을 때 (priority 2)
-            threats.push({ row: r, col: c, type: "DEFEND_3", priority: 2 });
-          } else if (myMax === 4) {
-            threats.push({ row: r, col: c, type: "ATTACK_4", priority: 3 });
-          }
-        }
-      }
-    }
-
-    // 위기 상황이면 위기 리스트만, 아니면 전체를 정렬해서 20개까지 전달 (GPT 판단 근거 제공)
-    const urgent = threats.filter((t) => t.priority <= 2);
-    if (urgent.length > 0) {
-      return urgent.sort((a, b) => a.priority - b.priority);
-    }
-
-    return threats.sort((a, b) => a.priority - b.priority).slice(0, 20);
+  /**
+   * 해당 위치에 돌을 놓을 수 있는지 확인
+   */
+  private canPlaceStone(row: number, col: number): boolean {
+    return this.isWithinBoard(row, col) && this.gameState.board[row][col] === 0;
   }
 
-  // --- 유틸리티 private 함수들 (this.gameState.board 참조) ---
-
-  private getMaxContinuous(r: number, c: number, color: number): number {
-    const directions: [number, number][] = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-    let max = 0;
-    for (const [dr, dc] of directions) {
-      const count =
-        1 +
-        this.countInDirection(r, c, dr, dc, color) +
-        this.countInDirection(r, c, -dr, -dc, color);
-      max = Math.max(max, count);
+  /**
+   * 승리 체크
+   */
+  public checkWin(row: number, col: number, color: number): boolean {
+    for (const [dr, dc] of DIRECTIONS) {
+      const count = this.countStones(row, col, dr, dc, color);
+      if (count >= this.GAME_RULES.WIN_COUNT) return true;
     }
-    return max;
+    return false;
   }
 
+  // =====================================================================
+  // 연속 돌 계산
+  // =====================================================================
+
+  /**
+   * 특정 방향으로 연속된 돌 개수 계산
+   */
+  private countStones(
+    row: number,
+    col: number,
+    dr: number,
+    dc: number,
+    color: number
+  ): number {
+    return (
+      1 +
+      this.countInDirection(row, col, dr, dc, color) +
+      this.countInDirection(row, col, -dr, -dc, color)
+    );
+  }
+
+  /**
+   * 한 방향으로 연속된 돌 개수 세기
+   */
   private countInDirection(
     r: number,
     c: number,
@@ -171,6 +172,7 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
     let count = 0;
     let nr = r + dr;
     let nc = c + dc;
+
     while (
       this.isWithinBoard(nr, nc) &&
       this.gameState.board[nr][nc] === color
@@ -179,61 +181,173 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
       nr += dr;
       nc += dc;
     }
+
     return count;
   }
 
-  public checkWin(row: number, col: number, color: number): boolean {
-    const directions: [number, number][] = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-    for (const [dr, dc] of directions) {
-      const count =
-        1 +
-        this.countInDirection(row, col, dr, dc, color) +
-        this.countInDirection(row, col, -dr, -dc, color);
-      if (count >= 5) return true;
+  // =====================================================================
+  // 위협 분석
+  // =====================================================================
+
+  /**
+   * 위협 목록 생성
+   */
+  public getThreats(color: number): Threat[] {
+    const threats: Threat[] = [];
+    const opponent = this.getOpponent(color);
+
+    for (let r = 0; r < this.gameState.size; r++) {
+      for (let c = 0; c < this.gameState.size; c++) {
+        if (this.gameState.board[r][c] === 0) {
+          const threat = this.analyzeThreat(r, c, color, opponent);
+          if (threat) threats.push(threat);
+        }
+      }
     }
-    return false;
+
+    return this.sortAndLimitThreats(threats);
   }
 
+  /**
+   * 상대 색깔 반환
+   */
+  private getOpponent(color: number): number {
+    return color === 1 ? 2 : 1;
+  }
+
+  /**
+   * 특정 위치의 위협 분석
+   */
+  private analyzeThreat(
+    r: number,
+    c: number,
+    myColor: number,
+    opponentColor: number
+  ): Threat | null {
+    const myMax = this.getMaxContinuous(r, c, myColor);
+    const opMax = this.getMaxContinuous(r, c, opponentColor);
+
+    // 승리 가능
+    if (myMax >= 5) {
+      return { row: r, col: c, type: "WIN", priority: 0 };
+    }
+
+    // 상대 승리 막기 (최우선)
+    if (opMax >= 5) {
+      return { row: r, col: c, type: "MUST_DEFEND_4", priority: 1 };
+    }
+
+    // 상대 4개 막기
+    if (opMax >= 4) {
+      return { row: r, col: c, type: "DEFEND_3", priority: 2 };
+    }
+
+    // 나의 4개 만들기
+    if (myMax === 4) {
+      return { row: r, col: c, type: "ATTACK_4", priority: 3 };
+    }
+
+    return null;
+  }
+
+  /**
+   * 위협 정렬 및 제한
+   */
+  private sortAndLimitThreats(threats: Threat[]): Threat[] {
+    // 긴급 위협만 반환
+    const urgent = threats.filter(
+      (t) => t.priority <= this.GAME_RULES.MIN_THREAT_PRIORITY
+    );
+    if (urgent.length > 0) {
+      return urgent.sort((a, b) => a.priority - b.priority);
+    }
+
+    // 전체 위협을 정렬하여 상위 N개만 반환
+    return threats
+      .sort((a, b) => a.priority - b.priority)
+      .slice(0, this.GAME_RULES.MAX_THREAT_COUNT);
+  }
+
+  /**
+   * 최대 연속 개수 계산
+   */
+  private getMaxContinuous(r: number, c: number, color: number): number {
+    let max = 0;
+
+    for (const [dr, dc] of DIRECTIONS) {
+      const count = this.countStones(r, c, dr, dc, color);
+      max = Math.max(max, count);
+    }
+
+    return max;
+  }
+
+  // =====================================================================
+  // 금수 체크
+  // =====================================================================
+
+  /**
+   * 금수 체크
+   */
   public checkForbidden(
     row: number,
     col: number,
     color: number
   ): { can: boolean; reason?: string } {
-    if (!this.isWithinBoard(row, col)) return { can: false };
-    if (this.gameState.board[row][col] !== 0) return { can: false };
-
-    if (color === 1) {
-      // 흑돌 금수 규칙
-      if (this.isOverline(row, col, color))
-        return { can: false, reason: "장목 금수" };
-      if (this.isDoubleThree(row, col, color))
-        return { can: false, reason: "3-3 금수" };
-      if (this.isDoubleFour(row, col, color))
-        return { can: false, reason: "4-4 금수" };
+    if (!this.canPlaceStone(row, col)) {
+      return { can: false };
     }
+
+    // 백돌은 금수 없음
+    if (color !== 1) {
+      return { can: true };
+    }
+
+    // 흑돌 금수 규칙 체크
+    return this.checkBlackForbidden(row, col, color);
+  }
+
+  /**
+   * 흑돌 금수 체크
+   */
+  private checkBlackForbidden(
+    row: number,
+    col: number,
+    color: number
+  ): { can: boolean; reason?: string } {
+    if (this.isOverline(row, col, color)) {
+      return { can: false, reason: "장목 금수" };
+    }
+
+    if (this.isDoubleThree(row, col, color)) {
+      return { can: false, reason: "3-3 금수" };
+    }
+
+    if (this.isDoubleFour(row, col, color)) {
+      return { can: false, reason: "4-4 금수" };
+    }
+
     return { can: true };
   }
 
-  // --- 금수 상세 로직 ---
+  /**
+   * 3-3 금수 체크
+   */
   private isDoubleThree(r: number, c: number, color: number): boolean {
     let openThreeCount = 0;
-    const directions: [number, number][] = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-    for (const [dr, dc] of directions) {
-      if (this.isOpenThree(r, c, dr, dc, color)) openThreeCount++;
+
+    for (const [dr, dc] of DIRECTIONS) {
+      if (this.isOpenThree(r, c, dr, dc, color)) {
+        openThreeCount++;
+      }
     }
+
     return openThreeCount >= 2;
   }
 
+  /**
+   * 열린 3 체크
+   */
   private isOpenThree(
     r: number,
     c: number,
@@ -241,17 +355,14 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
     dc: number,
     color: number
   ): boolean {
-    const count =
-      1 +
-      this.countInDirection(r, c, dr, dc, color) +
-      this.countInDirection(r, c, -dr, -dc, color);
+    const count = this.countStones(r, c, dr, dc, color);
     if (count !== 3) return false;
 
     const forwardCount = this.countInDirection(r, c, dr, dc, color);
+    const backwardCount = this.countInDirection(r, c, -dr, -dc, color);
+
     const headR = r + (forwardCount + 1) * dr;
     const headC = c + (forwardCount + 1) * dc;
-
-    const backwardCount = this.countInDirection(r, c, -dr, -dc, color);
     const tailR = r - (backwardCount + 1) * dr;
     const tailC = c - (backwardCount + 1) * dc;
 
@@ -263,50 +374,63 @@ export class OmokManager extends BaseGameManager<OmokState, OmokCallbacks> {
     );
   }
 
+  /**
+   * 4-4 금수 체크
+   */
   private isDoubleFour(r: number, c: number, color: number): boolean {
     let fourCount = 0;
-    const directions: [number, number][] = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-    for (const [dr, dc] of directions) {
-      const count =
-        1 +
-        this.countInDirection(r, c, dr, dc, color) +
-        this.countInDirection(r, c, -dr, -dc, color);
-      if (count === 4) fourCount++;
+
+    for (const [dr, dc] of DIRECTIONS) {
+      const count = this.countStones(r, c, dr, dc, color);
+      if (count === 4) {
+        fourCount++;
+      }
     }
+
     return fourCount >= 2;
   }
 
+  /**
+   * 장목 금수 체크
+   */
   private isOverline(r: number, c: number, color: number): boolean {
-    const directions: [number, number][] = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-    for (const [dr, dc] of directions) {
-      if (
-        1 +
-          this.countInDirection(r, c, dr, dc, color) +
-          this.countInDirection(r, c, -dr, -dc, color) >
-        5
-      )
+    for (const [dr, dc] of DIRECTIONS) {
+      const count = this.countStones(r, c, dr, dc, color);
+      if (count > this.GAME_RULES.OVERLINE_LIMIT) {
         return true;
+      }
     }
     return false;
   }
 
+  // =====================================================================
+  // 유틸리티
+  // =====================================================================
+
+  /**
+   * 보드 범위 체크
+   */
   private isWithinBoard(r: number, c: number): boolean {
     return (
       r >= 0 && r < this.gameState.size && c >= 0 && c < this.gameState.size
     );
   }
 
+  /**
+   * 보드 상태 반환
+   */
   public getBoardState(): number[][] {
     return this.gameState.board;
+  }
+
+  // =====================================================================
+  // 정리
+  // =====================================================================
+
+  /**
+   * AI 매니저 정리
+   */
+  public cleanup(): void {
+    this.aiManager.cleanup();
   }
 }
