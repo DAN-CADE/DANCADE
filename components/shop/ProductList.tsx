@@ -1,23 +1,15 @@
 "use client";
 
 import ProductItem from "@/components/shop/ProductItem";
+import { Product } from "@/game/types/product";
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-}
 
 interface ProductListProps {
   products: Product[];
+  onSelect: (product: Product) => void;
 }
 
-export default function ProductList({ products }: ProductListProps) {
-
-  
-
-
-
+export default function ProductList({ products, onSelect }: ProductListProps) {
 
   return (
     <div
@@ -30,7 +22,9 @@ export default function ProductList({ products }: ProductListProps) {
       "
     >
       {products.map((product) => (
-        <ProductItem key={product.id} product={product} />
+        <ProductItem  key={product.id}
+          product={product}
+          onClick={() => onSelect(product)}/>
       ))}
     </div>
   );
