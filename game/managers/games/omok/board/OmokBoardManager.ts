@@ -1,11 +1,11 @@
 // game/managers/games/Omok/OmokBoardManager.ts
 import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
-import type { OmokManager } from "./OmokManager";
+import type { OmokManager } from "@/game/managers/games/omok/core/OmokManager";
 import type { OmokBoardState } from "@/game/types/omok";
-import { OmokBoardRenderer } from "./renderers/OmokBoardRenderer";
-import { OmokStoneRenderer } from "./renderers/OmokStoneRenderer";
-import { OmokForbiddenMarkerRenderer } from "./renderers/OmokForbiddenMarkerRenderer";
-import { OmokCoordinateConverter } from "./utils/OmokCoordinateConverter";
+import { OmokBoardRenderer } from "@/game/managers/games/omok/board/renderers/OmokBoardRenderer";
+import { OmokStoneRenderer } from "@/game/managers/games/omok/board/renderers/OmokStoneRenderer";
+import { OmokForbiddenMarkerRenderer } from "@/game/managers/games/omok/board/renderers/OmokForbiddenMarkerRenderer";
+import { OmokCoordinateConverter } from "@/game/managers/games/omok/board/utils/OmokCoordinateConverter";
 
 /**
  * OmokBoardManager

@@ -1,23 +1,24 @@
-// game/managers/games/Omok/OmokRoomManager.ts
+// game/managers/base/multiplayer/room/BaseRoomManager.ts
+
 import { Socket } from "socket.io-client";
-import { OmokRoomNetworkManager } from "./OmokRoomNetworkManager";
-import { OmokRoomUIManager } from "./OmokRoomUIManager";
+import { BaseRoomNetworkManager } from "@/game/managers/base/multiplayer/room/BaseRoomNetworkManager";
+import { BaseRoomUIManager } from "@/game/managers/base/multiplayer/room/BaseRoomUIManager";
 
 /**
- * OmokRoomManager
- * - 네트워크 매니저와 UI 매니저를 조합
- * - Scene과 네트워크/UI 간의 중재자 역할
- * - 실제 로직은 각 매니저에 위임
+ * BaseRoomManager
+ * - 네트워크와 UI 매니저를 조합하는 조율자
+ * - 팩토리 메서드 패턴: 게임별로 적절한 매니저 생성
+ * - 오목의 OmokRoomManager를 기반으로 일반화
  */
-export class OmokRoomManager {
-  private scene: Phaser.Scene;
-  private networkManager: OmokRoomNetworkManager;
-  private uiManager: OmokRoomUIManager;
+export abstract class BaseRoomManager {
+  protected scene: Phaser.Scene;
+  protected networkManager: BaseRoomNetworkManager;
+  protected uiManager: BaseRoomUIManager;
 
   // 외부 콜백들
-  private onGameStartCallback?: () => void;
-  private onErrorCallback?: (message: string) => void;
-  private onGameAbortedCallback?: (
+  protected onGameStartCallback?: () => void;
+  protected onErrorCallback?: (message: string) => void;
+  protected onGameAbortedCallback?: (
     reason: string,
     leavingPlayer: string
   ) => void;
@@ -25,19 +26,44 @@ export class OmokRoomManager {
   constructor(scene: Phaser.Scene, socket: Socket) {
     this.scene = scene;
 
-    // 매니저 생성
-    this.networkManager = new OmokRoomNetworkManager(socket);
-    this.uiManager = new OmokRoomUIManager(scene, socket);
+    // 게임별 매니저 생성 (팩토리 패턴)
+    this.networkManager = this.createNetworkManager(socket);
+    this.uiManager = this.createUIManager(scene, socket);
 
-    // 네트워크 → UI 연결
+    // 바인딩 설정
     this.setupNetworkToUIBindings();
-
-    // UI → 네트워크 연결
     this.setupUIToNetworkBindings();
   }
 
   // =====================================================================
-  // 네트워크 → UI 바인딩
+  // 팩토리 메서드 (게임별 구현 필요)
+  // =====================================================================
+
+  /**
+   * 게임별 네트워크 매니저 생성
+   * @example
+   * protected createNetworkManager(socket: Socket): BaseRoomNetworkManager {
+   *   return new BaseRoomNetworkManager(socket, "omok");
+   * }
+   */
+  protected abstract createNetworkManager(
+    socket: Socket
+  ): BaseRoomNetworkManager;
+
+  /**
+   * 게임별 UI 매니저 생성
+   * @example
+   * protected createUIManager(scene: Phaser.Scene, socket: Socket): BaseRoomUIManager {
+   *   return new OmokRoomUIManager(scene, socket);
+   * }
+   */
+  protected abstract createUIManager(
+    scene: Phaser.Scene,
+    socket: Socket
+  ): BaseRoomUIManager;
+
+  // =====================================================================
+  // 네트워크 → UI 바인딩 (완전 공통)
   // =====================================================================
 
   private setupNetworkToUIBindings(): void {
@@ -102,30 +128,30 @@ export class OmokRoomManager {
   }
 
   // =====================================================================
-  // UI → 네트워크 바인딩
+  // UI → 네트워크 바인딩 (완전 공통)
   // =====================================================================
 
   private setupUIToNetworkBindings(): void {
     // UI 이벤트 리스너 등록
-    this.scene.events.on("omokRoomUI:joinRoomRequested", (roomId: string) => {
+    this.scene.events.on("roomUI:joinRoomRequested", (roomId: string) => {
       const username = this.getUsername();
       this.networkManager.joinRoom(roomId, username);
     });
 
-    this.scene.events.on("omokRoomUI:toggleReadyRequested", () => {
+    this.scene.events.on("roomUI:toggleReadyRequested", () => {
       this.networkManager.toggleReady();
     });
 
-    this.scene.events.on("omokRoomUI:startGameRequested", () => {
+    this.scene.events.on("roomUI:startGameRequested", () => {
       this.networkManager.startGame();
     });
 
-    this.scene.events.on("omokRoomUI:leaveRoomRequested", () => {
+    this.scene.events.on("roomUI:leaveRoomRequested", () => {
       this.networkManager.leaveRoom();
       this.scene.scene.restart();
     });
 
-    this.scene.events.on("omokRoomUI:backRequested", () => {
+    this.scene.events.on("roomUI:backRequested", () => {
       this.scene.scene.restart();
     });
   }
@@ -152,13 +178,19 @@ export class OmokRoomManager {
   /**
    * 방 생성 프롬프트 및 요청
    */
-  public showCreateRoomPrompt(): void {
+  public showCreateRoomPrompt(onCancel?: () => void): void {
     const roomName = this.uiManager.showCreateRoomPrompt();
 
-    if (roomName) {
-      const username = this.getUsername();
-      this.networkManager.createRoom(roomName, username);
+    // 취소 시 콜백
+    if (!roomName || roomName.trim() === "") {
+      if (onCancel) {
+        onCancel();
+      }
+      return;
     }
+
+    const username = this.getUsername();
+    this.networkManager.createRoom(roomName, username);
   }
 
   /**
@@ -176,7 +208,7 @@ export class OmokRoomManager {
   }
 
   // =====================================================================
-  // 콜백 설정
+  // 콜백 설정 (완전 공통)
   // =====================================================================
 
   public setOnGameStart(callback: () => void): void {
@@ -198,9 +230,9 @@ export class OmokRoomManager {
   // =====================================================================
 
   /**
-   * 사용자 이름 가져오기
+   * 사용자 이름 가져오기 (게임별로 오버라이드 가능)
    */
-  private getUsername(): string {
+  protected getUsername(): string {
     try {
       const userData = localStorage.getItem("user");
       return userData ? JSON.parse(userData).nickname : "플레이어";
@@ -217,10 +249,10 @@ export class OmokRoomManager {
     this.uiManager.clearUI();
 
     // UI 이벤트 리스너 제거
-    this.scene.events.off("omokRoomUI:joinRoomRequested");
-    this.scene.events.off("omokRoomUI:toggleReadyRequested");
-    this.scene.events.off("omokRoomUI:startGameRequested");
-    this.scene.events.off("omokRoomUI:leaveRoomRequested");
-    this.scene.events.off("omokRoomUI:backRequested");
+    this.scene.events.off("roomUI:joinRoomRequested");
+    this.scene.events.off("roomUI:toggleReadyRequested");
+    this.scene.events.off("roomUI:startGameRequested");
+    this.scene.events.off("roomUI:leaveRoomRequested");
+    this.scene.events.off("roomUI:backRequested");
   }
 }

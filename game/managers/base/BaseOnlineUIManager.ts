@@ -6,7 +6,7 @@ interface OnlineMenuOptions {
   onCreateRoom: () => void;
   onShowList: () => void;
   onBack: () => void;
-  onMainMove: () => void; // ✅ 추가
+  onMainMove: () => void;
   colors: { primary: number; secondary: number; panel: number };
 }
 
