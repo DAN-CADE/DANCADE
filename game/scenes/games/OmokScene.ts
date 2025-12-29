@@ -1,16 +1,16 @@
 // game/scenes/OmokScene.ts
 import { BaseGameScene } from "@/game/scenes/base/BaseGameScene";
-import { OmokManager } from "@/game/managers/games/omok/OmokManager";
-import { OmokBoardManager } from "@/game/managers/games/omok/OmokBoardManager";
-import { OmokUIManager } from "@/game/managers/games/omok/OmokUIManger";
-import { OmokRoomManager } from "@/game/managers/games/omok/OmokRoomManager";
-import { OmokNetworkManager } from "@/game/managers/games/omok/OmokNetworkManager";
+import { OmokManager } from "@/game/managers/games/omok/core/OmokManager";
+import { OmokBoardManager } from "@/game/managers/games/omok/board/OmokBoardManager";
+import { OmokUIManager } from "@/game/managers/games/omok/ui/OmokUIManger";
+import { OmokRoomManager } from "@/game/managers/games/omok/network/room/OmokRoomManager";
+import { OmokNetworkManager } from "@/game/managers/games/omok/network/OmokNetworkManager";
 import { BaseOnlineUIManager } from "@/game/managers/base/BaseOnlineUIManager";
 import { GptManager } from "@/game/managers/global/gpt/GptManager";
 
 // 분리된 타입 import
 import { OMOK_CONFIG, OmokMode, type OmokMoveData } from "@/game/types/omok";
-import { ButtonFactory } from "@/utils/ButtonFactory";
+import { OmokGameAbortedDialog } from "@/game/managers/games/omok/ui/OmokGameAbortedDialog";
 
 /**
  * OmokScene - 오목 게임 씬
@@ -52,6 +52,7 @@ export class OmokScene extends BaseGameScene {
     room: null as OmokRoomManager | null,
     network: null as OmokNetworkManager | null,
     onlineUI: null as BaseOnlineUIManager | null,
+    abortDialog: null as OmokGameAbortedDialog | null,
   };
 
   constructor() {
@@ -96,6 +97,9 @@ export class OmokScene extends BaseGameScene {
 
     // 방 매니저
     this.managers.room = this.createRoomManager();
+
+    // 게임 중단 다이얼로그
+    this.managers.abortDialog = new OmokGameAbortedDialog(this);
   }
 
   protected setupScene(): void {
@@ -278,7 +282,9 @@ export class OmokScene extends BaseGameScene {
    */
   private showCreateRoomDialog(): void {
     this.managers.onlineUI!.hideOnlineMenu();
-    this.managers.room!.showCreateRoomPrompt();
+    this.managers.room!.showCreateRoomPrompt(() => {
+      this.showOnlineMenu();
+    });
   }
 
   /**
@@ -294,8 +300,22 @@ export class OmokScene extends BaseGameScene {
    * 모드 선택으로 돌아가기
    */
   private returnToModeSelection(): void {
-    this.managers.onlineUI!.hideOnlineMenu();
-    this.showModeSelection();
+    // 게임 상태 초기화
+    this.resetAllManagers();
+
+    // 온라인 상태 초기화
+    this.onlineState.myColor = 0;
+    this.onlineState.isColorAssigned = false;
+    this.onlineState.currentRoomId = null;
+
+    // 게임 상태 초기화
+    this.gameState.mode = OmokMode.NONE;
+    this.gameState.isStarted = false;
+    this.gameState.isAiThinking = false;
+    this.gameState.currentTurn = 1;
+
+    // 씬 재시작 (자동으로 모드 선택 화면 표시)
+    this.scene.restart();
   }
 
   /**
@@ -635,22 +655,36 @@ export class OmokScene extends BaseGameScene {
 
     this.managers.board!.showMoveNumbers();
 
-    const winnerName = this.managers.ui!.getWinnerName(
-      winner,
-      this.gameState.mode,
-      this.onlineState.myColor
-    );
+    // winner만 전달 (나머지는 내부에서 사용)
+    const winnerName = this.getWinnerName(winner);
 
     this.managers.ui!.showEndGameUI(
       winnerName,
       () => this.restartGame(),
-      () => this.exitToMainMenu()
+      () => this.returnToModeSelection()
     );
   }
 
   /**
-   * 게임 중단 다이얼로그 표시
+   * 승자 이름 결정
+   * @param winner - 승자 (1: 흑, 2: 백)
    */
+  private getWinnerName(winner: number): string {
+    // this.gameState.mode 사용
+    if (this.gameState.mode === OmokMode.SINGLE) {
+      return winner === 1 ? "나" : "GPT";
+    } else if (this.gameState.mode === OmokMode.LOCAL) {
+      return winner === 1 ? "플레이어1" : "플레이어2";
+    } else if (this.gameState.mode === OmokMode.ONLINE) {
+      // this.onlineState.myColor 사용
+      return winner === this.onlineState.myColor ? "나" : "상대";
+    }
+    return "알 수 없음";
+  }
+
+  /**
+   * 게임 중단 다이얼로그 표시
+   
   private showGameAbortedDialog(reason: string, leavingPlayer: string): void {
     const { width, height } = this.scale;
     const centerX = width / 2;
@@ -709,6 +743,17 @@ export class OmokScene extends BaseGameScene {
 
     homeButton.setDepth(ABORT_UI_DEPTH);
   }
+    */
+
+  private showGameAbortedDialog(reason: string, leavingPlayer: string): void {
+    // UI 정리
+    this.managers.room!.clearUI();
+    this.managers.ui!.hideWaitingMessage();
+
+    this.managers.abortDialog!.show(reason, leavingPlayer, () => {
+      this.exitToMainMenu();
+    });
+  }
 
   // =====================================================================
   // 씬 전환
@@ -733,15 +778,38 @@ export class OmokScene extends BaseGameScene {
    * 게임 재시작
    */
   protected restartGame(): void {
+    // 현재 모드 저장
+    const previousMode = this.gameState.mode;
+
+    // 매니저 초기화
     this.resetAllManagers();
 
-    // 온라인 상태 초기화
-    if (this.gameState.mode === OmokMode.ONLINE) {
+    // 보드 시각적 초기화
+    this.managers.board?.renderBoard();
+
+    // 상태 초기화
+    this.gameState.isStarted = false;
+    this.gameState.isAiThinking = false;
+    this.gameState.currentTurn = 1;
+
+    // 온라인 상태 초기화 (온라인 모드면)
+    if (previousMode === OmokMode.ONLINE) {
       this.onlineState.myColor = 0;
       this.onlineState.isColorAssigned = false;
+      this.onlineState.currentRoomId = null;
     }
 
-    this.scene.restart();
+    // 이전 모드로 바로 시작
+    if (previousMode === OmokMode.SINGLE || previousMode === OmokMode.LOCAL) {
+      // 로컬 모드는 바로 재시작
+      this.startLocalGame(previousMode);
+    } else if (previousMode === OmokMode.ONLINE) {
+      // 온라인 모드는 온라인 메뉴로
+      this.showOnlineMenu();
+    } else {
+      // 예외: 모드가 NONE이면 모드 선택 화면으로
+      this.scene.restart();
+    }
   }
 
   /**
@@ -762,6 +830,7 @@ export class OmokScene extends BaseGameScene {
    * 씬 종료 시 정리
    */
   shutdown(): void {
+    this.managers.abortDialog?.clear();
     this.managers.network?.cleanup();
     this.managers.onlineUI?.cleanup();
     this.managers.room?.cleanup();

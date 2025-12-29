@@ -1,23 +1,45 @@
-// game/managers/games/Omok/ui/OmokEndGameRenderer.ts
+// game/managers/base/multiplayer/ui/BaseEndGameUIManager.ts
+
 import { ButtonFactory } from "@/utils/ButtonFactory";
-import { OMOK_CONFIG } from "@/game/types/omok";
 
 /**
- * OmokEndGameRenderer
- * - 게임 종료 UI 렌더링만 담당
+ * 게임 종료 UI 설정
  */
-export class OmokEndGameRenderer {
-  private scene: Phaser.Scene;
-  private endGameUI: Phaser.GameObjects.Container | null = null;
+export interface EndGameUIConfig {
+  colors: {
+    overlay: number;
+    overlayAlpha: number;
+    winnerText: string;
+    buttonPrimary: number;
+    buttonDanger: number;
+  };
+  layout: {
+    winnerTextY: number;
+    buttonYOffset: number;
+    buttonSpacing: number;
+    buttonWidth: number;
+    buttonHeight: number;
+  };
+  textStyle: {
+    winner: Partial<Phaser.Types.GameObjects.Text.TextStyle>;
+  };
+  depth: number;
+}
 
-  // 레이아웃 상수
-  private readonly LAYOUT = {
-    BUTTON_Y_OFFSET: 50,
-    BUTTON_SPACING: 240, // 중앙 기준 좌우로
-  } as const;
+/**
+ * BaseEndGameUIManager
+ * - 모든 게임의 종료 UI 공통화
+ * - 승자 표시 + 재시작/나가기 버튼
+ * - 게임별로 색상/레이아웃만 커스터마이징
+ */
+export class BaseEndGameUIManager {
+  protected scene: Phaser.Scene;
+  protected config: EndGameUIConfig;
+  protected endGameUI: Phaser.GameObjects.Container | null = null;
 
-  constructor(scene: Phaser.Scene) {
+  constructor(scene: Phaser.Scene, config: EndGameUIConfig) {
     this.scene = scene;
+    this.config = config;
   }
 
   // =====================================================================
@@ -44,7 +66,7 @@ export class OmokEndGameRenderer {
     // 컨테이너 생성
     this.endGameUI = this.scene.add
       .container(centerX, centerY)
-      .setDepth(OMOK_CONFIG.DEPTH.MESSAGE);
+      .setDepth(this.config.depth);
 
     // 반투명 배경
     this.createOverlay(centerX, centerY);
@@ -73,12 +95,13 @@ export class OmokEndGameRenderer {
    */
   private createOverlay(centerX: number, centerY: number): void {
     const { width, height } = this.scene.scale;
+    const { overlay, overlayAlpha } = this.config.colors;
 
-    const overlay = this.scene.add
-      .rectangle(-centerX, -centerY, width, height, 0x000000, 0.7)
+    const overlayRect = this.scene.add
+      .rectangle(-centerX, -centerY, width, height, overlay, overlayAlpha)
       .setOrigin(0, 0);
 
-    this.endGameUI!.add(overlay);
+    this.endGameUI!.add(overlayRect);
   }
 
   /**
@@ -86,10 +109,9 @@ export class OmokEndGameRenderer {
    */
   private createWinnerText(winnerName: string): void {
     const winText = this.scene.add
-      .text(0, -100, `🎉 ${winnerName} 승리! 🎉`, {
-        ...OMOK_CONFIG.TEXT_STYLE.TITLE,
-        color: OMOK_CONFIG.COLORS.GOLD,
-        fontStyle: "bold",
+      .text(0, this.config.layout.winnerTextY, `🎉 ${winnerName} 승리! 🎉`, {
+        ...this.config.textStyle.winner,
+        color: this.config.colors.winnerText,
       })
       .setOrigin(0.5)
       .setScale(0)
@@ -110,22 +132,24 @@ export class OmokEndGameRenderer {
    * 버튼들 생성
    */
   private createButtons(onRestart: () => void, onExit: () => void): void {
-    const { BUTTON_Y_OFFSET, BUTTON_SPACING } = this.LAYOUT;
+    const { buttonYOffset, buttonSpacing, buttonWidth, buttonHeight } =
+      this.config.layout;
+    const { buttonPrimary, buttonDanger } = this.config.colors;
 
     // 재시작 버튼
     const restartBtn = ButtonFactory.createButton(
       this.scene,
-      -BUTTON_SPACING / 2,
-      BUTTON_Y_OFFSET,
+      0,
+      buttonYOffset,
       "RESTART",
       () => {
         this.clear();
         onRestart();
       },
       {
-        width: OMOK_CONFIG.BUTTON_SIZE.MEDIUM.width,
-        height: OMOK_CONFIG.BUTTON_SIZE.MEDIUM.height,
-        color: OMOK_CONFIG.COLORS.PRIMARY,
+        width: buttonWidth,
+        height: buttonHeight,
+        color: buttonPrimary,
         textColor: "#ffffff",
       }
     );
@@ -133,24 +157,24 @@ export class OmokEndGameRenderer {
     // 나가기 버튼
     const exitBtn = ButtonFactory.createButton(
       this.scene,
-      BUTTON_SPACING / 2,
-      BUTTON_Y_OFFSET,
+      0,
+      buttonYOffset + buttonHeight + buttonSpacing,
       "EXIT",
       () => {
         this.clear();
         onExit();
       },
       {
-        width: OMOK_CONFIG.BUTTON_SIZE.MEDIUM.width,
-        height: OMOK_CONFIG.BUTTON_SIZE.MEDIUM.height,
-        color: OMOK_CONFIG.COLORS.DANGER,
+        width: buttonWidth,
+        height: buttonHeight,
+        color: buttonDanger,
         textColor: "#ffffff",
       }
     );
 
     this.endGameUI!.add([restartBtn, exitBtn]);
 
-    // 버튼 애니메이션 (순차적)
+    // 버튼 애니메이션
     this.animateButtons([restartBtn, exitBtn]);
   }
 

@@ -1,6 +1,6 @@
 // game/managers/games/Omok/renderers/OmokForbiddenMarkerRenderer.ts
 import { OMOK_CONFIG } from "@/game/types/omok";
-import type { OmokManager } from "../OmokManager";
+import type { OmokManager } from "../../OmokManager";
 
 /**
  * OmokForbiddenMarkerRenderer
