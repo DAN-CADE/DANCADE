@@ -14,6 +14,11 @@ const DEFAULT_PART: Partial<Record<PartType, string>> = {
   feet: "feet_shoes_black",
 };
 
+const FRAMES_PER_ROW = 13;
+const ROW_DIR = { up: 0, left: 1, down: 2, right: 3 };
+const JUMP_ROW_START = 26; // 27번째 줄 (0-index)
+const THRUST_ROW_START = 12; // 찌르기 시작 줄 (기본 LPC 기준)
+
 const LPC_ANIMS = {
   frameRate: 10,
   walk: {
@@ -29,6 +34,17 @@ const LPC_ANIMS = {
     right: 143,
   },
 };
+
+// 애니메이션별 시작 Row(행) 위치
+const ACTION_ROW_OFFSET = {
+  cast: 0,
+  thrust: 4,
+  walk: 8,
+  slash: 12,
+  shoot: 16,
+  jump: 26, // 27번째 줄 (index 26)
+};
+
 
 export default class LpcCharacter extends Phaser.GameObjects.Container {
   private nameTag: Phaser.GameObjects.Text;
@@ -54,6 +70,8 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
   // 상태 변수
   private currentDirection: "up" | "down" | "left" | "right" = "down";
   private isMoving: boolean = false;
+  private isJumping: boolean = false;
+  private isThrusting: boolean = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -105,6 +123,8 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         left: Phaser.Input.Keyboard.KeyCodes.A,
         down: Phaser.Input.Keyboard.KeyCodes.S,
         right: Phaser.Input.Keyboard.KeyCodes.D,
+        space: Phaser.Input.Keyboard.KeyCodes.SPACE, // 점프 키 추가
+        z: Phaser.Input.Keyboard.KeyCodes.Z,          // 찌르기 키 추가
       }) as { [key: string]: Phaser.Input.Keyboard.Key };
     }
   }
@@ -146,40 +166,51 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
 
+    // 1. 키 존재 여부 확인 후 입력 감지
+    const isSpaceJustDown = this.keys.space && Phaser.Input.Keyboard.JustDown(this.keys.space);
+    const isZJustDown = this.keys.z && Phaser.Input.Keyboard.JustDown(this.keys.z);
+
     let velocityX = 0;
     let velocityY = 0;
 
-    if (this.keys.left.isDown) velocityX = -1;
-    else if (this.keys.right.isDown) velocityX = 1;
+    // 2. 점프나 찌르기 중이 아닐 때만 이동 가능
+    if (!this.isJumping && !this.isThrusting) {
+      if (this.keys.left.isDown) velocityX = -1;
+      else if (this.keys.right.isDown) velocityX = 1;
 
-    if (this.keys.up.isDown) velocityY = -1;
-    else if (this.keys.down.isDown) velocityY = 1;
+      if (this.keys.up.isDown) velocityY = -1;
+      else if (this.keys.down.isDown) velocityY = 1;
 
-    // 1. 이동 처리
-    if (velocityX !== 0 || velocityY !== 0) {
-      body.velocity.x = velocityX;
-      body.velocity.y = velocityY;
-      body.velocity.normalize().scale(this.speed);
-    } else {
-      body.setVelocity(0, 0);
+      // 이동 처리
+      if (velocityX !== 0 || velocityY !== 0) {
+        body.velocity.x = velocityX;
+        body.velocity.y = velocityY;
+        body.velocity.normalize().scale(this.speed);
+      } else {
+        body.setVelocity(0, 0);
+      }
+
+      // 방향 설정
+      if (velocityX < 0) this.currentDirection = "left";
+      else if (velocityX > 0) this.currentDirection = "right";
+      else if (velocityY < 0) this.currentDirection = "up";
+      else if (velocityY > 0) this.currentDirection = "down";
+
+      this.isMoving = velocityX !== 0 || velocityY !== 0;
     }
 
-    // 2. 방향 및 상태 감지
-    const oldDirection = this.currentDirection;
-    const oldMoving = this.isMoving;
-
-    if (velocityX < 0) this.currentDirection = "left";
-    else if (velocityX > 0) this.currentDirection = "right";
-    else if (velocityY < 0) this.currentDirection = "up";
-    else if (velocityY > 0) this.currentDirection = "down";
-
-    this.isMoving = velocityX !== 0 || velocityY !== 0;
-
-    // 3. 상태 변화 시 애니메이션 동기화
-    if (oldDirection !== this.currentDirection || oldMoving !== this.isMoving) {
+    // 3. 애니메이션 상태 결정 및 재생
+    if (isSpaceJustDown && !this.isJumping) {
+      this.isJumping = true;
+      this.playLayeredAnimations(true);
+    } else if (isZJustDown && !this.isThrusting) {
+      this.isThrusting = true;
+      this.playLayeredAnimations(true);
+    } else if (!this.isJumping && !this.isThrusting) {
+      // 이동 또는 대기 애니메이션
       this.playLayeredAnimations();
     }
-  }
+  } 
 
   /**
    * 특정 텍스처에 대한 4방향 걷기/대기 애니메이션 생성
@@ -187,54 +218,47 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
   private ensureAnimations(textureKey: string) {
     if (!textureKey) return;
     const anims = this.scene.anims;
-
-    // 이미 생성된 애니메이션
     if (anims.exists(`${textureKey}-down`)) return;
 
     const config = { frameRate: LPC_ANIMS.frameRate, repeat: -1 };
+    const directions: ('up' | 'left' | 'down' | 'right')[] = ['up', 'left', 'down', 'right'];
 
-    // Walk Animations
-    anims.create({
-      key: `${textureKey}-up`,
-      frames: anims.generateFrameNumbers(textureKey, LPC_ANIMS.walk.up),
-      ...config,
-    });
-    anims.create({
-      key: `${textureKey}-left`,
-      frames: anims.generateFrameNumbers(textureKey, LPC_ANIMS.walk.left),
-      ...config,
-    });
-    anims.create({
-      key: `${textureKey}-down`,
-      frames: anims.generateFrameNumbers(textureKey, LPC_ANIMS.walk.down),
-      ...config,
-    });
-    anims.create({
-      key: `${textureKey}-right`,
-      frames: anims.generateFrameNumbers(textureKey, LPC_ANIMS.walk.right),
-      ...config,
-    });
+    directions.forEach((dir) => {
+      const dirIdx = ROW_DIR[dir];
 
-    // Idle Animations (단일 프레임)
-    anims.create({
-      key: `${textureKey}-idle-up`,
-      frames: [{ key: textureKey, frame: LPC_ANIMS.idle.up }],
-      frameRate: 0,
-    });
-    anims.create({
-      key: `${textureKey}-idle-left`,
-      frames: [{ key: textureKey, frame: LPC_ANIMS.idle.left }],
-      frameRate: 0,
-    });
-    anims.create({
-      key: `${textureKey}-idle-down`,
-      frames: [{ key: textureKey, frame: LPC_ANIMS.idle.down }],
-      frameRate: 0,
-    });
-    anims.create({
-      key: `${textureKey}-idle-right`,
-      frames: [{ key: textureKey, frame: LPC_ANIMS.idle.right }],
-      frameRate: 0,
+      // 1. Walk (기존 동일)
+      anims.create({
+        key: `${textureKey}-${dir}`,
+        frames: anims.generateFrameNumbers(textureKey, LPC_ANIMS.walk[dir]),
+        ...config,
+      });
+
+      // 2. Thrust (찌르기): 0-1-2-3-4-5-6-7 패턴
+      anims.create({
+        key: `${textureKey}-thrust-${dir}`,
+        frames: anims.generateFrameNumbers(textureKey, {
+          frames: [0, 1, 2, 3, 4, 5].map(f => (THRUST_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
+        }),
+        frameRate: LPC_ANIMS.frameRate,
+        repeat: 0
+      });
+
+      // 3. Jump (점프): 27번째 줄부터 시작, 0-1-2-3-4-1 패턴
+      anims.create({
+        key: `${textureKey}-jump-${dir}`,
+        frames: anims.generateFrameNumbers(textureKey, {
+          frames: [0, 1, 2, 3, 4, 1].map(f => (JUMP_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
+        }),
+        frameRate: LPC_ANIMS.frameRate,
+        repeat: 0
+      });      
+      
+      // 4. Idle (기존 동일)
+      anims.create({
+        key: `${textureKey}-idle-${dir}`,
+        frames: [{ key: textureKey, frame: LPC_ANIMS.idle[dir] }],
+        frameRate: 0,
+      });
     });
   }
 
@@ -243,26 +267,35 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
    * @param force true일 경우 현재 재생 중이어도 강제로 다시 시작 (스킨 변경 시 사용)
    */
   private playLayeredAnimations(force: boolean = false) {
-    const action = this.isMoving ? "" : "-idle";
-    const suffix = `${action}-${this.currentDirection}`; // 예: '-down' or '-idle-down'
+    let actionSuffix = "";
+    if (this.isJumping) actionSuffix = `-jump-${this.currentDirection}`;
+    else if (this.isThrusting) actionSuffix = `-thrust-${this.currentDirection}`;
+    else actionSuffix = `${this.isMoving ? "" : "-idle"}-${this.currentDirection}`;
 
     this.layerOrder.forEach((part) => {
       const sprite = this.parts[part];
+      if (!sprite?.visible) return;
 
-      // 텍스처가 로드되어 있고 유효한 경우만 처리
-      if (
-        sprite &&
-        sprite.visible &&
-        sprite.texture.key &&
-        sprite.texture.key !== "__MISSING"
-      ) {
-        const textureKey = sprite.texture.key;
-        const animKey = `${textureKey}${suffix}`;
+      let animKey = `${sprite.texture.key}${actionSuffix}`;
 
-        if (this.scene.anims.exists(animKey)) {
-          // 현재 같은 애니메이션이 재생 중이면 건너뜀 (force가 아닐 때)
-          if (force || sprite.anims.currentAnim?.key !== animKey) {
-            sprite.play(animKey, true);
+      // 헤어인데 점프 중이라면?
+      if (part === 'hair' && this.isJumping) {
+        // 점프 애니메이션 대신 현재 방향의 idle(대기) 프레임을 고정 재생
+        animKey = `${sprite.texture.key}-idle-${this.currentDirection}`;
+      }
+
+      if (this.scene.anims.exists(animKey)) {
+        if (force || sprite.anims.currentAnim?.key !== animKey) {
+          sprite.play(animKey, true);
+          
+          // 애니메이션 완료 시 Y축 리셋을 위한 콜백
+          if (part === 'body' && (this.isJumping || this.isThrusting)) {
+            sprite.once('animationcomplete', () => {
+              this.isJumping = false;
+              this.isThrusting = false;
+              this.parts['hair']?.setY(0);
+              this.playLayeredAnimations(true);
+            });
           }
         }
       }

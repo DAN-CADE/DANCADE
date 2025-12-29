@@ -10,16 +10,16 @@ export abstract class BaseUIManager {
   // 공통 텍스트 스타일 (각 게임에서 오버라이드 가능)
   protected readonly TEXT_STYLE = {
     SCORE: {
-      fontFamily: '"Press Start 2P"',
+      fontFamily: "Press Start 2P",
       fontSize: "14px",
       color: "#ffffff",
     },
     GAME_OVER: {
-      fontFamily: '"Press Start 2P"',
+      fontFamily: "Press Start 2P",
       fontSize: "36px",
     },
     BUTTON: {
-      fontFamily: '"Press Start 2P"',
+      fontFamily: "Press Start 2P",
       fontSize: "14px",
       color: "#333333",
     },

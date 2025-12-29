@@ -8,6 +8,7 @@ import { AvatarDataManager } from "@/game/managers/global/AvatarDataManager";
 import LpcCharacter from "@/components/avatar/core/LpcCharacter";
 import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
+import { UIManager } from "@/game/managers/global/UIManager";
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -31,7 +32,7 @@ interface PlayerMoveData {
 
 export class MainScene extends BaseGameScene {
   private mapManager!: MapManager;
-  private avatarManager!: AvatarManager;
+  private player!: AvatarManager;
   private avatarDataManager!: AvatarDataManager;
   private arcadeManager!: ArcadeMachineManager;
   private interactionManager!: InteractionManager;
@@ -43,6 +44,11 @@ export class MainScene extends BaseGameScene {
   private onlinePlayers = new Map<string, OnlinePlayer>(); // socketId -> player data
   private playerAvatars = new Map<string, LpcCharacter>(); // socketId -> LpcCharacter (실제 아바타)
   private playerNameTags = new Map<string, Phaser.GameObjects.Text>(); // socketId -> nickname text
+
+  // NPC 상호작용 관련
+  public uiManager!: UIManager;
+  private npcManagers: AvatarManager[] = [];
+  private interactKey!: Phaser.Input.Keyboard.Key;
 
   // 위치 최적화 (변경이 있을 때만 전송)
   private lastSentPosition = { x: 0, y: 0 };
@@ -61,8 +67,8 @@ export class MainScene extends BaseGameScene {
     this.mapManager = new MapManager(this);
     this.mapManager.preloadMap();
 
-    this.avatarManager = new AvatarManager(this);
-    this.avatarManager.preloadAvatar();
+    this.player = new AvatarManager(this);
+    this.player.preloadAvatar();
 
     // LPC 아바타 매니저 초기화 (다른 플레이어용)
     this.lpcSpriteManager = new LpcSpriteManager();
@@ -171,27 +177,30 @@ export class MainScene extends BaseGameScene {
   // 어떤 도구(매니저)들을 사용할 것인가
   protected initManagers(): void {
     this.avatarDataManager = new AvatarDataManager(this);
-    this.avatarManager = new AvatarManager(this);
+    this.player = new AvatarManager(this);
     this.arcadeManager = new ArcadeMachineManager(this);
     this.interactionManager = new InteractionManager(this);
     this.lpcSpriteManager = new LpcSpriteManager();
+    this.uiManager = new UIManager(this);
   }
 
   // 화면에 무엇을 그릴 것인가
   protected createGameObjects(): void {
     this.mapManager.createMap();
+    this.uiManager.createGameUI();
 
     const currentData = this.avatarDataManager.customization;
-    this.avatarManager.createAvatar(
+    this.player.createAvatar(
       this.spawnPoint.x,
       this.spawnPoint.y,
-      currentData
+      currentData,
+      false
     );
 
     const map = this.mapManager.getMap();
     if (map) this.arcadeManager.setGameObjects(map);
 
-    this.mapManager.setupCollisions(this.avatarManager.getContainer());
+    this.mapManager.setupCollisions(this.player.getContainer());
 
     // ------------------------------ 추후 지울 것
     // [테스트용 코드] 'O' 키를 누르면 오목 씬으로 강제 이동
@@ -227,13 +236,27 @@ export class MainScene extends BaseGameScene {
       });
     }
 
+    // NPC 추가 및 상호작용 적용
+    const merchant = new AvatarManager(this).createNPC(1545, 241, 'MERCHANT');
+    const villager = new AvatarManager(this).createNPC(1616, 592, 'VILLAGER');
+    const gambler  = new AvatarManager(this).createNPC(1348, 592, 'GAMBLER');
+
+    this.npcManagers.push(merchant, villager, gambler);
+
+    if (this.input.keyboard) {
+      this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+      this.interactKey.on('down', () => {
+        // 플레이어 매니저에게 주변 NPC와 상호작용하라고 명령
+        this.player.tryInteract(this.npcManagers);
+      });
+    }
   }
 
   update(): void {
     // 플레이어의 현재 좌표를 가져오고
-    this.avatarManager.update();
+    this.player.update();
 
-    const playerPos = this.avatarManager.getPosition();
+    const playerPos = this.player.getPosition();
     const nearby = this.arcadeManager.update(playerPos);
 
     // 좌표를 던져서 근처에 게임기가 있는지 확인
@@ -266,7 +289,7 @@ export class MainScene extends BaseGameScene {
       }
 
       // 애니메이션 상태 전송 (변경이 있을 때만)
-      const playerAvatar = this.avatarManager.getContainer();
+      const playerAvatar = this.player.getContainer();
       if (playerAvatar) {
         const currentAnimation = playerAvatar.getAnimationState();
         if (
@@ -282,6 +305,9 @@ export class MainScene extends BaseGameScene {
         }
       }
     }
+
+
+    this.npcManagers.forEach(npc => npc.update());
   }
 
   // 온라인 플레이어 업데이트
@@ -315,6 +341,11 @@ export class MainScene extends BaseGameScene {
 
   // 플레이어 스프라이트 생성
   private createPlayerSprite(player: OnlinePlayer): void {
+    if (!this.physics || !this.add) {
+      console.warn("메인 씬의 물리 시스템이 아직 준비되지 않았습니다.");
+      return;
+    }
+
     // LpcCharacter를 사용하여 실제 아바타 생성
     const playerAvatar = new LpcCharacter(
       this,
@@ -411,7 +442,7 @@ export class MainScene extends BaseGameScene {
   protected cleanupManagers(): void {
     // shutdown 시 호출될 정리 로직
     this.avatarDataManager.destroy();
-    this.avatarManager.destroy();
+    this.player.destroy();
     this.arcadeManager.destroy();
     this.interactionManager.destroy();
 
