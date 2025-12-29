@@ -1,9 +1,9 @@
 // game/managers/games/Omok/OmokUIManager.ts
 import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
-import { OmokModeSelectionRenderer } from "./ui/OmokModeSelectionRenderer";
-import { OmokPlayerProfileRenderer } from "./ui/OmokPlayerProfileRenderer";
-import { OmokMessageRenderer } from "./ui/OmokMessageRenderer";
-import { OmokEndGameRenderer } from "./ui/OmokEndGameRenderer";
+import { OmokModeSelectionRenderer } from "@/game/managers/games/omok/ui/OmokModeSelectionRenderer";
+import { OmokPlayerProfileRenderer } from "@/game/managers/games/omok/ui/OmokPlayerProfileRenderer";
+import { OmokMessageRenderer } from "@/game/managers/games/omok/ui/OmokMessageRenderer";
+import { OmokEndGameRenderer } from "@/game/managers/games/omok/ui/OmokEndGameRenderer";
 import type { OmokUIState, OmokMode } from "@/game/types/omok";
 
 /**

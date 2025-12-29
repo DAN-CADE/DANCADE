@@ -1,6 +1,6 @@
 // game/managers/games/Omok/OmokManager.ts
 import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
-import { OmokAIManager } from "./OmokAIManager";
+import { OmokAIManager } from "@/game/managers/games/omok/core/OmokAIManager";
 import {
   type OmokCallbacks,
   type OmokState,

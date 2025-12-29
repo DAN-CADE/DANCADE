@@ -15,6 +15,7 @@ interface StoneInfo {
  */
 export class OmokStoneRenderer {
   private scene: Phaser.Scene;
+  private stones: Phaser.GameObjects.Arc[] = []; // 추가: 돌 저장
   private stoneNumbers: Phaser.GameObjects.Text[] = [];
   private moveCount = 0;
 
@@ -64,6 +65,7 @@ export class OmokStoneRenderer {
    * 리셋
    */
   public reset(): void {
+    this.destroyStones(); // 추가: 돌 삭제
     this.destroyStoneNumbers();
     this.moveCount = 0;
   }
@@ -107,10 +109,13 @@ export class OmokStoneRenderer {
   private createStoneCircle(x: number, y: number, color: number): void {
     const { width, color: borderColor } = this.STYLE.STONE_BORDER;
 
-    this.scene.add
+    // 생성한 돌을 저장
+    const stone = this.scene.add
       .circle(x, y, OMOK_CONFIG.STONE_RADIUS, color)
       .setStrokeStyle(width, borderColor)
       .setDepth(OMOK_CONFIG.DEPTH.STONE);
+
+    this.stones.push(stone);
   }
 
   /**
@@ -138,5 +143,13 @@ export class OmokStoneRenderer {
   private destroyStoneNumbers(): void {
     this.stoneNumbers.forEach((n) => n.destroy());
     this.stoneNumbers = [];
+  }
+
+  /**
+   * 돌 제거
+   */
+  private destroyStones(): void {
+    this.stones.forEach((stone) => stone.destroy());
+    this.stones = [];
   }
 }

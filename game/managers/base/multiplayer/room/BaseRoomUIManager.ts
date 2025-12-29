@@ -1,52 +1,39 @@
-// game/managers/games/Omok/OmokRoomUIManager.ts
+// game/managers/base/multiplayer/room/BaseRoomUIManager.ts
+
 import { Socket } from "socket.io-client";
-import { OMOK_CONFIG, type RoomData } from "@/game/types/omok";
 import { ButtonFactory } from "@/utils/ButtonFactory";
+import type {
+  RoomData,
+  RoomUIConfig,
+} from "@/game/types/multiplayer/room.types";
+import { OMOK_CONFIG } from "@/game/types/omok";
 
 /**
- * OmokRoomUIManager
- * - 방 관련 UI 렌더링만 담당
- * - 네트워크 통신은 하지 않음 (데이터를 받아서 표시만)
+ * BaseRoomUIManager
+ * - 방 UI 렌더링의 공통 구조 제공
+ * - 템플릿 메서드 패턴: 구조는 공통, 스타일은 게임별 커스터마이징
+ * - 오목의 OmokRoomUIManager를 기반으로 템플릿화
  */
-export class OmokRoomUIManager {
-  private scene: Phaser.Scene;
-  private socket: Socket;
-  private readonly UI_DEPTH = OMOK_CONFIG.DEPTH.ROOM_UI;
+export abstract class BaseRoomUIManager {
+  protected scene: Phaser.Scene;
+  protected socket: Socket;
+  protected config: RoomUIConfig;
+  protected currentScreen: "menu" | "list" | "waiting" = "menu";
+  protected readonly UI_DEPTH: number;
 
-  private currentScreen: "menu" | "create" | "list" | "waiting" = "menu";
-
-  // UI 레이아웃 상수
-  private readonly LAYOUT = {
-    PANEL: {
-      WIDTH: 600,
-      HEIGHT: 700,
-    },
-    ROOM_CARD: {
-      WIDTH: 500,
-      HEIGHT: 70,
-      SPACING: 80,
-      START_Y: 220,
-    },
-    WAITING_ROOM: {
-      PANEL_HEIGHT: 750,
-      PLAYER_CARD_SPACING: 100,
-      PLAYER_CARD_START_Y: 250,
-      BUTTON_Y: -180,
-      EXIT_BUTTON_Y: -90,
-    },
-  } as const;
-
-  constructor(scene: Phaser.Scene, socket: Socket) {
+  constructor(scene: Phaser.Scene, socket: Socket, config: RoomUIConfig) {
     this.scene = scene;
     this.socket = socket;
+    this.config = config;
+    this.UI_DEPTH = 500; // 게임별로 오버라이드 가능
   }
 
   // =====================================================================
-  // 방 목록 UI
+  // 방 목록 UI (구조 공통)
   // =====================================================================
 
   /**
-   * 방 목록 UI 렌더링
+   * 방 목록 렌더링 (공통 구조)
    */
   public renderRoomList(rooms: RoomData[]): void {
     this.clearUI();
@@ -59,21 +46,20 @@ export class OmokRoomUIManager {
     this.createPanel(
       centerX,
       height / 2,
-      this.LAYOUT.PANEL.WIDTH,
-      this.LAYOUT.PANEL.HEIGHT
+      this.config.layout.panelWidth,
+      this.config.layout.panelHeight
     );
 
     // 타이틀
-    this.createText(centerX, 120, "ROOM LIST", OMOK_CONFIG.TEXT_STYLE.SUBTITLE);
+    this.createText(centerX, 120, "ROOM LIST", this.config.textStyle.title);
 
     // 방 목록
-    this.renderRoomCards(rooms, centerX);
-
-    // 방이 없을 때
     if (rooms.length === 0) {
       this.createText(centerX, height / 2, "생성된 방이 없습니다.", {
-        color: OMOK_CONFIG.COLORS.SUB_TEXT,
+        color: this.config.colors.subText,
       });
+    } else {
+      this.renderRoomCards(rooms, centerX);
     }
 
     // 뒤로가기 버튼
@@ -81,10 +67,11 @@ export class OmokRoomUIManager {
   }
 
   /**
-   * 방 카드 렌더링
+   * 방 카드 렌더링 (게임별 커스터마이징 가능)
    */
-  private renderRoomCards(rooms: RoomData[], centerX: number): void {
-    let yPos = this.LAYOUT.ROOM_CARD.START_Y;
+  protected renderRoomCards(rooms: RoomData[], centerX: number): void {
+    const { roomCardHeight, roomCardSpacing } = this.config.layout;
+    let yPos = 220;
 
     rooms.forEach((room) => {
       const roomInfo = `${room.roomName}\n방장: ${room.hostUsername} | ${room.playerCount}/${room.maxPlayers}명`;
@@ -94,29 +81,26 @@ export class OmokRoomUIManager {
         centerX,
         yPos,
         roomInfo,
-        () => {
-          // 버튼 클릭은 외부에서 처리 (네트워크 매니저 호출)
-          this.emit("joinRoomRequested", room.roomId);
-        },
+        () => this.emit("joinRoomRequested", room.roomId),
         {
-          width: this.LAYOUT.ROOM_CARD.WIDTH,
-          height: this.LAYOUT.ROOM_CARD.HEIGHT,
-          color: 0x2c3e50,
+          width: this.config.layout.roomCardWidth,
+          height: roomCardHeight,
+          color: this.config.colors.cardInactive,
           textColor: "#ffffff",
           fontSize: "14px",
         }
       );
       btn.setDepth(this.UI_DEPTH);
-      yPos += this.LAYOUT.ROOM_CARD.SPACING;
+      yPos += roomCardSpacing;
     });
   }
 
   // =====================================================================
-  // 대기실 UI
+  // 대기실 UI (구조 공통)
   // =====================================================================
 
   /**
-   * 대기실 UI 렌더링
+   * 대기실 렌더링 (공통 구조)
    */
   public renderWaitingRoom(roomData: RoomData): void {
     this.clearUI();
@@ -129,8 +113,8 @@ export class OmokRoomUIManager {
     this.createPanel(
       centerX,
       height / 2,
-      this.LAYOUT.PANEL.WIDTH,
-      this.LAYOUT.WAITING_ROOM.PANEL_HEIGHT
+      this.config.layout.panelWidth,
+      750 // 대기실은 높이 고정
     );
 
     // 방 제목
@@ -138,7 +122,7 @@ export class OmokRoomUIManager {
       centerX,
       120,
       roomData.roomName,
-      OMOK_CONFIG.TEXT_STYLE.TITLE
+      this.config.textStyle.title
     );
 
     // 플레이어 목록
@@ -149,15 +133,15 @@ export class OmokRoomUIManager {
   }
 
   /**
-   * 플레이어 카드 렌더링
+   * 플레이어 카드 렌더링 (게임별 커스터마이징 가능)
    */
-  private renderPlayerCards(roomData: RoomData, centerX: number): void {
-    roomData.players?.forEach((player, index) => {
+  protected renderPlayerCards(roomData: RoomData, centerX: number): void {
+    const { playerCardHeight, playerCardSpacing } = this.config.layout;
+    let yPos = 250;
+
+    roomData.players?.forEach((player) => {
       const isHost = player.socketId === roomData.hostSocketId;
       const isMe = player.socketId === this.socket.id;
-      const yPos =
-        this.LAYOUT.WAITING_ROOM.PLAYER_CARD_START_Y +
-        index * this.LAYOUT.WAITING_ROOM.PLAYER_CARD_SPACING;
 
       // 플레이어 카드 배경
       this.scene.add
@@ -165,10 +149,8 @@ export class OmokRoomUIManager {
           centerX,
           yPos,
           500,
-          80,
-          isMe
-            ? OMOK_CONFIG.COLORS.CARD_ACTIVE
-            : OMOK_CONFIG.COLORS.CARD_INACTIVE
+          playerCardHeight,
+          isMe ? this.config.colors.cardActive : this.config.colors.cardInactive
         )
         .setDepth(this.UI_DEPTH);
 
@@ -178,42 +160,62 @@ export class OmokRoomUIManager {
       }).setOrigin(0, 0.5);
 
       // 상태
-      const isReady = (player as any).isReady;
+      const isReady = player.isReady;
       let statusText = isReady ? "READY" : "WAITING";
       if (isHost) statusText = "HOST 👑";
 
       this.createText(centerX + 220, yPos, statusText, {
-        color: isReady ? OMOK_CONFIG.COLORS.GOLD : "#ffffff",
+        color: isReady ? this.config.colors.gold : "#ffffff",
       }).setOrigin(1, 0.5);
+
+      yPos += playerCardSpacing;
     });
   }
 
   /**
-   * 대기실 버튼 렌더링
+   * 대기실 버튼 렌더링 (게임별 커스터마이징 가능)
    */
-  private renderWaitingRoomButtons(
+  protected renderWaitingRoomButtons(
     roomData: RoomData,
     centerX: number,
     height: number
   ): void {
     const isHost = this.socket.id === roomData.hostSocketId;
-    const btnY = height + this.LAYOUT.WAITING_ROOM.BUTTON_Y;
+    const btnY = height - 180;
 
     if (isHost) {
+      // 모든 플레이어가 준비되었는지 확인
+      const allPlayersReady = this.checkAllPlayersReady(roomData);
+
       // 호스트: 게임 시작 버튼
       const startBtn = ButtonFactory.createButton(
         this.scene,
         centerX,
         btnY,
-        "START GAME",
-        () => this.emit("startGameRequested"),
-        { width: 350, color: OMOK_CONFIG.COLORS.PRIMARY, textColor: "#ffffff" }
+        allPlayersReady ? "START GAME" : "WAITING FOR PLAYERS...",
+        () => {
+          // 모두 준비된 경우에만 게임 시작
+          if (allPlayersReady) {
+            this.emit("startGameRequested");
+          }
+        },
+        {
+          width: 350,
+          color: OMOK_CONFIG.COLORS.PRIMARY,
+          textColor: "#ffffff",
+        }
       );
+
+      // 준비 안 된 경우 반투명 처리
+      if (!allPlayersReady) {
+        startBtn.setAlpha(0.5);
+      }
+
       startBtn.setDepth(this.UI_DEPTH);
     } else {
       // 일반 플레이어: 준비 버튼
       const me = roomData.players?.find((p) => p.socketId === this.socket.id);
-      const myReadyStatus = (me as any)?.isReady;
+      const myReadyStatus = me?.isReady;
 
       const readyBtn = ButtonFactory.createButton(
         this.scene,
@@ -224,8 +226,8 @@ export class OmokRoomUIManager {
         {
           width: 350,
           color: myReadyStatus
-            ? OMOK_CONFIG.COLORS.DANGER
-            : OMOK_CONFIG.COLORS.PRIMARY,
+            ? this.config.colors.danger
+            : this.config.colors.primary,
           textColor: "#ffffff",
         }
       );
@@ -236,7 +238,7 @@ export class OmokRoomUIManager {
     const exitBtn = ButtonFactory.createButton(
       this.scene,
       centerX,
-      height + this.LAYOUT.WAITING_ROOM.EXIT_BUTTON_Y,
+      height - 90,
       "EXIT",
       () => this.emit("leaveRoomRequested"),
       { width: 200, height: 60, color: 0x333333, textColor: "#ffffff" }
@@ -244,8 +246,31 @@ export class OmokRoomUIManager {
     exitBtn.setDepth(this.UI_DEPTH);
   }
 
+  /**
+   * 모든 플레이어가 준비되었는지 확인
+   */
+  private checkAllPlayersReady(roomData: RoomData): boolean {
+    // 플레이어가 없으면 false
+    if (!roomData.players || roomData.players.length === 0) {
+      return false;
+    }
+
+    // 호스트를 제외한 플레이어들
+    const nonHostPlayers = roomData.players.filter(
+      (p) => p.socketId !== roomData.hostSocketId
+    );
+
+    // 호스트 혼자면 false (상대가 없음)
+    if (nonHostPlayers.length === 0) {
+      return false;
+    }
+
+    // 모든 비호스트 플레이어가 준비 상태인지 확인
+    return nonHostPlayers.every((p) => (p as any).isReady === true);
+  }
+
   // =====================================================================
-  // 방 생성 프롬프트
+  // 방 생성 프롬프트 (공통)
   // =====================================================================
 
   /**
@@ -253,12 +278,9 @@ export class OmokRoomUIManager {
    */
   public showCreateRoomPrompt(): string | null {
     const roomName = prompt("방 제목을 입력하세요");
-
-    // 취소 또는 빈 문자열이면 null 반환
     if (!roomName || roomName.trim() === "") {
       return null;
     }
-
     return roomName;
   }
 
@@ -269,14 +291,14 @@ export class OmokRoomUIManager {
   /**
    * 패널 생성
    */
-  private createPanel(
+  protected createPanel(
     x: number,
     y: number,
     width: number,
     height: number
   ): void {
     this.scene.add
-      .rectangle(x, y, width, height, OMOK_CONFIG.COLORS.PANEL, 0.95)
+      .rectangle(x, y, width, height, this.config.colors.panel, 0.95)
       .setStrokeStyle(4, 0xffffff, 0.1)
       .setDepth(this.UI_DEPTH - 1);
   }
@@ -284,7 +306,7 @@ export class OmokRoomUIManager {
   /**
    * 텍스트 생성
    */
-  private createText(
+  protected createText(
     x: number,
     y: number,
     text: string,
@@ -292,7 +314,7 @@ export class OmokRoomUIManager {
   ): Phaser.GameObjects.Text {
     return this.scene.add
       .text(x, y, text, {
-        ...OMOK_CONFIG.TEXT_STYLE.NORMAL,
+        ...this.config.textStyle.normal,
         ...style,
       })
       .setOrigin(0.5)
@@ -302,7 +324,7 @@ export class OmokRoomUIManager {
   /**
    * 뒤로가기 버튼 생성
    */
-  private createBackButton(x: number, y: number): void {
+  protected createBackButton(x: number, y: number): void {
     const backBtn = ButtonFactory.createButton(
       this.scene,
       x,
@@ -312,7 +334,7 @@ export class OmokRoomUIManager {
       {
         width: 200,
         height: 60,
-        color: OMOK_CONFIG.COLORS.DANGER,
+        color: this.config.colors.danger,
         textColor: "#ffffff",
       }
     );
@@ -343,7 +365,7 @@ export class OmokRoomUIManager {
   /**
    * 이벤트 발생 (Scene에서 처리)
    */
-  private emit(eventName: string, ...args: any[]): void {
-    this.scene.events.emit(`omokRoomUI:${eventName}`, ...args);
+  protected emit(eventName: string, ...args: any[]): void {
+    this.scene.events.emit(`roomUI:${eventName}`, ...args);
   }
 }
