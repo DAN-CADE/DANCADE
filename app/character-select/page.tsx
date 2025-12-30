@@ -5,6 +5,10 @@ import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
+import {
+  generateGuestId,
+  generateGuestNickname,
+} from "@/lib/utils/guestNickname";
 import { useLPCData } from "@/hooks/useLPCData";
 import { useCharacterCustomization } from "@/hooks/useCharacterCustomization";
 import { ActionButton } from "@/components/character-select/Button";
@@ -47,6 +51,20 @@ export default function CharacterSelect() {
     if (!customization) return;
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
+
+    // 게스트 닉네임 저장
+    const guestId = generateGuestId();
+    const nickname = generateGuestNickname();
+
+    const userData = {
+      userId: guestId,
+      nickname: nickname,
+      isGuest: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem("user", JSON.stringify(userData));
+
     router.push("/game");
   }, [customization, router]);
 

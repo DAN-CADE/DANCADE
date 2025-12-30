@@ -45,7 +45,7 @@ export default function NicknamePage() {
   };
 
   return (
-    <main className="nickname-page min-h-screen relative">
+    <main className="nickname-page font-neo min-h-screen relative">
       <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
 
       <Window title="NICKNAME">

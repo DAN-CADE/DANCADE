@@ -58,8 +58,13 @@ export default function LoginIdPage() {
     // console.log("회원가입 페이지로 이동");
   };
 
+  const handleGuestLogin = () => {
+    // 캐릭터 선택창으로 이동 (게임시작 시 로컬스토리지 생성)
+    router.push("/character-select");
+  };
+
   return (
-    <main className="login-id-page">
+    <main className="login-id-page font-neo">
       <Window title="LOGIN">
         <section className="login-form-section flex flex-wrap lg:flex-row justify-center items-center gap-7 w-full mb-9 px-4 lg:px-0">
           <header className="login-header mb-6 lg:mb-0">
@@ -127,22 +132,34 @@ export default function LoginIdPage() {
               </p>
             </div>
 
-            {/* 버튼 */}
-            <div className="text-right mt-6">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="login-button pixelBtn pixelBtn--cyan mr-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "로그인 중..." : "로그인"}
-              </button>
+            {/* 버튼 영역 */}
+            <div className="flex justify-between items-center mt-6">
+              {/* 왼쪽: 게스트 로그인 */}
               <button
                 type="button"
-                onClick={handleSignup}
-                className="login-button pixelBtn pixelBtn--cyan cursor-pointer"
+                onClick={handleGuestLogin}
+                className="login-button pixelBtn pixelBtn--pink cursor-pointer"
               >
-                회원가입
+                게스트 로그인
               </button>
+
+              {/* 오른쪽: 아이디 로그인, 회원가입 */}
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="login-button pixelBtn pixelBtn--cyan cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "로그인 중..." : "로그인"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignup}
+                  className="login-button pixelBtn pixelBtn--cyan cursor-pointer"
+                >
+                  회원 가입
+                </button>
+              </div>
             </div>
           </form>
         </section>
