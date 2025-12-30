@@ -2,11 +2,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
+import {
+  generateGuestId,
+  generateGuestNickname,
+} from "@/lib/utils/guestNickname";
 import { useLPCData } from "@/hooks/useLPCData";
 import { useCharacterCustomization } from "@/hooks/useCharacterCustomization";
+import { useAuth } from "@/hooks/useAuth";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { ActionButton } from "@/components/character-select/Button";
 import { CustomizationPanel } from "@/components/character-select/CustomizationPanel";
 import { LoadingScreen } from "@/components/character-select/Loading";
@@ -27,6 +33,8 @@ const AvatarPreview = dynamic(
 export default function CharacterSelect() {
   const router = useRouter();
   const [isAssetLoading, setIsAssetLoading] = useState(true);
+  const { getCurrentUser } = useAuth();
+  const { getStoredUser } = useGuestAuth();
 
   // 1. 상태 관리
   const { lpcData, isLoading, error } = useLPCData();
@@ -36,6 +44,17 @@ export default function CharacterSelect() {
     handleRandomize,
     handleGenderChange,
   } = useCharacterCustomization(lpcData);
+
+  // 사용자 정보 확인
+  useEffect(() => {
+    const memberUser = getCurrentUser();
+    const guestUser = getStoredUser();
+
+    // 로그인한 회원도 없고, 게스트도 없으면 로그인 페이지로 이동
+    if (!memberUser && !guestUser) {
+      router.push("/auth/login/id");
+    }
+  }, [router]);
 
   // 2. 아바타 렌더링이 완료되면 실행될 함수
   const handleAvatarLoaded = useCallback(() => {
@@ -47,8 +66,28 @@ export default function CharacterSelect() {
     if (!customization) return;
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
+
+    // 로그인한 회원인지 확인
+    const memberUser = getCurrentUser();
+
+    // 게스트 사용자인 경우에만 게스트 데이터 생성
+    if (!memberUser) {
+      const guestId = generateGuestId();
+      const nickname = generateGuestNickname();
+
+      const userData = {
+        userId: guestId,
+        nickname: nickname,
+        isGuest: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem("user", JSON.stringify(userData));
+    }
+    // 로그인한 회원은 기존 정보 유지
+
     router.push("/game");
-  }, [customization, router]);
+  }, [customization, router, getCurrentUser]);
 
   // 4. 조건부 렌더링
   if (isLoading || !customization) {
