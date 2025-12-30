@@ -3,12 +3,12 @@
 const {
   validateRoomExists,
   validateIsHost,
-} = require("../../base/utils/validation");
+} = require("../../base/utils/Validation");
 
 /**
  * 오목 게임 시작/종료 관리
  */
-class omokGameManager {
+class OmokGameManager {
   /**
    * @param {Object} io - Socket.IO 서버 인스턴스
    * @param {Object} socket - 클라이언트 소켓
@@ -164,4 +164,4 @@ class omokGameManager {
   }
 }
 
-module.exports = omokGameManager;
+module.exports = OmokGameManager;
