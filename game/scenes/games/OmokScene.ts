@@ -1,4 +1,5 @@
-// game/scenes/OmokScene.ts
+// game/scenes/OmokScene.ts (완전 수정 버전)
+
 import { BaseGameScene } from "@/game/scenes/base/BaseGameScene";
 import { OmokManager } from "@/game/managers/games/omok/core/OmokManager";
 import { OmokBoardManager } from "@/game/managers/games/omok/board/OmokBoardManager";
@@ -6,11 +7,11 @@ import { OmokUIManager } from "@/game/managers/games/omok/ui/OmokUIManger";
 import { OmokRoomManager } from "@/game/managers/games/omok/network/room/OmokRoomManager";
 import { OmokNetworkManager } from "@/game/managers/games/omok/network/OmokNetworkManager";
 import { BaseOnlineUIManager } from "@/game/managers/base/BaseOnlineUIManager";
-import { GptManager } from "@/game/managers/global/gpt/GptManager";
 
 // 분리된 타입 import
 import { OMOK_CONFIG, OmokMode, type OmokMoveData } from "@/game/types/omok";
 import { OmokGameAbortedDialog } from "@/game/managers/games/omok/ui/OmokGameAbortedDialog";
+import { OmokAIManager } from "@/game/managers/games/omok/core/OmokAIManager";
 
 /**
  * OmokScene - 오목 게임 씬
@@ -27,7 +28,6 @@ export class OmokScene extends BaseGameScene {
   // =====================================================================
   private gameState = {
     isStarted: false,
-    isAiThinking: false,
     currentTurn: 1, // 1(흑) 또는 2(백)
     mode: OmokMode.NONE,
   };
@@ -46,13 +46,13 @@ export class OmokScene extends BaseGameScene {
   // =====================================================================
   private managers = {
     omok: null as OmokManager | null,
-    gpt: null as GptManager | null,
     board: null as OmokBoardManager | null,
     ui: null as OmokUIManager | null,
     room: null as OmokRoomManager | null,
     network: null as OmokNetworkManager | null,
     onlineUI: null as BaseOnlineUIManager | null,
     abortDialog: null as OmokGameAbortedDialog | null,
+    ai: null as OmokAIManager | null,
   };
 
   constructor() {
@@ -82,8 +82,8 @@ export class OmokScene extends BaseGameScene {
     // 네트워크 매니저 (가장 먼저 초기화)
     this.managers.network = this.createNetworkManager();
 
-    // GPT 매니저
-    this.managers.gpt = new GptManager();
+    // AI 매니저
+    this.managers.ai = new OmokAIManager();
 
     // UI 매니저들
     this.managers.ui = new OmokUIManager(this);
@@ -214,9 +214,8 @@ export class OmokScene extends BaseGameScene {
     this.gameState.mode = mode;
     this.gameState.currentTurn = Math.random() < 0.5 ? 1 : 2;
     this.gameState.isStarted = true;
-    this.gameState.isAiThinking = false;
 
-    this.managers.ui!.createPlayerProfiles(mode); // 로컬 모드는 myColor 불필요
+    this.managers.ui!.createPlayerProfiles(mode);
     this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
     this.managers.board!.updateForbiddenMarkers(
       this.gameState.currentTurn,
@@ -225,7 +224,7 @@ export class OmokScene extends BaseGameScene {
 
     // AI 모드이고 AI가 선공이면 AI가 먼저 수를 둠
     if (mode === OmokMode.SINGLE && this.gameState.currentTurn === 2) {
-      this.makeAiMove();
+      this.executeAiTurn();
     }
   }
 
@@ -311,7 +310,7 @@ export class OmokScene extends BaseGameScene {
     // 게임 상태 초기화
     this.gameState.mode = OmokMode.NONE;
     this.gameState.isStarted = false;
-    this.gameState.isAiThinking = false;
+    // ❌ this.gameState.isAiThinking = false; ← 삭제!
     this.gameState.currentTurn = 1;
 
     // 씬 재시작 (자동으로 모드 선택 화면 표시)
@@ -410,8 +409,6 @@ export class OmokScene extends BaseGameScene {
    */
   private handleGameAborted(reason: string, leavingPlayer: string): void {
     this.gameState.isStarted = false;
-    this.gameState.isAiThinking = false;
-
     this.showGameAbortedDialog(reason, leavingPlayer);
   }
 
@@ -446,7 +443,7 @@ export class OmokScene extends BaseGameScene {
    * 입력 가능 여부 확인
    */
   private canAcceptInput(): boolean {
-    return this.gameState.isStarted && !this.gameState.isAiThinking;
+    return this.gameState.isStarted && !this.managers.ai!.isAiThinking();
   }
 
   /**
@@ -534,7 +531,7 @@ export class OmokScene extends BaseGameScene {
 
     // AI 턴이면 AI 실행
     if (this.shouldExecuteAiTurn()) {
-      this.makeAiMove();
+      this.executeAiTurn();
     }
   }
 
@@ -568,77 +565,47 @@ export class OmokScene extends BaseGameScene {
   /**
    * AI 수 실행
    */
-  private async makeAiMove(): Promise<void> {
-    if (!this.gameState.isStarted || this.gameState.isAiThinking) return;
+  private executeAiTurn(): void {
+    if (!this.gameState.isStarted || this.managers.ai!.isAiThinking()) {
+      return;
+    }
 
-    this.gameState.isAiThinking = true;
     const currentTurn = this.gameState.currentTurn;
     const threats = this.managers.omok!.getThreats(currentTurn);
-
-    try {
-      const move = await this.managers.omok!.getNextMove(threats || []);
-
-      // AI 고민 연출 (0.5초 지연)
-      this.time.delayedCall(500, () => {
-        if (!this.gameState.isStarted) {
-          this.gameState.isAiThinking = false;
-          return;
-        }
-
-        const validMove = this.validateAiMove(move, threats);
-        if (validMove) {
-          this.executeAiMove(validMove.row, validMove.col, currentTurn);
-        }
-
-        this.gameState.isAiThinking = false;
-      });
-    } catch (error) {
-      console.error("[AI] 수 계산 실패:", error);
-      this.executeFallbackAiMove();
-      this.gameState.isAiThinking = false;
-    }
-  }
-
-  /**
-   * AI 수 검증
-   */
-  private validateAiMove(
-    move: { row: number; col: number },
-    threats: any[]
-  ): { row: number; col: number } | null {
     const board = this.managers.omok!.getBoardState();
+    const lastMove = undefined;
 
-    // GPT 응답이 유효한 경우
-    if (move && move.row !== -1 && board[move.row]?.[move.col] === 0) {
-      return move;
-    }
-
-    // 위협 지점이 있으면 그곳에 두기
-    if (threats?.length > 0) {
-      return { row: threats[0].row, col: threats[0].col };
-    }
-
-    // 랜덤 수로 폴백
-    return this.managers.omok!.getRandomMove();
+    this.managers.ai!.executeAiTurn(
+      board,
+      threats || [],
+      lastMove,
+      (row, col) => this.isValidPosition(row, col),
+      (result) => this.handleAiTurnResult(result, currentTurn)
+    );
   }
 
   /**
-   * AI 수 실행
+   * AI 턴 결과 처리
    */
-  private executeAiMove(row: number, col: number, color: number): void {
-    if (this.managers.omok!.placeStone(row, col, color)) {
-      this.managers.board!.renderStone(row, col, color);
+  private handleAiTurnResult(
+    result: { success: boolean; move: { row: number; col: number } | null },
+    currentTurn: number
+  ): void {
+    if (!this.gameState.isStarted) {
+      return;
+    }
+
+    if (!result.success || !result.move || result.move.row === -1) {
+      console.error("[AI] 유효한 수를 찾지 못함");
+      return;
+    }
+
+    const { row, col } = result.move;
+
+    // AI 수 실행
+    if (this.managers.omok!.placeStone(row, col, currentTurn)) {
+      this.managers.board!.renderStone(row, col, currentTurn);
       this.advanceGameStep(row, col);
-    }
-  }
-
-  /**
-   * 폴백 AI 수 (랜덤)
-   */
-  private executeFallbackAiMove(): void {
-    const move = this.managers.omok!.getRandomMove();
-    if (move) {
-      this.executeAiMove(move.row, move.col, 2);
     }
   }
 
@@ -651,11 +618,9 @@ export class OmokScene extends BaseGameScene {
    */
   protected handleGameEnd(winner: number): void {
     this.gameState.isStarted = false;
-    this.gameState.isAiThinking = false;
 
     this.managers.board!.showMoveNumbers();
 
-    // winner만 전달 (나머지는 내부에서 사용)
     const winnerName = this.getWinnerName(winner);
 
     this.managers.ui!.showEndGameUI(
@@ -667,16 +632,13 @@ export class OmokScene extends BaseGameScene {
 
   /**
    * 승자 이름 결정
-   * @param winner - 승자 (1: 흑, 2: 백)
    */
   private getWinnerName(winner: number): string {
-    // this.gameState.mode 사용
     if (this.gameState.mode === OmokMode.SINGLE) {
       return winner === 1 ? "나" : "GPT";
     } else if (this.gameState.mode === OmokMode.LOCAL) {
       return winner === 1 ? "플레이어1" : "플레이어2";
     } else if (this.gameState.mode === OmokMode.ONLINE) {
-      // this.onlineState.myColor 사용
       return winner === this.onlineState.myColor ? "나" : "상대";
     }
     return "알 수 없음";
@@ -684,69 +646,8 @@ export class OmokScene extends BaseGameScene {
 
   /**
    * 게임 중단 다이얼로그 표시
-   
+   */
   private showGameAbortedDialog(reason: string, leavingPlayer: string): void {
-    const { width, height } = this.scale;
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    const ABORT_UI_DEPTH = 10000;
-
-    // UI 정리
-    this.managers.room!.clearUI();
-    this.managers.ui!.hideWaitingMessage();
-
-    // 배경 오버레이
-    const overlay = this.add
-      .rectangle(centerX, centerY, width, height, 0x000000, 0.8)
-      .setDepth(ABORT_UI_DEPTH - 1);
-
-    // 메시지
-    const titleText = this.add
-      .text(centerX, centerY - 50, "⚠️ 게임 중단", {
-        fontSize: "48px",
-        color: "#ff6b6b",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(ABORT_UI_DEPTH);
-
-    const reasonText = this.add
-      .text(centerX, centerY + 20, reason, {
-        fontSize: "24px",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5)
-      .setDepth(ABORT_UI_DEPTH);
-
-    // 메인으로 버튼
-
-    const homeButton = ButtonFactory.createButton(
-      this,
-      centerX,
-      centerY + 100,
-      "메인으로",
-      () => {
-        overlay.destroy();
-        titleText.destroy();
-        reasonText.destroy();
-        homeButton.destroy();
-        this.exitToMainMenu();
-      },
-      {
-        width: 200,
-        height: 60,
-        color: OMOK_CONFIG.COLORS.BUTTON_GRAY,
-        textColor: "#ffffff",
-      }
-    );
-
-    homeButton.setDepth(ABORT_UI_DEPTH);
-  }
-    */
-
-  private showGameAbortedDialog(reason: string, leavingPlayer: string): void {
-    // UI 정리
     this.managers.room!.clearUI();
     this.managers.ui!.hideWaitingMessage();
 
@@ -778,36 +679,25 @@ export class OmokScene extends BaseGameScene {
    * 게임 재시작
    */
   protected restartGame(): void {
-    // 현재 모드 저장
     const previousMode = this.gameState.mode;
 
-    // 매니저 초기화
     this.resetAllManagers();
-
-    // 보드 시각적 초기화
     this.managers.board?.renderBoard();
 
-    // 상태 초기화
     this.gameState.isStarted = false;
-    this.gameState.isAiThinking = false;
     this.gameState.currentTurn = 1;
 
-    // 온라인 상태 초기화 (온라인 모드면)
     if (previousMode === OmokMode.ONLINE) {
       this.onlineState.myColor = 0;
       this.onlineState.isColorAssigned = false;
       this.onlineState.currentRoomId = null;
     }
 
-    // 이전 모드로 바로 시작
     if (previousMode === OmokMode.SINGLE || previousMode === OmokMode.LOCAL) {
-      // 로컬 모드는 바로 재시작
       this.startLocalGame(previousMode);
     } else if (previousMode === OmokMode.ONLINE) {
-      // 온라인 모드는 온라인 메뉴로
       this.showOnlineMenu();
     } else {
-      // 예외: 모드가 NONE이면 모드 선택 화면으로
       this.scene.restart();
     }
   }
@@ -820,6 +710,7 @@ export class OmokScene extends BaseGameScene {
     this.managers.ui?.resetGame();
     this.managers.omok?.resetGame();
     this.managers.room?.cleanup();
+    this.managers.ai?.cleanup();
   }
 
   // =====================================================================
@@ -834,6 +725,7 @@ export class OmokScene extends BaseGameScene {
     this.managers.network?.cleanup();
     this.managers.onlineUI?.cleanup();
     this.managers.room?.cleanup();
+    this.managers.ai?.cleanup();
     super.shutdown();
   }
 }
