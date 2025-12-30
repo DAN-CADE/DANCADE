@@ -6,9 +6,9 @@ import { useProducts } from "@/hooks/shop/useProducts";
 import { useState } from "react";
 import { Product } from "@/game/types/product";
 import ProductDetailModal from "@/components/shop/ProductDetailModal";
-import { useAuth } from "@/hooks/auth/useAuth";
 import { useShopOwnedItems } from "@/hooks/shop/useShopOwnedItems";
 import { UserPointBar } from "@/components/common/UserPointBar";
+import { useAuth } from "@/hooks/useAuth";
 
 
 
@@ -17,10 +17,10 @@ export default function ShopPage(){
   const { products, isLoading } = useProducts();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { currentUser, isLoggedIn } = useAuth();
   const { ownedItemIds, isLoading: ownedLoading,refetch  } = useShopOwnedItems();
   const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
-
+  const { getCurrentUser } = useAuth();
+  const user = getCurrentUser();
   if(isLoading || ownedLoading) return <div>로딩중...</div>
 
 
@@ -29,17 +29,23 @@ export default function ShopPage(){
     isOwned: ownedItemIds.includes(product.id),
   }));
 
-
-
-
-  const handleSelectProduct = (product: Product) => {
-    if (!isLoggedIn) {
+  const requireUser = () => {
+    const user = getCurrentUser();
+    if (!user) {
       alert("회원가입 후 이용 가능합니다");
-      return;
+      return null;
     }
-    setSelectedProduct(product);
-    setIsModalOpen(true);
+    return user;
   };
+
+
+    const handleSelectProduct = (product: Product) => {
+      const user = requireUser();
+      if (!user) return;
+
+      setSelectedProduct(product);
+      setIsModalOpen(true);
+    };
 
   const handleModal = () => {
     setIsModalOpen(false);
@@ -56,7 +62,7 @@ const handlePurchase = async (product: Product) => {
     const res = await fetch("/api/purchase", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: product.id }),
+      body: JSON.stringify({ itemId: product.id, userId: user!.id,    }),
     });
 
     const data = await res.json();

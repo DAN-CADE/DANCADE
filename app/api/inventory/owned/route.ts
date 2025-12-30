@@ -1,23 +1,23 @@
-// app/api/inventory/owned/route.ts
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
 
-//상점 조회용
-export async function GET() {
+// 상점 - 보유 아이템 조회
+export async function POST(req: Request) {
   try {
-    // 🔹 임시: 개발용 유저
-    const DEV_USER_ID = "cab8399d-2411-4845-acce-dca3ba6093a5";
+    const { userId } = await req.json();
 
-    //     // 나중에 이렇게 바뀜
-    // const {
-    //   data: { user },
-    // } = await supabase.auth.getUser();
-    // const userId = user.id;
+    // 🔐 최소한의 가드
+    if (!userId) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     const { data, error } = await supabase
       .from("user_inventory")
       .select("item_id")
-      .eq("user_id", DEV_USER_ID);
+      .eq("user_id", userId);
 
     if (error) {
       console.error("[OWNED_INVENTORY_ERROR]", error);
