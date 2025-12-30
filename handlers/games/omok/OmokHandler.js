@@ -1,7 +1,7 @@
 // handlers/games/omok/omokHandler.js
 
-const OmokGameManager = require("./omokGameManager");
-const OmokMatchmaking = require("./omokMatchmaking");
+const OmokGameManager = require("./OmokGameManager");
+const OmokMatchmaking = require("./OmokMatchmaking");
 
 /**
  * 오목 게임 전용 핸들러

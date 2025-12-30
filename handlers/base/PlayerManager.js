@@ -3,15 +3,15 @@
 const {
   validateRoomExists,
   validatePlayerInRoom,
-} = require("./utils/validation");
+} = require("./utils/Validation");
 
-const { notifyPlayerReady, notifyAllReady } = require("./utils/eventEmitters");
+const { notifyPlayerReady, notifyAllReady } = require("./utils/EventEmitters");
 
 /**
  * 플레이어 관리 클래스
  * - 플레이어 준비 상태, 게임 준비 체크 등
  */
-class playerManager {
+class PlayerManager {
   /**
    * @param {Object} io - Socket.IO 서버 인스턴스
    * @param {Object} socket - 클라이언트 소켓
@@ -109,4 +109,4 @@ class playerManager {
   }
 }
 
-module.exports = playerManager;
+module.exports = PlayerManager;

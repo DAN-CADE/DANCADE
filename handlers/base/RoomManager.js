@@ -5,7 +5,7 @@ const {
   getRoomList,
   createRoomData,
   createPlayerData,
-} = require("./utils/roomUtils");
+} = require("./utils/RoomUtils");
 
 const {
   validateRoomExists,
@@ -13,7 +13,7 @@ const {
   validateRoomPassword,
   validateNotAlreadyInRoom,
   validateUsername,
-} = require("./utils/validation");
+} = require("./utils/Validation");
 
 const {
   broadcastRoomListUpdate,
@@ -21,13 +21,13 @@ const {
   notifyPlayerLeft,
   notifyHostChanged,
   notifyGameAborted,
-} = require("./utils/eventEmitters");
+} = require("./utils/EventEmitters");
 
 /**
  * 방 관리 클래스
  * - 방 생성, 입장, 나가기, 방장 변경 등
  */
-class roomManager {
+class RoomManager {
   /**
    * @param {Object} io - Socket.IO 서버 인스턴스
    * @param {Object} socket - 클라이언트 소켓
@@ -296,4 +296,4 @@ class roomManager {
   }
 }
 
-module.exports = roomManager;
+module.exports = RoomManager;

@@ -43,7 +43,7 @@ export default function RootLayout({
     <html lang="ko">
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${notoSansKR.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${notoSansKR.variable} font-neo antialiased`}
       >
         {children}
       </body>

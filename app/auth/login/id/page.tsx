@@ -7,16 +7,20 @@ import logo from "@/public/assets/logos/logo.svg";
 import brickBreaker from "@/public/assets/screenshots/brick-breaker.png";
 import pingPong from "@/public/assets/screenshots/ping-pong.png";
 import Window from "@/components/common/Window";
+import { useAuth } from "@/hooks/useAuth";
+import { useGuestAuth } from "@/hooks/useGuestAuth";
 
 export default function LoginIdPage() {
   const router = useRouter();
+  const { login, isLoading: isAuthLoading } = useAuth();
+  const { getOrCreateGuestUser } = useGuestAuth();
 
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
   const [errorMessage, setErrorMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const gameList = [
     { src: brickBreaker, alt: "벽돌깨기 게임" },
@@ -34,32 +38,45 @@ export default function LoginIdPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // 빈 값 체크만
+    // 빈 값 체크
     if (!formData.username || !formData.password) {
       setErrorMessage("아이디와 비밀번호를 입력해주세요.");
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      // ******************** Supabase 로그인
-      console.log("로그인 시도:", formData);
+      // Supabase 로그인
+      await login({
+        userid: formData.username,
+        password: formData.password,
+      });
+
+      // 로그인 성공 - 캐릭터 선택 페이지로 이동
+      router.push("/character-select");
     } catch (error) {
-      setErrorMessage("아이디 또는 비밀번호가 일치하지 않습니다.");
-      console.log(error);
-    } finally {
-      setIsLoading(false);
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "아이디 또는 비밀번호가 일치하지 않습니다.";
+      setErrorMessage(errorMsg);
     }
   };
 
   const handleSignup = () => {
     router.push("/auth/register");
-    // console.log("회원가입 페이지로 이동");
+  };
+
+  const handleGuestLogin = () => {
+    // 게스트 사용자 생성 또는 불러오기
+    const guestUser = getOrCreateGuestUser();
+    console.log("게스트 로그인:", guestUser);
+
+    // 캐릭터 선택창으로 이동
+    router.push("/character-select");
   };
 
   return (
-    <main className="login-id-page">
+    <main className="login-id-page font-neo">
       <Window title="LOGIN">
         <section className="login-form-section flex flex-wrap lg:flex-row justify-center items-center gap-7 w-full mb-9 px-4 lg:px-0">
           <header className="login-header mb-6 lg:mb-0">
@@ -90,9 +107,11 @@ export default function LoginIdPage() {
                   onChange={handleChange}
                   placeholder="아이디를 입력하세요."
                   autoComplete="username"
+                  disabled={isAuthLoading}
                   className="w-full py-4 px-4 border border-[var(--color-navy)] 
                              placeholder:text-slate-gray text-black 
-                             focus:outline-none focus:ring-0"
+                             focus:outline-none focus:ring-0
+                             disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -104,45 +123,70 @@ export default function LoginIdPage() {
                 >
                   비밀번호
                 </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="비밀번호를 입력하세요."
-                  autoComplete="current-password"
-                  className="w-full py-4 px-4 border border-[var(--color-navy)] 
-                             placeholder:text-slate-gray text-black 
-                             focus:outline-none focus:ring-0"
-                />
+                <div className="w-full relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="비밀번호를 입력하세요."
+                    autoComplete="current-password"
+                    disabled={isAuthLoading}
+                    className="w-full py-4 px-4 pr-12 border border-[var(--color-navy)] 
+                               placeholder:text-slate-gray text-black 
+                               focus:outline-none focus:ring-0
+                               disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isAuthLoading}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800 transition-colors disabled:cursor-not-allowed"
+                    title={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
               </div>
 
               {/* 에러 메시지 */}
-              <p
-                className={`text-right text-[var(--color-pink)] mt-3 ${
-                  errorMessage ? "" : "hidden"
-                }`}
-              >
-                {errorMessage}
-              </p>
+              {errorMessage && (
+                <p className="text-left text-[var(--color-pink)] mt-3">
+                  {errorMessage}
+                </p>
+              )}
             </div>
 
-            {/* 버튼 */}
-            <div className="text-right mt-6">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="login-button pixelBtn pixelBtn--cyan mr-3 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "로그인 중..." : "로그인"}
-              </button>
+            {/* 버튼 영역 */}
+            <div className="flex justify-between items-center mt-6">
+              {/* 왼쪽: 게스트 로그인 */}
               <button
                 type="button"
-                onClick={handleSignup}
-                className="login-button pixelBtn pixelBtn--cyan cursor-pointer"
+                onClick={handleGuestLogin}
+                disabled={isAuthLoading}
+                className="login-button pixelBtn pixelBtn--pink cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                회원가입
+                게스트 로그인
               </button>
+
+              {/* 오른쪽: 아이디 로그인, 회원가입 */}
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={isAuthLoading}
+                  className="login-button pixelBtn pixelBtn--cyan cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isAuthLoading ? "로그인 중..." : "로그인"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignup}
+                  disabled={isAuthLoading}
+                  className="login-button pixelBtn pixelBtn--cyan cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  회원 가입
+                </button>
+              </div>
             </div>
           </form>
         </section>

@@ -1,7 +1,7 @@
 // handlers/base/baseGameHandler.js
 
-const RoomManager = require("./roomManager");
-const PlayerManager = require("./playerManager");
+const RoomManager = require("./RoomManager");
+const PlayerManager = require("./PlayerManager");
 
 /**
  * 기본 게임 핸들러 (모든 멀티플레이 게임 공통 로직)
