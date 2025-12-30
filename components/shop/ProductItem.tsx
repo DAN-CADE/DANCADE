@@ -17,20 +17,15 @@ return (
       ? "border-cyan-400 bg-cyan-400/10"
       : "border-white/30 hover:border-white/60"}
   `}
->
-  <div className="text-white text-sm font-semibold">
-    {product.name}
-  </div>
+  >
+    <div className="text-white text-sm font-semibold">
+      {product.name}
+    </div>
 
-  {product.isOwned ? (
-    <div className="text-cyan-300 text-xs font-bold">
-      보유중
-    </div>
-  ) : (
-    <div className="text-white/80 text-xs">
-      {product.price} P
-    </div>
-  )}
-</div>
+    {product.isOwned ? 
+      (<div className="text-cyan-300 text-xs font-bold"> 보유중</div>) : 
+      (<div className="text-white/80 text-xs">{product.price} P </div>)
+    }
+  </div>
   );
 }

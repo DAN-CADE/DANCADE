@@ -1,37 +1,34 @@
+// hooks/shop/useShopOwnedItems.ts
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useShopOwnedItems() {
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchOwnedItems = async () => {
-      setIsLoading(true);
-
-      try {
-        const res = await fetch("/api/inventory/owned");
-        const data = await res.json();
-
-        const ids = data.map(
-          (item: { item_id: string }) => item.item_id
-        );
-
-        setOwnedItemIds(ids);
-      } catch (error) {
-        console.error("useShopOwnedItems error:", error);
-        setOwnedItemIds([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchOwnedItems();
+  const fetchOwnedItems = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/inventory/owned");
+      const data = await res.json();
+      const ids = data.map((item: { item_id: string }) => item.item_id);
+      setOwnedItemIds(ids);
+    } catch (e) {
+      console.error("useShopOwnedItems error:", e);
+      setOwnedItemIds([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOwnedItems();
+  }, [fetchOwnedItems]);
 
   return {
     ownedItemIds,
     isLoading,
+    refetch: fetchOwnedItems, // 👈 추가
   };
 }
