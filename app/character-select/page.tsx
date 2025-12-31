@@ -17,6 +17,7 @@ import { ActionButton } from "@/components/character-select/Button";
 import { CustomizationPanel } from "@/components/character-select/CustomizationPanel";
 import { LoadingScreen } from "@/components/character-select/Loading";
 import { ErrorScreen } from "@/components/character-select/Error";
+import Window from "@/components/common/Window";
 
 // ------------------------------------------------------------
 // SSR 방지
@@ -61,33 +62,52 @@ export default function CharacterSelect() {
     setIsAssetLoading(false);
   }, []);
 
-  // 3. 이벤트 핸들러
-  const handleStartGame = useCallback(() => {
+    // 3. 이벤트 핸들러
+    const handleStartGame = useCallback(async () => {
     if (!customization) return;
 
+    // 1️⃣ localStorage는 무조건 저장
     localStorage.setItem(STORAGE_KEY, JSON.stringify(customization));
 
-    // 로그인한 회원인지 확인
     const memberUser = getCurrentUser();
 
-    // 게스트 사용자인 경우에만 게스트 데이터 생성
+    // 2️⃣ 회원일 경우만 DB 저장
+    if (memberUser) {
+      const res = await fetch("/api/users/character", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: memberUser.id,
+          characterSkin: customization,
+        }),
+      });
+
+      if (!res.ok) {
+        alert("캐릭터 저장 실패");
+        return;
+      }
+    }
+
+    // 3️⃣ 게스트면 유저 정보 생성 (기존 로직 유지)
     if (!memberUser) {
       const guestId = generateGuestId();
       const nickname = generateGuestNickname();
 
-      const userData = {
-        userId: guestId,
-        nickname: nickname,
-        isGuest: true,
-        createdAt: new Date().toISOString(),
-      };
-
-      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          userId: guestId,
+          nickname,
+          isGuest: true,
+          createdAt: new Date().toISOString(),
+        })
+      );
     }
-    // 로그인한 회원은 기존 정보 유지
 
+    // 4️⃣ 게임 시작
     router.push("/game");
-  }, [customization, router, getCurrentUser]);
+  }, [customization, getCurrentUser, router]);
+
 
   // 4. 조건부 렌더링
   if (isLoading || !customization) {
@@ -102,38 +122,42 @@ export default function CharacterSelect() {
 
   // 4. UI 구성
   return (
-    <div className="flex items-start min-h-screen bg-[#1a1a1a] text-white font-neo">
-      {/* 왼쪽: 미리보기 영역 */}
-      <div className="w-1/2 flex flex-col items-center justify-center p-10 sticky top-1/2 -translate-y-1/2">
-        <div className="w-[400px] h-[400px] border-[3px] border-[#555] rounded-[10px] bg-[#2d2d2d] overflow-hidden relative">
-          {isAssetLoading && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+    <Window title="character">
+    <div className="w-full">
+      <div className="flex w-full  text-white font-neo">
+          {/* 왼쪽: 미리보기 영역 */}
+          <div  className="w-1/2 flex flex-col items-center justify-center p-10">
+            <div className="w-[400px] h-[400px] border-[3px] border-[#555] rounded-[10px] bg-[#2d2d2d] overflow-hidden relative">
+              {isAssetLoading && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+
+              <AvatarPreview
+                customization={previewState}
+                onLoad={handleAvatarLoaded}
+              />
             </div>
-          )}
 
-          <AvatarPreview
-            customization={previewState}
-            onLoad={handleAvatarLoaded}
-          />
-        </div>
+            {/* 액션 버튼 그룹 */}
+            <div className="flex gap-[15px] mt-[30px]">
+              <ActionButton onClick={handleRandomize}>랜덤 생성</ActionButton>
+              <ActionButton onClick={handleStartGame}>게임 시작</ActionButton>
+            </div>
+          </div>
 
-        {/* 액션 버튼 그룹 */}
-        <div className="flex gap-[15px] mt-[30px]">
-          <ActionButton onClick={handleRandomize}>랜덤 생성</ActionButton>
-          <ActionButton onClick={handleStartGame}>게임 시작</ActionButton>
+          {/* 오른쪽: 커스터마이징 패널 */}
+          <div className="w-1/2 p-10 max-h-[700px] overflow-y-auto">
+            <CustomizationPanel
+              lpcData={lpcData}
+              customization={customization}
+              onChange={setCustomization}
+              onGenderChange={handleGenderChange}
+            />
+          </div>
         </div>
       </div>
-
-      {/* 오른쪽: 커스터마이징 패널 */}
-      <div className="w-1/2 p-10 overflow-y-auto bg-[#252525]">
-        <CustomizationPanel
-          lpcData={lpcData}
-          customization={customization}
-          onChange={setCustomization}
-          onGenderChange={handleGenderChange}
-        />
-      </div>
-    </div>
+    </Window>
   );
 }

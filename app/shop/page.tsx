@@ -3,13 +3,15 @@ import TransparentFrame from "@/components/common/TransparentFrame";
 import CategoryTabs, { ShopCategory } from "@/components/shop/CategoryTabs";
 import ProductList from "@/components/shop/ProductList";
 import { useProducts } from "@/hooks/shop/useProducts";
-import { useState } from "react";
 import { Product } from "@/game/types/product";
 import ProductDetailModal from "@/components/shop/ProductDetailModal";
 import { useShopOwnedItems } from "@/hooks/shop/useShopOwnedItems";
 import { UserPointBar } from "@/components/common/UserPointBar";
 import { useAuth } from "@/hooks/useAuth";
-
+import { STORAGE_KEY } from "@/constants/character";
+import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
+import { useEffect, useMemo, useState } from "react";
+import ShopCharacterPreview from "@/components/shop/ShopCharacterPreview";
 
 
 export default function ShopPage(){
@@ -21,6 +23,20 @@ export default function ShopPage(){
   const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
+
+
+
+const [previewCharacter, setPreviewCharacter] =
+  useState<CharacterState | null>(null);
+
+useEffect(() => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) return;
+
+  setPreviewCharacter(JSON.parse(stored));
+}, []);
+
+
   if(isLoading || ownedLoading) return <div>로딩중...</div>
 
 
@@ -43,6 +59,7 @@ export default function ShopPage(){
       const user = requireUser();
       if (!user) return;
 
+      handlePreviewItem(product)
       setSelectedProduct(product);
       setIsModalOpen(true);
     };
@@ -86,6 +103,25 @@ const handlePurchase = async (product: Product) => {
   }
 };
 
+const handlePreviewItem = (product: Product) => {
+  // if (!product.style_key) return; // style_key 없는 상품이면 프리뷰 불가
+
+  // setPreviewCharacter((prev) => {
+  //   if (!prev) return prev;
+
+  //   return {
+  //     ...prev,
+  //     parts: {
+  //       ...prev.parts,
+  //       [product.category]: {
+  //         ...prev.parts[product.category],
+  //         styleId: product.style_key, // ✅ 여기만 바뀜
+  //       },
+  //     },
+  //   };
+  // });
+};
+
 
 
 
@@ -98,6 +134,16 @@ const handlePurchase = async (product: Product) => {
       <TransparentFrame>
         
         <div className="flex h-full gap-6">
+
+            {/* 👈 STEP 2: 캐릭터 프리뷰 */}
+          <aside className="w-[280px]">
+            {previewCharacter && (
+              <ShopCharacterPreview character={previewCharacter} />
+            )}
+          </aside>
+
+
+
           {/* 사이드바 영역 */}
           <aside className="side-content w-[320px]">
             <CategoryTabs
