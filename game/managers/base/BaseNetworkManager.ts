@@ -4,7 +4,7 @@ import { BaseGameManager } from "@/game/managers/base/BaseGameManager";
 import { NETWORK_CONFIG } from "@/game/config/network";
 
 interface SocketInitOptions {
-  transports?: string[];
+  transports?: readonly string[];
   reconnection?: boolean;
   reconnectionAttempts?: number;
   reconnectionDelay?: number;
@@ -19,7 +19,7 @@ interface SocketInitOptions {
 export abstract class BaseNetworkManager<
   TState
 > extends BaseGameManager<TState> {
-  protected socket: Socket;
+  protected socket!: Socket;
   protected roomId: string | null;
   protected socketInitialized = false;
 
@@ -137,7 +137,7 @@ export abstract class BaseNetworkManager<
   }
 
   // =====================================================================
-  // ✅ 타입 안전 통신 메서드 (새로 추가)
+  // 타입 안전 통신 메서드
   // =====================================================================
 
   /**
@@ -210,6 +210,8 @@ export abstract class BaseNetworkManager<
    * @returns 성공 여부
    */
   protected safeEmit(event: string, data?: any): boolean {
+    // -> 소켓 핸들러 타입이 이미 any[]를 사용해서, 에러 린트 무시하는 것이 현실적이라고
+    //    하는데, 또 다른 수정 방법이 있는지 확인이 필요함
     if (!this.isConnected()) {
       console.error(`[NetworkManager] 소켓 미연결: ${event}`);
       return false;
@@ -243,6 +245,8 @@ export abstract class BaseNetworkManager<
    * @param handler - 핸들러 함수
    */
   protected safeOn(event: string, handler: (...args: any[]) => void): void {
+    // -> 소켓 핸들러 타입이 이미 any[]를 사용해서, 에러 린트 무시하는 것이 현실적이라고
+    //    하는데, 또 다른 수정 방법이 있는지 확인이 필요함
     this.socket.off(event); // 기존 리스너 제거
     this.socket.on(event, handler);
   }
@@ -253,6 +257,8 @@ export abstract class BaseNetworkManager<
    * @param handler - 핸들러 함수 (선택)
    */
   protected safeOff(event: string, handler?: (...args: any[]) => void): void {
+    // -> 소켓 핸들러 타입이 이미 any[]를 사용해서, 에러 린트 무시하는 것이 현실적이라고
+    //    하는데, 또 다른 수정 방법이 있는지 확인이 필요함
     if (handler) {
       this.socket.off(event, handler);
     } else {
@@ -303,14 +309,14 @@ export abstract class BaseNetworkManager<
   /**
    * 연결 해제 시 호출
    */
-  protected onDisconnected(reason: string): void {
+  protected onDisconnected(_reason: string): void {
     // 자식 클래스에서 필요시 구현
   }
 
   /**
    * 에러 발생 시 호출
    */
-  protected onError(error: unknown): void {
+  protected onError(_error: unknown): void {
     // 자식 클래스에서 필요시 구현
   }
 
