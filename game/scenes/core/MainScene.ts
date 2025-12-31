@@ -269,6 +269,14 @@ export class MainScene extends BaseGameScene {
         this.player.tryInteract(this.npcManagers);
       });
     }
+
+    this.events.on("shutdown", () => {
+      this.cleanupSocket();
+    });
+
+    this.events.on("destroy", () => {
+      this.cleanupSocket();
+    });
   }
 
   update(): void {
@@ -480,7 +488,16 @@ export class MainScene extends BaseGameScene {
     this.onlinePlayers.clear();
   }
 
+  private cleanupSocket(): void {
+  if (this.socket) {
+    console.log("Cleanup: Socket.io 연결 해제");
+    this.socket.disconnect(); // 연결 종료
+    this.socket.removeAllListeners(); // 모든 이벤트 리스너 제거
+  }
+}
+
   // 게임 종료 처리 구현 필수.
   protected handleGameEnd(): void {}
   protected restartGame(): void {}
+  
 }

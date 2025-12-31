@@ -2,11 +2,15 @@
 import { io } from "socket.io-client";
 
 // Socket.io 클라이언트 인스턴스 생성
-export const socket = io("http://localhost:3001", {
+const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+export const socket = io(socketUrl, {
   autoConnect: true,
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionAttempts: 5,
+  withCredentials: true,
+  transports: ["websocket"]
 });
 
 // 연결 상태 로깅 (개발 시 유용)
