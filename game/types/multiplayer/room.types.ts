@@ -1,9 +1,23 @@
-// game/managers/base/multiplayer/types/room.types.ts
+// game/types/multiplayer/room.types.ts (수정 버전)
 
 /**
  * 멀티플레이 Room 시스템 공통 타입
  * - 모든 게임에서 사용하는 방/플레이어 데이터 구조
  */
+
+// =====================================================================
+// 유저 통계
+// =====================================================================
+
+/**
+ * 호스트 통계 정보
+ */
+export interface HostStats {
+  wins: number;
+  losses: number;
+  winRate: number;
+  totalGames: number;
+}
 
 // =====================================================================
 // 방 데이터
@@ -18,11 +32,14 @@ export interface RoomData {
   gameType?: string; // "omok", "pingpong" 등
   hostUsername: string;
   hostSocketId: string;
+  hostUserId?: string; // ⭐ 추가
+  hostStats?: HostStats; // ⭐ 추가
   playerCount: number;
   maxPlayers: number;
   isPrivate: boolean;
   status: "waiting" | "playing" | "finished";
   players?: PlayerData[];
+  password?: string;
 }
 
 /**
@@ -57,6 +74,7 @@ export interface RoomNetworkCallbacks {
   // 플레이어 상태 변화
   onPlayerJoined?: (roomData: RoomData) => void;
   onPlayerLeft?: (roomData: RoomData, username: string) => void;
+  onLeftRoom?: (roomId: string) => void; // ⭐ 추가: 내가 방을 나감
   onPlayerReady?: (roomData: RoomData) => void;
 
   // 방장/게임 상태

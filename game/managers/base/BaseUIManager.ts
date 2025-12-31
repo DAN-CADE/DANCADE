@@ -1,5 +1,8 @@
 // game/managers/base/BaseUIManager.ts
 
+import { TEXT_STYLE } from "@/game/types/common/ui.constants";
+import { ButtonFactory } from "@/utils/ButtonFactory";
+
 /**
  * UI 매니저의 베이스 클래스
  * 게임 UI의 공통 패턴 제공
@@ -7,21 +10,16 @@
 export abstract class BaseUIManager {
   protected scene: Phaser.Scene;
 
-  // 공통 텍스트 스타일 (각 게임에서 오버라이드 가능)
-  protected readonly TEXT_STYLE = {
-    SCORE: {
-      fontFamily: "Press Start 2P",
-      fontSize: "14px",
-      color: "#ffffff",
-    },
+  /**
+   * 게임 UI에서 사용하는 텍스트 스타일 별칭
+   * (실제 정의는 ui.constants.ts)
+   */
+  protected readonly GAME_TEXT = {
+    SCORE: TEXT_STYLE.SMALL,
+    BUTTON: TEXT_STYLE.SMALL,
     GAME_OVER: {
-      fontFamily: "Press Start 2P",
+      ...TEXT_STYLE.TITLE,
       fontSize: "36px",
-    },
-    BUTTON: {
-      fontFamily: "Press Start 2P",
-      fontSize: "14px",
-      color: "#333333",
     },
   };
 
@@ -39,33 +37,28 @@ export abstract class BaseUIManager {
    */
   protected createRestartButton(
     onRestart: () => void,
-    x: number = 400,
-    y: number = 400,
-    depth: number = 0
-  ): void {
-    const restartBtnBg = this.scene.add
-      .rectangle(x, y, 200, 60, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(depth);
+    x = 400,
+    y = 400,
+    depth = 0
+  ): Phaser.GameObjects.Container {
+    const style = this.GAME_TEXT.BUTTON;
 
-    this.scene.add
-      .text(x, y, "RETRY", this.TEXT_STYLE.BUTTON)
-      .setOrigin(0.5)
-      .setDepth(depth);
+    const button = ButtonFactory.createButton(
+      this.scene,
+      x,
+      y,
+      "RETRY",
+      onRestart,
+      {
+        size: "SMALL",
+        color: 0xffffff,
+        textColor: style.color,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+      }
+    );
 
-    restartBtnBg.on("pointerover", () => {
-      restartBtnBg.setFillStyle(0xe0e0e0);
-      restartBtnBg.setScale(1.05);
-    });
-
-    restartBtnBg.on("pointerout", () => {
-      restartBtnBg.setFillStyle(0xffffff);
-      restartBtnBg.setScale(1);
-    });
-
-    restartBtnBg.on("pointerdown", () => {
-      onRestart();
-    });
+    return button.setDepth(depth);
   }
 
   /**
@@ -73,41 +66,36 @@ export abstract class BaseUIManager {
    */
   protected createHomeButton(
     onHome: () => void,
-    x: number = 750,
-    y: number = 50,
-    depth: number = 0
-  ): void {
-    const homeBtnBg = this.scene.add
-      .rectangle(x, y, 200, 60, 0xffffff)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(depth);
+    x = 750,
+    y = 50,
+    depth = 0
+  ): Phaser.GameObjects.Container {
+    const style = this.GAME_TEXT.BUTTON;
 
-    this.scene.add
-      .text(x, y, "HOME", this.TEXT_STYLE.BUTTON)
-      .setOrigin(0.5)
-      .setDepth(depth);
+    const button = ButtonFactory.createButton(
+      this.scene,
+      x,
+      y,
+      "HOME",
+      onHome,
+      {
+        size: "SMALL",
+        color: 0xffffff,
+        textColor: style.color,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+      }
+    );
 
-    homeBtnBg.on("pointerover", () => {
-      homeBtnBg.setFillStyle(0xe0e0e0);
-      homeBtnBg.setScale(1.05);
-    });
-
-    homeBtnBg.on("pointerout", () => {
-      homeBtnBg.setFillStyle(0xffffff);
-      homeBtnBg.setScale(1);
-    });
-
-    homeBtnBg.on("pointerdown", () => {
-      window.location.href = "/game";
-    });
+    return button.setDepth(depth);
   }
 
   /**
    * 오버레이 생성 (공통 패턴)
    */
   protected createOverlay(
-    alpha: number = 0.7,
-    depth: number = 10
+    alpha = 0.7,
+    depth = 10
   ): Phaser.GameObjects.Rectangle {
     return this.scene.add
       .rectangle(400, 300, 800, 600, 0x000000, alpha)

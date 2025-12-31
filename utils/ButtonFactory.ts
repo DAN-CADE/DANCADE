@@ -1,13 +1,17 @@
 // utils/ButtonFactory.ts
 // - 공통 버튼 생성 유틸리티
 
-interface ButtonOptions {
-  width?: number;
-  height?: number;
+import { BUTTON_SIZE } from "@/game/types/omok";
+
+export type ButtonSizeKey = keyof typeof BUTTON_SIZE;
+
+export interface ButtonOptions {
+  size?: ButtonSizeKey;
   color?: number;
   textColor?: string;
   fontSize?: string;
   fontFamily?: string;
+  cornerRadius?: number;
 }
 
 /**
@@ -26,13 +30,15 @@ export class ButtonFactory {
     options: ButtonOptions = {}
   ): Phaser.GameObjects.Container {
     const {
-      width = 350,
-      height = 70,
+      size = "MEDIUM",
       color = 0xffffff,
       textColor = "#333333",
       fontSize = "16px",
       fontFamily = "NeoDunggeunmo",
+      // cornerRadius = 12,
     } = options;
+
+    const { width, height } = BUTTON_SIZE[size];
 
     const container = scene.add
       .container(x, y)
@@ -98,8 +104,7 @@ export class ButtonFactory {
     color: number = 0x4a9eff
   ): Phaser.GameObjects.Container {
     return ButtonFactory.createButton(scene, x, y, text, callback, {
-      width: 380,
-      height: 70,
+      size: "LARGE",
       color,
       textColor: "#ffffff",
     });
@@ -117,8 +122,7 @@ export class ButtonFactory {
     color: number = 0x4ecca3
   ): Phaser.GameObjects.Container {
     return ButtonFactory.createButton(scene, x, y, text, callback, {
-      width: 200,
-      height: 60,
+      size: "SMALL",
       color,
       textColor: "#ffffff",
       fontSize: "14px",

@@ -1,44 +1,69 @@
-// handlers/base/utils/roomUtils.js
+// handlers/base/utils/RoomUtils.js
 
-/**
- * 방 관련 유틸리티 함수 모음
- */
+const RoomStatsEnricher = require("./RoomStatsEnricher");
+const { v4: uuidv4 } = require("uuid");
 
 /**
  * 랜덤 방 ID 생성
  * @returns {string} 생성된 방 ID
  */
 function generateRoomId() {
-  return "room_" + Math.random().toString(36).substr(2, 9);
+  // return "room_" + Math.random().toString(36).substr(2, 9);
+  return uuidv4();
 }
 
 /**
- * 특정 게임 타입의 공개 방 목록 반환
+ * 특정 게임 타입의 방 목록 반환 (✅ 통계 포함)
  * @param {Map} rooms - 전체 방 목록
  * @param {string} gamePrefix - 게임 타입 (예: "omok")
- * @returns {Array} 공개 방 목록
+ * @returns {Promise<Array>} 방 목록 (통계 포함)
  */
-function getRoomList(rooms, gamePrefix) {
+async function getRoomList(rooms, gamePrefix) {
+  console.log(
+    `[getRoomList] 시작 - gamePrefix: ${gamePrefix}, 전체 방: ${rooms.size}개`
+  );
+
   const roomList = [];
   rooms.forEach((room) => {
-    if (
-      room.gameType === gamePrefix &&
-      room.status === "waiting" &&
-      !room.isPrivate
-    ) {
+    console.log(`[getRoomList] 방 체크:`, {
+      roomId: room.roomId,
+      gameType: room.gameType,
+      status: room.status,
+      gamePrefix,
+      match: room.gameType === gamePrefix && room.status === "waiting",
+    });
+
+    if (room.gameType === gamePrefix && room.status === "waiting") {
       roomList.push({
         roomId: room.roomId,
         roomName: room.roomName,
         hostUsername: room.players[0]?.username,
         hostSocketId: room.hostSocketId,
+        hostUserId: room.players[0]?.userId,
         playerCount: room.players.length,
         maxPlayers: room.maxPlayers,
         isPrivate: room.isPrivate,
         status: room.status,
+        players: room.players,
       });
     }
   });
-  return roomList;
+
+  console.log(`[getRoomList] 필터링 완료 - ${roomList.length}개 방`);
+
+  // ⭐ 통계 정보 추가
+  const enrichedRooms = await RoomStatsEnricher.enrichRoomsWithStats(
+    roomList,
+    gamePrefix
+  );
+
+  console.log(`[getRoomList] enrichment 완료:`, {
+    type: typeof enrichedRooms,
+    isArray: Array.isArray(enrichedRooms),
+    length: enrichedRooms?.length,
+  });
+
+  return enrichedRooms;
 }
 
 /**
@@ -48,6 +73,7 @@ function getRoomList(rooms, gamePrefix) {
  * @param {string} params.roomName - 방 이름
  * @param {string} params.gamePrefix - 게임 타입
  * @param {string} params.hostSocketId - 방장 소켓 ID
+ * @param {string} params.userId - 방장 유저 ID
  * @param {string} params.username - 방장 이름
  * @param {boolean} params.isPrivate - 비공개 여부
  * @param {string} params.password - 방 비밀번호
@@ -59,6 +85,7 @@ function createRoomData({
   roomName,
   gamePrefix,
   hostSocketId,
+  userId,
   username,
   isPrivate,
   password,
@@ -72,6 +99,7 @@ function createRoomData({
     players: [
       {
         socketId: hostSocketId,
+        userId,
         username,
         isReady: false,
         joinedAt: Date.now(),
@@ -90,11 +118,13 @@ function createRoomData({
  * 새 플레이어 데이터 생성
  * @param {string} socketId - 소켓 ID
  * @param {string} username - 사용자 이름
+ * @param {string} [userId] - 유저 ID
  * @returns {Object} 플레이어 데이터
  */
-function createPlayerData(socketId, username) {
+function createPlayerData(socketId, username, userId = null) {
   return {
     socketId,
+    userId,
     username,
     isReady: false,
     joinedAt: Date.now(),

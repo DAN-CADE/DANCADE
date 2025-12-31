@@ -1,3 +1,5 @@
+// game/managers/games/omok/network/room/OmokRoomManager.ts
+
 import { Socket } from "socket.io-client";
 import {
   BaseRoomManager,

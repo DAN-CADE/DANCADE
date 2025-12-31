@@ -1,4 +1,4 @@
-// game/managers/base/multiplayer/room/BaseRoomNetworkManager.ts
+// game/managers/base/multiplayer/room/BaseRoomNetworkManager.ts (수정 버전)
 
 import { Socket } from "socket.io-client";
 import type {
@@ -10,19 +10,14 @@ import type {
  * BaseRoomNetworkManager
  * - 모든 게임의 방 시스템 네트워크 로직 공통화
  * - 게임별 차이는 gamePrefix만으로 해결
- * - 오목의 OmokRoomNetworkManager를 기반으로 완전 일반화
  */
 export class BaseRoomNetworkManager {
   protected socket: Socket;
   protected gamePrefix: string;
-  protected roomList: RoomData[] = [];
+  protected roomList: RoomData[] = []; // ⭐ 반드시 배열로 초기화
   protected currentRoomId: string | null = null;
   protected callbacks: RoomNetworkCallbacks = {};
 
-  /**
-   * @param socket - Socket.IO 클라이언트
-   * @param gamePrefix - 게임 타입 ("omok", "pingpong" 등)
-   */
   constructor(socket: Socket, gamePrefix: string) {
     this.socket = socket;
     this.gamePrefix = gamePrefix;
@@ -30,16 +25,31 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // 소켓 핸들러 설정 (완전 공통)
+  // 소켓 핸들러 설정
   // =====================================================================
 
   protected setupSocketHandlers(): void {
     const prefix = this.gamePrefix;
 
-    // 방 목록 업데이트
-    this.socket.on(`${prefix}:roomListUpdate`, (rooms: RoomData[]) => {
-      this.roomList = rooms;
-      this.callbacks.onRoomListUpdate?.(rooms);
+    // ⭐ 방 목록 업데이트 (안전한 처리)
+    this.socket.on(`${prefix}:roomListUpdate`, (data: any) => {
+      console.log(`[${prefix}RoomNetwork] 방 목록 수신:`, data);
+
+      // ⭐ 서버 응답 형태 확인 및 처리
+      if (Array.isArray(data)) {
+        // 배열로 직접 받은 경우
+        this.roomList = data;
+        this.callbacks.onRoomListUpdate?.(data);
+      } else if (data && Array.isArray(data.rooms)) {
+        // { rooms: [...] } 형태로 받은 경우
+        this.roomList = data.rooms;
+        this.callbacks.onRoomListUpdate?.(data.rooms);
+      } else {
+        // 예상치 못한 형태
+        console.error(`[${prefix}RoomNetwork] 잘못된 방 목록 형태:`, data);
+        this.roomList = [];
+        this.callbacks.onRoomListUpdate?.([]);
+      }
     });
 
     // 방 생성 성공
@@ -75,6 +85,13 @@ export class BaseRoomNetworkManager {
       }
     );
 
+    // ⭐ 내가 방을 나감
+    this.socket.on(`${prefix}:leftRoom`, (data: { roomId: string }) => {
+      console.log(`[${prefix}RoomNetwork] 방 퇴장 완료:`, data.roomId);
+      this.currentRoomId = null;
+      this.callbacks.onLeftRoom?.(data.roomId);
+    });
+
     // 플레이어 준비
     this.socket.on(`${prefix}:playerReady`, (data: { roomData: RoomData }) => {
       this.callbacks.onPlayerReady?.(data.roomData);
@@ -109,46 +126,54 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // 네트워크 액션 (완전 공통)
+  // 네트워크 액션
   // =====================================================================
 
-  /**
-   * 방 목록 요청
-   */
   public requestRoomList(): void {
+    console.log(`[${this.gamePrefix}RoomNetwork] 방 목록 요청`);
     this.socket.emit(`${this.gamePrefix}:getRoomList`);
   }
 
-  /**
-   * 방 생성
-   */
   public createRoom(
     roomName: string,
+    userId: string,
     username: string,
+    userUUID: string,
+    isPrivate?: boolean,
+    password?: string,
     options?: { isPrivate?: boolean; password?: string }
   ): void {
     const payload = {
       roomName,
+      userId,
       username,
-      isPrivate: options?.isPrivate || false,
-      password: options?.password || "",
+      userUUID,
+      isPrivate: isPrivate || options?.isPrivate || false,
+      password: password || options?.password || "",
     };
 
     console.log(`🚀 [${this.gamePrefix}RoomNetwork] 방 생성:`, payload);
     this.socket.emit(`${this.gamePrefix}:createRoom`, payload);
   }
 
-  /**
-   * 방 입장
-   */
-  public joinRoom(roomId: string, username: string, password?: string): void {
-    const payload = { roomId, username, password };
+  public joinRoom(
+    roomId: string,
+    userId: string,
+    username: string,
+    userUUID: string,
+    password?: string
+  ): void {
+    const payload = {
+      roomId,
+      userId,
+      username,
+      userUUID,
+      password,
+    };
+
     this.socket.emit(`${this.gamePrefix}:joinRoom`, payload);
   }
 
-  /**
-   * 방 나가기
-   */
   public leaveRoom(): void {
     if (this.currentRoomId) {
       const payload = { roomId: this.currentRoomId };
@@ -157,9 +182,6 @@ export class BaseRoomNetworkManager {
     }
   }
 
-  /**
-   * 준비 상태 토글
-   */
   public toggleReady(): void {
     if (this.currentRoomId) {
       const payload = { roomId: this.currentRoomId };
@@ -167,9 +189,6 @@ export class BaseRoomNetworkManager {
     }
   }
 
-  /**
-   * 게임 시작 (호스트만)
-   */
   public startGame(): void {
     if (this.currentRoomId) {
       const payload = { roomId: this.currentRoomId };
@@ -178,7 +197,7 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // 콜백 등록 (완전 공통)
+  // 콜백 등록
   // =====================================================================
 
   public setOnRoomListUpdate(callback: (rooms: RoomData[]) => void): void {
@@ -209,6 +228,10 @@ export class BaseRoomNetworkManager {
     this.callbacks.onPlayerLeft = callback;
   }
 
+  public setOnLeftRoom(callback: (roomId: string) => void): void {
+    this.callbacks.onLeftRoom = callback;
+  }
+
   public setOnPlayerReady(callback: (roomData: RoomData) => void): void {
     this.callbacks.onPlayerReady = callback;
   }
@@ -232,10 +255,17 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // Getters (완전 공통)
+  // Getters (⭐ 안전한 처리)
   // =====================================================================
 
   public getRoomList(): RoomData[] {
+    // ⭐ 항상 배열 반환 보장
+    if (!Array.isArray(this.roomList)) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] roomList가 배열이 아님! 빈 배열 반환`
+      );
+      return [];
+    }
     return this.roomList;
   }
 
@@ -244,7 +274,7 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // 정리 (완전 공통)
+  // 정리
   // =====================================================================
 
   public cleanup(): void {
@@ -255,6 +285,7 @@ export class BaseRoomNetworkManager {
       "joinError",
       "playerJoined",
       "playerLeft",
+      "leftRoom", // ⭐ 추가
       "playerReady",
       "gameStart",
       "gameAborted",

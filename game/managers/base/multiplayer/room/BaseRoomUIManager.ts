@@ -3,6 +3,7 @@
 import { Socket } from "socket.io-client";
 import { ButtonFactory } from "@/utils/ButtonFactory";
 import type {
+  PlayerData,
   RoomData,
   RoomUIConfig,
 } from "@/game/types/multiplayer/room.types";
@@ -12,7 +13,6 @@ import { OMOK_CONFIG } from "@/game/types/omok";
  * BaseRoomUIManager
  * - 방 UI 렌더링의 공통 구조 제공
  * - 템플릿 메서드 패턴: 구조는 공통, 스타일은 게임별 커스터마이징
- * - 오목의 OmokRoomUIManager를 기반으로 템플릿화
  */
 export abstract class BaseRoomUIManager {
   protected scene: Phaser.Scene;
@@ -25,15 +25,15 @@ export abstract class BaseRoomUIManager {
     this.scene = scene;
     this.socket = socket;
     this.config = config;
-    this.UI_DEPTH = 500; // 게임별로 오버라이드 가능
+    this.UI_DEPTH = 500;
   }
 
   // =====================================================================
-  // 방 목록 UI (구조 공통)
+  // 방 목록 UI
   // =====================================================================
 
   /**
-   * 방 목록 렌더링 (공통 구조)
+   * 방 목록 렌더링
    */
   public renderRoomList(rooms: RoomData[]): void {
     this.clearUI();
@@ -53,6 +53,16 @@ export abstract class BaseRoomUIManager {
     // 타이틀
     this.createText(centerX, 120, "ROOM LIST", this.config.textStyle.title);
 
+    // 안전한 배열 체크
+    if (!Array.isArray(rooms)) {
+      console.error("renderRoomList: rooms가 배열이 아님", rooms);
+      this.createText(centerX, height / 2, "방 목록을 불러올 수 없습니다.", {
+        color: "#ff0000",
+      });
+      this.createBackButton(centerX, height - 120);
+      return;
+    }
+
     // 방 목록
     if (rooms.length === 0) {
       this.createText(centerX, height / 2, "생성된 방이 없습니다.", {
@@ -67,21 +77,39 @@ export abstract class BaseRoomUIManager {
   }
 
   /**
-   * 방 카드 렌더링 (게임별 커스터마이징 가능)
+   * 방 카드 렌더링
    */
   protected renderRoomCards(rooms: RoomData[], centerX: number): void {
+    // 다시 한번 배열 체크 (이중 안전장치)
+    if (!Array.isArray(rooms)) {
+      console.error("❌ renderRoomCards: rooms가 배열이 아님!", rooms);
+      return;
+    }
+
     const { roomCardHeight, roomCardSpacing } = this.config.layout;
     let yPos = 220;
 
     rooms.forEach((room) => {
-      const roomInfo = `${room.roomName}\n방장: ${room.hostUsername} | ${room.playerCount}/${room.maxPlayers}명`;
+      // 비공개 방 표시
+      const lockIcon = room.isPrivate ? "🔒 " : "";
+
+      // 통계 표시
+      const statsText = room.hostStats
+        ? ` | ${room.hostStats.wins}승 ${room.hostStats.losses}패 (승률 ${(
+            room.hostStats.winRate * 100
+          ).toFixed(0)}%)`
+        : "";
+
+      const roomInfo = `${lockIcon}${room.roomName}\n방장: ${room.hostUsername} | ${room.playerCount}/${room.maxPlayers}명${statsText}`;
 
       const btn = ButtonFactory.createButton(
         this.scene,
         centerX,
         yPos,
         roomInfo,
-        () => this.emit("joinRoomRequested", room.roomId),
+        () => {
+          this.emit("joinRoomRequested", room.roomId, room.isPrivate);
+        },
         {
           width: this.config.layout.roomCardWidth,
           height: roomCardHeight,
@@ -110,12 +138,7 @@ export abstract class BaseRoomUIManager {
     const centerX = width / 2;
 
     // 배경 패널
-    this.createPanel(
-      centerX,
-      height / 2,
-      this.config.layout.panelWidth,
-      750 // 대기실은 높이 고정
-    );
+    this.createPanel(centerX, height / 2, this.config.layout.panelWidth, 750);
 
     // 방 제목
     this.createText(
@@ -194,7 +217,6 @@ export abstract class BaseRoomUIManager {
         btnY,
         allPlayersReady ? "START GAME" : "WAITING FOR PLAYERS...",
         () => {
-          // 모두 준비된 경우에만 게임 시작
           if (allPlayersReady) {
             this.emit("startGameRequested");
           }
@@ -206,7 +228,6 @@ export abstract class BaseRoomUIManager {
         }
       );
 
-      // 준비 안 된 경우 반투명 처리
       if (!allPlayersReady) {
         startBtn.setAlpha(0.5);
       }
@@ -250,23 +271,19 @@ export abstract class BaseRoomUIManager {
    * 모든 플레이어가 준비되었는지 확인
    */
   private checkAllPlayersReady(roomData: RoomData): boolean {
-    // 플레이어가 없으면 false
     if (!roomData.players || roomData.players.length === 0) {
       return false;
     }
 
-    // 호스트를 제외한 플레이어들
     const nonHostPlayers = roomData.players.filter(
       (p) => p.socketId !== roomData.hostSocketId
     );
 
-    // 호스트 혼자면 false (상대가 없음)
     if (nonHostPlayers.length === 0) {
       return false;
     }
 
-    // 모든 비호스트 플레이어가 준비 상태인지 확인
-    return nonHostPlayers.every((p) => (p as any).isReady === true);
+    return nonHostPlayers.every((p: PlayerData) => p.isReady === true);
   }
 
   // =====================================================================
@@ -276,12 +293,38 @@ export abstract class BaseRoomUIManager {
   /**
    * 방 생성 프롬프트 표시
    */
-  public showCreateRoomPrompt(): string | null {
-    const roomName = prompt("방 제목을 입력하세요");
+  // BaseRoomUIManager.ts
+  public showCreateRoomPrompt(): {
+    roomName: string;
+    isPrivate: boolean;
+    password?: string;
+  } | null {
+    const roomName = prompt("방 제목을 입력하세요:");
     if (!roomName || roomName.trim() === "") {
       return null;
     }
-    return roomName;
+
+    const isPrivate = confirm("비공개 방으로 만드시겠습니까?");
+    let password: string | undefined;
+
+    if (isPrivate) {
+      const input = prompt("비밀번호를 입력하세요 (4~20자)");
+      if (!input || input.length < 4 || input.length > 20) {
+        alert("비밀번호는 4~20자여야 합니다.");
+        return null;
+      }
+      password = input;
+    }
+
+    return { roomName, isPrivate, password };
+  }
+
+  /**
+   * 방 입장 프롬프트 (비공개 방용)
+   */
+  public showJoinPasswordPrompt(): string | null {
+    const password = prompt("비밀번호를 입력하세요:");
+    return password;
   }
 
   // =====================================================================
@@ -353,6 +396,9 @@ export abstract class BaseRoomUIManager {
       (child: any) => child.depth >= this.UI_DEPTH - 1
     );
     targets.forEach((child) => child.destroy());
+
+    // 화면 상태 초기화
+    this.currentScreen = "menu";
   }
 
   /**
@@ -365,7 +411,7 @@ export abstract class BaseRoomUIManager {
   /**
    * 이벤트 발생 (Scene에서 처리)
    */
-  protected emit(eventName: string, ...args: any[]): void {
+  protected emit(eventName: string, ...args: unknown[]): void {
     this.scene.events.emit(`roomUI:${eventName}`, ...args);
   }
 }

@@ -1,8 +1,17 @@
 // server.js
+// ⭐ dotenv 먼저 로드 (제일 위에!)
+require("dotenv").config();
+
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
+
+// 🔧 환경 변수 확인 (디버깅용)
+console.log("🔧 환경 변수 확인:", {
+  NEXT_API_URL: process.env.NEXT_API_URL,
+  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+});
 
 const app = express();
 const server = http.createServer(app);

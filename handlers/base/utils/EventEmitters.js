@@ -5,14 +5,33 @@
  */
 
 /**
- * 방 목록 업데이트 브로드캐스트
+ * 방 목록 업데이트 브로드캐스트 (⭐ async로 수정)
  * @param {Object} io - Socket.IO 서버 인스턴스
  * @param {Map} rooms - 방 목록
  * @param {string} gamePrefix - 게임 타입
  */
-function broadcastRoomListUpdate(io, rooms, gamePrefix) {
-  const { getRoomList } = require("./roomUtils");
-  io.emit(`${gamePrefix}:roomListUpdate`, getRoomList(rooms, gamePrefix));
+async function broadcastRoomListUpdate(io, rooms, gamePrefix) {
+  try {
+    const { getRoomList } = require("./roomUtils");
+    const roomList = await getRoomList(rooms, gamePrefix);
+
+    // ⭐ 안전장치: 배열이 아니면 빈 배열
+    const safeRoomList = Array.isArray(roomList) ? roomList : [];
+
+    console.log(`[broadcastRoomListUpdate] 브로드캐스트:`, {
+      gamePrefix,
+      type: typeof safeRoomList,
+      isArray: Array.isArray(safeRoomList),
+      length: safeRoomList.length,
+    });
+
+    io.emit(`${gamePrefix}:roomListUpdate`, safeRoomList);
+  } catch (error) {
+    console.error(`[${gamePrefix}] 방 목록 브로드캐스트 실패:`, error);
+
+    // ⭐ 에러 시에도 빈 배열 전송 (클라이언트 에러 방지)
+    io.emit(`${gamePrefix}:roomListUpdate`, []);
+  }
 }
 
 /**
