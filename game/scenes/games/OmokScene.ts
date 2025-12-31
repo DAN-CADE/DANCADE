@@ -12,6 +12,7 @@ import { BaseOnlineUIManager } from "@/game/managers/base/BaseOnlineUIManager";
 import { OMOK_CONFIG, OmokMode, type OmokMoveData } from "@/game/types/omok";
 import { OmokGameAbortedDialog } from "@/game/managers/games/omok/ui/OmokGameAbortedDialog";
 import { OmokAIManager } from "@/game/managers/games/omok/core/OmokAIManager";
+import { BaseRoomUIManager } from "@/game/managers/base/multiplayer";
 
 /**
  * OmokScene - 오목 게임 씬
@@ -53,6 +54,7 @@ export class OmokScene extends BaseGameScene {
     onlineUI: null as BaseOnlineUIManager | null,
     abortDialog: null as OmokGameAbortedDialog | null,
     ai: null as OmokAIManager | null,
+    roomUI: null as BaseRoomUIManager | null,
   };
 
   constructor() {
@@ -100,6 +102,9 @@ export class OmokScene extends BaseGameScene {
 
     // 게임 중단 다이얼로그
     this.managers.abortDialog = new OmokGameAbortedDialog(this);
+
+    // 이벤트 리스너 등록
+    this.setupEventListeners();
   }
 
   protected setupScene(): void {
@@ -195,6 +200,12 @@ export class OmokScene extends BaseGameScene {
    */
   private showModeSelection(): void {
     this.managers.ui!.showModeSelection((mode) => {
+      if (mode === OmokMode.NONE) {
+        // EXIT 처리
+        this.exitToMainScene();
+        return;
+      }
+
       if (mode === OmokMode.ONLINE) {
         this.showOnlineMenu();
       } else {
@@ -281,9 +292,8 @@ export class OmokScene extends BaseGameScene {
    */
   private showCreateRoomDialog(): void {
     this.managers.onlineUI!.hideOnlineMenu();
-    this.managers.room!.showCreateRoomPrompt(() => {
-      this.showOnlineMenu();
-    });
+
+    this.events.emit("roomUI:createRoomRequested");
   }
 
   /**
@@ -310,7 +320,6 @@ export class OmokScene extends BaseGameScene {
     // 게임 상태 초기화
     this.gameState.mode = OmokMode.NONE;
     this.gameState.isStarted = false;
-    // ❌ this.gameState.isAiThinking = false; ← 삭제!
     this.gameState.currentTurn = 1;
 
     // 씬 재시작 (자동으로 모드 선택 화면 표시)
@@ -621,6 +630,12 @@ export class OmokScene extends BaseGameScene {
 
     this.managers.board!.showMoveNumbers();
 
+    // ⭐ 온라인 모드일 때 서버에 게임 종료 알림
+    if (this.gameState.mode === OmokMode.ONLINE) {
+      console.log(`🏆 [OmokScene] 게임 종료 - 승자: ${winner}`);
+      this.managers.network!.notifyGameOver(winner);
+    }
+
     const winnerName = this.getWinnerName(winner);
 
     this.managers.ui!.showEndGameUI(
@@ -711,6 +726,17 @@ export class OmokScene extends BaseGameScene {
     this.managers.omok?.resetGame();
     this.managers.room?.cleanup();
     this.managers.ai?.cleanup();
+  }
+
+  /**
+   * 이벤트 리스너 설정
+   */
+  private setupEventListeners(): void {
+    // 방에서 나가기/뒤로가기 → 온라인 메뉴 표시
+    this.events.on("room:exit", () => {
+      console.log("[OmokScene] room:exit 이벤트 받음 - 온라인 메뉴 표시");
+      this.showOnlineMenu();
+    });
   }
 
   // =====================================================================
