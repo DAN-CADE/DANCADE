@@ -17,6 +17,7 @@ interface ChatFrameProps {
 export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [isFullHeight, setIsFullHeight] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -48,10 +49,24 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   };
 
   return (
-    <div className={styles.chatFrame}>
+    <div
+      className={styles.chatFrame}
+      style={{ height: isFullHeight ? "calc(100vh - 50px)" : "415px" }}
+    >
       {/* Header */}
       <div className={styles.header}>
         <span className={styles.title}>채팅</span>
+        <button
+          onClick={() => setIsFullHeight(!isFullHeight)}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          <img src="/assets/ui/chevrons-vertical.png" alt="expand" />
+        </button>
         {onClose && (
           <button className={styles.closeBtn} onClick={onClose}>
             ✕
