@@ -95,6 +95,8 @@ export class MainScene extends BaseGameScene {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      withCredentials: true,
+      transports: ["websocket"]      
     });
 
     // 연결 성공
