@@ -1,5 +1,9 @@
 // game/managers/base/BaseOnlineUIManager.ts
 import { ButtonFactory } from "@/utils/ButtonFactory";
+import {
+  BUTTON_SIZE,
+  ONLINE_MENU_LAYOUT,
+} from "@/game/types/common/ui.constants";
 
 interface OnlineMenuOptions {
   onQuickJoin: () => void;
@@ -9,6 +13,13 @@ interface OnlineMenuOptions {
   onMainMove: () => void;
   colors: { primary: number; secondary: number; panel: number };
 }
+
+type MenuButtonConfig = {
+  label: string;
+  onClick: () => void;
+  color: number;
+  textColor: string;
+};
 
 export class BaseOnlineUIManager {
   protected readonly UI_DEPTH = 500;
@@ -31,108 +42,117 @@ export class BaseOnlineUIManager {
 
     this.menuContainer = this.scene.add.container(0, 0).setDepth(this.UI_DEPTH);
 
-    // ✅ 버튼 개수에 따른 패널 높이 계산
-    const buttonCount = 5; // 빠른 매칭, 방 만들기, 방 목록, 뒤로가기, 메인으로
-    const buttonHeight = 70;
-    const buttonGap = 20;
-    const paddingTop = 60;
-    const paddingBottom = 60;
-    const panelHeight =
-      paddingTop +
-      buttonCount * buttonHeight +
-      (buttonCount - 1) * buttonGap +
-      paddingBottom;
+    // ------------------------------------------------------------
+    // 레이아웃 설정
+    // ------------------------------------------------------------
+    const layout = {
+      panelWidth: ONLINE_MENU_LAYOUT.PANEL_WIDTH,
+      buttonSize: BUTTON_SIZE.MEDIUM,
+      buttonGap: ONLINE_MENU_LAYOUT.BUTTON_GAP,
+      paddingTop: ONLINE_MENU_LAYOUT.PADDING_TOP,
+      paddingBottom: ONLINE_MENU_LAYOUT.PADDING_BOTTOM,
+    };
 
+    // ------------------------------------------------------------
+    // 온라인 메뉴 버튼
+    // ------------------------------------------------------------
+    const buttonConfigs: MenuButtonConfig[] = [
+      {
+        label: "빠른 매칭",
+        onClick: options.onQuickJoin,
+        color: options.colors.primary,
+        textColor: "#ffffff",
+      },
+      {
+        label: "방 만들기",
+        onClick: options.onCreateRoom,
+        color: options.colors.secondary,
+        textColor: "#ffffff",
+      },
+      {
+        label: "방 목록",
+        onClick: options.onShowList,
+        color: options.colors.secondary,
+        textColor: "#ffffff",
+      },
+      {
+        label: "뒤로가기",
+        onClick: options.onBack,
+        color: 0x6b7280,
+        textColor: "#ffffff",
+      },
+      {
+        label: "메인으로",
+        onClick: options.onMainMove,
+        color: 0xd9d9d9,
+        textColor: "#000000",
+      },
+    ];
+
+    // ------------------------------------------------------------
+    // 패널 높이값 계산
+    // ------------------------------------------------------------
+    const panelHeight =
+      layout.paddingTop +
+      buttonConfigs.length * layout.buttonSize.height +
+      (buttonConfigs.length - 1) * layout.buttonGap +
+      layout.paddingBottom;
+
+    // ------------------------------------------------------------
     // 배경 패널
+    // ------------------------------------------------------------
     const panel = this.scene.add
-      .rectangle(centerX, centerY, 450, panelHeight, options.colors.panel, 0.95)
+      .rectangle(
+        centerX,
+        centerY,
+        layout.panelWidth,
+        panelHeight,
+        options.colors.panel,
+        0.95
+      )
       .setStrokeStyle(4, 0xffffff, 0.1)
       .setDepth(this.UI_DEPTH - 1);
 
     this.menuContainer.add(panel);
 
-    // ✅ 버튼 위치 계산
+    // ------------------------------------------------------------
+    // Buttons
+    // ------------------------------------------------------------
     const firstButtonY =
-      centerY - panelHeight / 2 + paddingTop + buttonHeight / 2;
-    const spacing = buttonHeight + buttonGap;
+      centerY -
+      panelHeight / 2 +
+      layout.paddingTop +
+      layout.buttonSize.height / 2;
 
-    // ✅ 버튼 생성
-    const buttons = [
+    const spacing = layout.buttonSize.height + layout.buttonGap;
+
+    const buttons = buttonConfigs.map((config, index) =>
       ButtonFactory.createButton(
         this.scene,
         centerX,
-        firstButtonY,
-        "빠른 매칭",
-        options.onQuickJoin,
+        firstButtonY + spacing * index,
+        config.label,
+        config.onClick,
         {
-          width: 350,
-          height: buttonHeight,
-          color: options.colors.primary,
-          textColor: "#ffffff",
+          width: layout.buttonSize.width,
+          height: layout.buttonSize.height,
+          color: config.color,
+          textColor: config.textColor,
         }
-      ),
-      ButtonFactory.createButton(
-        this.scene,
-        centerX,
-        firstButtonY + spacing,
-        "방 만들기",
-        options.onCreateRoom,
-        {
-          width: 350,
-          height: buttonHeight,
-          color: options.colors.secondary,
-          textColor: "#ffffff",
-        }
-      ),
-      ButtonFactory.createButton(
-        this.scene,
-        centerX,
-        firstButtonY + spacing * 2,
-        "방 목록",
-        options.onShowList,
-        {
-          width: 350,
-          height: buttonHeight,
-          color: options.colors.secondary,
-          textColor: "#ffffff",
-        }
-      ),
-      ButtonFactory.createButton(
-        this.scene,
-        centerX,
-        firstButtonY + spacing * 3,
-        "뒤로가기",
-        options.onBack,
-        {
-          width: 350,
-          height: buttonHeight,
-          color: 0x6b7280,
-          textColor: "#ffffff",
-        }
-      ),
-      ButtonFactory.createButton(
-        this.scene,
-        centerX,
-        firstButtonY + spacing * 4,
-        "메인으로",
-        options.onMainMove,
-        {
-          width: 350,
-          height: buttonHeight,
-          color: 0xd9d9d9,
-          textColor: "#000000",
-        }
-      ),
-    ];
+      )
+    );
 
     this.menuContainer.add(buttons);
   }
 
+  // ============================================================
+  // 정리
+  // ============================================================
   public hideOnlineMenu(): void {
-    if (this.menuContainer) {
-      this.menuContainer.destroy();
-      this.menuContainer = null;
-    }
+    if (!this.menuContainer) return;
+
+    this.menuContainer.destroy(true);
+    this.menuContainer = null;
   }
 
   public cleanup(): void {
