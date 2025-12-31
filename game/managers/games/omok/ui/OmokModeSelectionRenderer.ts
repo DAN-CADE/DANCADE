@@ -1,35 +1,39 @@
 // game/managers/games/Omok/ui/OmokModeSelectionRenderer.ts
 import { ButtonFactory } from "@/utils/ButtonFactory";
 import { OMOK_CONFIG, OmokMode } from "@/game/types/omok";
+import {
+  BUTTON_SIZE,
+  COMMON_COLORS,
+  ONLINE_MENU_LAYOUT,
+} from "@/game/types/common/ui.constants";
 
-/**
- * 모드 버튼 정보
- */
 interface ModeButtonConfig {
   label: string;
   mode: OmokMode;
   color: number;
 }
 
-/**
- * OmokModeSelectionRenderer
- * - 모드 선택 UI 렌더링만 담당
- */
 export class OmokModeSelectionRenderer {
   private scene: Phaser.Scene;
   private container: Phaser.GameObjects.Container | null = null;
 
-  // 레이아웃 상수
-  private readonly LAYOUT = {
-    PANEL_WIDTH: 450,
-    PANEL_HEIGHT: 380,
-    PANEL_Y_OFFSET: -190,
-    FIRST_BUTTON_Y: -110,
-    BUTTON_SPACING: 110,
+  // ------------------------------------------------------------
+  // 레이아웃 설정
+  // ------------------------------------------------------------
+
+  private readonly layout = {
+    panelWidth: 450,
+    buttonSize: BUTTON_SIZE.MEDIUM,
+    buttonGap: 20,
+    paddingTop: 60,
+    paddingBottom: 60,
+    panelCornerRadius: 30,
   } as const;
 
-  // 버튼 설정
-  private readonly MODE_BUTTONS: ModeButtonConfig[] = [
+  // ------------------------------------------------------------
+  // Button configs
+  // ------------------------------------------------------------
+  private readonly modeButtons: ModeButtonConfig[] = [
     {
       label: "SINGLE (VS GPT)",
       mode: OmokMode.SINGLE,
@@ -45,6 +49,11 @@ export class OmokModeSelectionRenderer {
       mode: OmokMode.ONLINE,
       color: 0x686de0,
     },
+    {
+      label: "EXIT",
+      mode: OmokMode.NONE,
+      color: COMMON_COLORS.NEUTRAL,
+    },
   ];
 
   constructor(scene: Phaser.Scene) {
@@ -55,104 +64,105 @@ export class OmokModeSelectionRenderer {
   // Public API
   // =====================================================================
 
-  /**
-   * 모드 선택 UI 표시
-   * @param onSelect - 모드 선택 콜백
-   */
   public show(onSelect: (mode: OmokMode) => void): void {
     this.clear();
 
     const { width, height } = this.scene.scale;
-    const centerX = width / 2;
-    const centerY = height / 2;
 
-    // 컨테이너 생성
     this.container = this.scene.add
-      .container(centerX, centerY)
+      .container(width / 2, height / 2)
       .setDepth(OMOK_CONFIG.DEPTH.UI);
 
-    // 패널 생성
-    this.createPanel();
+    const panelHeight = this.calculatePanelHeight();
 
-    // 버튼 생성
-    this.createButtons(onSelect);
+    this.createPanel(panelHeight);
+    this.createButtons(panelHeight, onSelect);
   }
 
-  /**
-   * UI 제거
-   */
   public clear(): void {
-    this.container?.destroy();
+    this.container?.destroy(true);
     this.container = null;
   }
 
   // =====================================================================
-  // Private 렌더링 로직
+  // Private helpers
   // =====================================================================
 
-  /**
-   * 패널 생성
-   */
-  private createPanel(): void {
-    const { PANEL_WIDTH, PANEL_HEIGHT, PANEL_Y_OFFSET } = this.LAYOUT;
+  private calculatePanelHeight(): number {
+    const { buttonSize, buttonGap, paddingTop, paddingBottom } = this.layout;
+    const count = this.modeButtons.length;
+
+    return (
+      paddingTop +
+      count * buttonSize.height +
+      (count - 1) * buttonGap +
+      paddingBottom
+    );
+  }
+
+  private createPanel(panelHeight: number): void {
+    const { panelWidth, panelCornerRadius } = this.layout;
 
     const panel = this.scene.add.graphics();
+
     panel.fillStyle(OMOK_CONFIG.COLORS.PANEL, 0.95);
     panel.fillRoundedRect(
-      -PANEL_WIDTH / 2,
-      PANEL_Y_OFFSET,
-      PANEL_WIDTH,
-      PANEL_HEIGHT,
-      30
+      -panelWidth / 2,
+      -panelHeight / 2,
+      panelWidth,
+      panelHeight,
+      panelCornerRadius
     );
+
     panel.lineStyle(4, 0xffffff, 0.1);
     panel.strokeRoundedRect(
-      -PANEL_WIDTH / 2,
-      PANEL_Y_OFFSET,
-      PANEL_WIDTH,
-      PANEL_HEIGHT,
-      30
+      -panelWidth / 2,
+      -panelHeight / 2,
+      panelWidth,
+      panelHeight,
+      panelCornerRadius
     );
 
     this.container!.add(panel);
   }
 
-  /**
-   * 버튼들 생성
-   */
-  private createButtons(onSelect: (mode: OmokMode) => void): void {
-    const buttons = this.MODE_BUTTONS.map((config, index) =>
-      this.createButton(config, index, onSelect)
+  private createButtons(
+    panelHeight: number,
+    onSelect: (mode: OmokMode) => void
+  ): void {
+    const layout = {
+      panelWidth: ONLINE_MENU_LAYOUT.PANEL_WIDTH,
+      buttonSize: BUTTON_SIZE.MEDIUM,
+      buttonGap: ONLINE_MENU_LAYOUT.BUTTON_GAP,
+      paddingTop: ONLINE_MENU_LAYOUT.PADDING_TOP,
+      paddingBottom: ONLINE_MENU_LAYOUT.PADDING_BOTTOM,
+    };
+
+    const { buttonSize, buttonGap, paddingTop } = this.layout;
+
+    const firstButtonY = -panelHeight / 2 + paddingTop + buttonSize.height / 2;
+
+    const spacing = buttonSize.height + buttonGap;
+
+    const buttons = this.modeButtons.map((config, index) =>
+      ButtonFactory.createButton(
+        this.scene,
+        0,
+        firstButtonY + index * spacing,
+        config.label,
+        () => {
+          this.clear();
+          onSelect(config.mode);
+        },
+        {
+          width: buttonSize.width,
+          height: buttonSize.height,
+          color: config.color,
+          textColor: "#ffffff",
+        }
+      )
     );
 
     this.container!.add(buttons);
-  }
-
-  /**
-   * 개별 버튼 생성
-   */
-  private createButton(
-    config: ModeButtonConfig,
-    index: number,
-    onSelect: (mode: OmokMode) => void
-  ): Phaser.GameObjects.Container {
-    const { FIRST_BUTTON_Y, BUTTON_SPACING } = this.LAYOUT;
-
-    return ButtonFactory.createButton(
-      this.scene,
-      0,
-      FIRST_BUTTON_Y + index * BUTTON_SPACING,
-      config.label,
-      () => {
-        this.clear();
-        onSelect(config.mode);
-      },
-      {
-        width: OMOK_CONFIG.BUTTON_SIZE.LARGE.width,
-        height: OMOK_CONFIG.BUTTON_SIZE.LARGE.height,
-        color: config.color,
-        textColor: "#ffffff",
-      }
-    );
   }
 }
