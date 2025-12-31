@@ -1,3 +1,5 @@
+// game/managers/games/omok/network/OmokNetworkManager.ts
+
 import { BaseGameNetworkManager } from "@/game/managers/base/multiplayer/game/BaseGameNetworkManager";
 import type { OmokMoveData } from "@/game/types/omok";
 
