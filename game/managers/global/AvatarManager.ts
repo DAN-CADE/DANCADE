@@ -114,7 +114,7 @@ export class AvatarManager extends BaseGameManager<AvatarManagerState> {
     );
 
     // this.createAvatar(x, y, null, config.name, true)
-    this.avatarContainer.setDefaultPart("female");
+    this.avatarContainer.setDefaultPart(config.defaultSprite);
 
     return this;
   }

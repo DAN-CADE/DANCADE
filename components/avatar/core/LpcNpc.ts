@@ -1,7 +1,8 @@
 import { AvatarManager } from "@/game/managers/global/AvatarManager";
 import { MainScene } from "@/game/scenes/core/MainScene";
+import { getEventGame } from "@/lib/supabase/event"
 
-export type NpcType = 'MERCHANT' | 'VILLAGER' | 'GAMBLER';
+export type NpcType = 'MERCHANT' | 'VILLAGER' | 'EVENT';
 
 interface NpcData {
   name: string;
@@ -25,12 +26,16 @@ export const NPC_CONFIG: Record<NpcType, NpcData> = {
       scene.uiManager.showSpeechBubble(npc, "오늘 날씨가 참 좋네요.", 2000);
     }
   },
-  GAMBLER: {
-    name: "도박사",
+  EVENT: {
+    name: "이벤트 NPC",
     defaultSprite: "male",
-    interaction: (scene, npc) => {
-      scene.uiManager.showGameUI(npc);
-      scene.uiManager.showNotice("이벤트 발생")
+    interaction: async (scene, npc) => {
+      const { data } = await getEventGame();
+      if (data) {
+        scene.uiManager.showGameUI(npc);
+      } else {
+        scene.uiManager.showSpeechBubble(npc, "진행중인 이벤트가 없습니다.", 2000);
+      }
     }
   }
 };

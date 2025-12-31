@@ -9,6 +9,7 @@ import LpcCharacter from "@/components/avatar/core/LpcCharacter";
 import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 import { UIManager } from "@/game/managers/global/UIManager";
+import { createEventGame } from "@/lib/supabase/event"
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -94,6 +95,8 @@ export class MainScene extends BaseGameScene {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      withCredentials: true,
+      transports: ["websocket"]      
     });
 
     // 연결 성공
@@ -133,11 +136,27 @@ export class MainScene extends BaseGameScene {
       }
     );
 
+
+    
+    this.socket.on("createEventGame", (data:any)=> {
+      createEventGame(data);
+      this.uiManager.showNotice(data.content);
+      
+    })
+
+    this.socket.on("createNotice", (data:any)=> {
+      this.uiManager.showNotice(data.content);
+    })
+
     // 연결 끊김
     this.socket.on("disconnect", () => {
       console.log("❌ Socket.io 연결 끊김");
     });
+
+    
   }
+
+  
 
   // 게임에 입장
   private joinGame(): void {
@@ -239,7 +258,7 @@ export class MainScene extends BaseGameScene {
     // NPC 추가 및 상호작용 적용
     const merchant = new AvatarManager(this).createNPC(1545, 241, 'MERCHANT');
     const villager = new AvatarManager(this).createNPC(1616, 592, 'VILLAGER');
-    const gambler  = new AvatarManager(this).createNPC(1348, 592, 'GAMBLER');
+    const gambler  = new AvatarManager(this).createNPC(1348, 592, 'EVENT');
 
     this.npcManagers.push(merchant, villager, gambler);
 
@@ -250,6 +269,14 @@ export class MainScene extends BaseGameScene {
         this.player.tryInteract(this.npcManagers);
       });
     }
+
+    this.events.on("shutdown", () => {
+      this.cleanupSocket();
+    });
+
+    this.events.on("destroy", () => {
+      this.cleanupSocket();
+    });
   }
 
   update(): void {
@@ -461,7 +488,16 @@ export class MainScene extends BaseGameScene {
     this.onlinePlayers.clear();
   }
 
+  private cleanupSocket(): void {
+  if (this.socket) {
+    console.log("Cleanup: Socket.io 연결 해제");
+    this.socket.disconnect(); // 연결 종료
+    this.socket.removeAllListeners(); // 모든 이벤트 리스너 제거
+  }
+}
+
   // 게임 종료 처리 구현 필수.
   protected handleGameEnd(): void {}
   protected restartGame(): void {}
+  
 }
