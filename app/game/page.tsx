@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Inventory from "@/components/inventory/Inventory";
+import ChatFrame from "@/components/chat/ChatFrame";
 
 const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), {
   ssr: false,
@@ -48,13 +49,17 @@ export default function GamePage() {
             환영합니다, <strong>{nickname}</strong>님! 🎮
           </div>
         )}
-
         <div className="flex justify-center mb-8">
           <PhaserGame />
           {/* 인벤토리 컴포넌트 추가*/}
           <Inventory />
         </div>
       </main>
+
+      {/* 채팅 오버레이 */}
+      <div className="fixed bottom-8 left-8 z-50">
+        <ChatFrame />
+      </div>
     </div>
   );
 }

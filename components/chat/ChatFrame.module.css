@@ -1,0 +1,483 @@
+/* ChatFrame.module.css */
+
+.chatFrame {
+  width: 500px;
+  height: 415px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(26, 26, 46, 0.7);
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  font-family: "NeoDunggeunmo", "Arial", sans-serif;
+  color: white;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+  padding: 0 15px;
+  background: rgba(26, 26, 46, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px 5px 0 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.closeBtn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.messagesContainer {
+  flex: 1;
+  height: 300px;
+  overflow-y: auto;
+  padding: 15px;
+  background: rgba(26, 26, 46, 0.7);
+  display: flex;
+  flex-direction: column;
+}
+
+.messagesContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messagesContainer::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  animation: wave 2s ease-in-out infinite;
+}
+
+.emptyIcon:hover {
+  transform: scale(1.2);
+  animation: none;
+}
+
+.emptyText {
+  font-size: 14px;
+  text-align: center;
+}
+
+.emojiContainer {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-8px);
+  }
+  75% {
+    transform: translateY(8px);
+  }
+}
+
+/* Loading State */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid rgba(100, 150, 255, 0.8);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  font-size: 14px;
+}
+
+/* Emoji Button */
+.emojiBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.emojiBtn:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.emojiBtn:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.emojiBtn:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.emojiBtn:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+.emojiBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.15);
+  animation: none;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* ========================================
+   메시지 스타일
+======================================== */
+
+/* 상대방 메시지 - 왼쪽 (핑크) */
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: #cd9eb2;
+  border-radius: 12px 12px 12px 2px;
+  max-width: 70%;
+  word-wrap: break-word;
+  word-break: break-word;
+  position: relative;
+  align-self: flex-start;
+}
+
+/* 말풍선 꼬리 - 왼쪽 */
+.message::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 8px 10px 0;
+  border-color: transparent #cd9eb2 transparent transparent;
+}
+
+/* 내 메시지 - 오른쪽 (청록색 + 그림자) */
+.messageOwn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: #7ec8c4;
+  border-radius: 12px 12px 2px 12px;
+  max-width: 70%;
+  word-wrap: break-word;
+  word-break: break-word;
+  position: relative;
+  align-self: flex-end;
+  box-shadow: 0 2px 6px rgba(126, 200, 196, 0.4);
+}
+
+/* 말풍선 꼬리 - 오른쪽 */
+.messageOwn::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: -8px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 10px 8px;
+  border-color: transparent transparent transparent #7ec8c4;
+}
+
+/* 시스템 메시지 - 중앙 */
+.messageSystem {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 8px auto;
+  padding: 6px 12px;
+  background: rgba(255, 215, 0, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  align-self: center;
+  max-width: 80%;
+}
+
+.messageSystem::before {
+  display: none;
+}
+
+.messageSystem .author {
+  display: none;
+}
+
+.messageSystem .content {
+  font-size: 12px;
+  color: #ffd700;
+  text-align: center;
+}
+
+/* 게임 공지 메시지 */
+.messageGame {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 10px 14px;
+  background: rgba(135, 206, 235, 0.2);
+  border-radius: 8px;
+  border-left: 3px solid #87ceeb;
+  align-self: stretch;
+}
+
+.messageGame::before {
+  display: none;
+}
+
+.messageGame .content {
+  color: #87ceeb;
+}
+
+/* 메시지 텍스트 스타일 */
+.author {
+  font-size: 11px;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.5px;
+}
+
+.content {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1a1a2e;
+}
+
+.timestamp {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.4);
+  align-self: flex-end;
+  margin-top: 2px;
+}
+
+/* ========================================
+   입력 영역
+======================================== */
+
+.inputContainer {
+  height: 50px;
+  padding: 8px 15px;
+  background: rgba(26, 26, 46, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 5px 5px;
+  display: flex;
+  align-items: center;
+}
+
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: rgba(100, 100, 100, 0.5);
+  border: none;
+  border-radius: 5px;
+  padding: 0 12px;
+  transition: background-color 0.2s;
+  height: 34px;
+}
+
+.inputWrapper:focus-within {
+  background: rgba(120, 120, 120, 0.6);
+}
+
+.input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: white;
+  padding: 0 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sendBtn {
+  background: linear-gradient(
+    135deg,
+    rgba(100, 150, 255, 0.7) 0%,
+    rgba(80, 120, 255, 0.7) 100%
+  );
+  border: none;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.sendBtn:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(100, 150, 255, 0.8) 0%,
+    rgba(80, 120, 255, 0.8) 100%
+  );
+}
+
+.sendBtn:active {
+  transform: scale(0.98);
+}
+
+.sendBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   에러 배너
+======================================== */
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 12px;
+  background: rgba(220, 80, 80, 0.2);
+  border-top: 1px solid rgba(220, 80, 80, 0.5);
+  color: rgba(255, 100, 100, 0.9);
+  font-size: 12px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.errorClose {
+  background: none;
+  border: none;
+  color: rgba(255, 100, 100, 0.9);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 8px;
+  transition: opacity 0.2s;
+}
+
+.errorClose:hover {
+  opacity: 0.7;
+}
+
+/* ========================================
+   반응형
+======================================== */
+
+@media (max-width: 600px) {
+  .chatFrame {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+}
