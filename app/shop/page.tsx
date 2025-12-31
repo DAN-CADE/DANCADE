@@ -143,8 +143,11 @@ const handlePreviewItem = (product: Product) => {
       <div className="absolute top-4 right-6 z-50">
         <UserPointBar />
       </div>
+
+
+
+
       <TransparentFrame>
-        
         <div className="flex h-full gap-6">
 
             {/* 👈 STEP 2: 캐릭터 프리뷰 */}

@@ -32,7 +32,8 @@ const AvatarPreview: React.FC<AvatarPreviewProps> = ({
       width: 400,
       height: 400,
       parent: containerRef.current,
-      backgroundColor: "#2d2d2d",
+      // backgroundColor: "#2d2d2d",
+       transparent: true,
       render: { pixelArt: true, roundPixels: true },
       physics: {
         default: "arcade",
