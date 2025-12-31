@@ -4,6 +4,7 @@ const {
   validateRoomExists,
   validateIsHost,
 } = require("../../base/utils/Validation");
+const GameOverHandler = require("../../base/utils/GameOverHandler");
 
 /**
  * 오목 게임 시작/종료 관리
@@ -19,6 +20,7 @@ class OmokGameManager {
     this.socket = socket;
     this.rooms = rooms;
     this.gamePrefix = "omok";
+    this.gameOverHandler = new GameOverHandler(io, rooms, "omok");
   }
 
   /**
@@ -148,19 +150,11 @@ class OmokGameManager {
    * @param {string} data.roomId - 방 ID
    * @param {number} data.winner - 승자 (1: 흑, 2: 백)
    */
-  handleGameOver(data) {
+  async handleGameOver(data) {
     const { roomId, winner } = data;
 
-    const room = this.rooms.get(roomId);
-    if (room) {
-      room.status = "finished";
-      this.io.to(roomId).emit("omok:gameOver", { winner, roomData: room });
-
-      // 빠른 매칭 방은 삭제
-      if (roomId === "omok_quick_match") {
-        this.rooms.delete(roomId);
-      }
-    }
+    // 공통 핸들러로 위임
+    await this.gameOverHandler.handleGameOver(roomId, winner);
   }
 }
 
