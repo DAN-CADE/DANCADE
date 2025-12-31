@@ -27,16 +27,21 @@ export default function ShopPage(){
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
 
+  const SHOP_CATEGORY_TO_LPC_PART: Record< ShopCategory, keyof CharacterState["parts"] | null > = {
+  all: null,
+  hair: "hair",
+  top: "torso",
+  bottom: "legs",
+  feet: "feet",
+  };
 
-  console.log(gender,"성별", previewCharacter)
 
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
 
-useEffect(() => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return;
-
-  setPreviewCharacter(JSON.parse(stored));
-}, []);
+    setPreviewCharacter(JSON.parse(stored));
+  }, []);
 
 
   if(isLoading || ownedLoading) return <div>로딩중...</div>
@@ -57,14 +62,14 @@ useEffect(() => {
   };
 
 
-    const handleSelectProduct = (product: Product) => {
-      const user = requireUser();
-      if (!user) return;
+  const handleSelectProduct = (product: Product) => {
+    const user = requireUser();
+    if (!user) return;
 
-      handlePreviewItem(product)
-      setSelectedProduct(product);
-      setIsModalOpen(true);
-    };
+    handlePreviewItem(product)
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
 
   const handleModal = () => {
     setIsModalOpen(false);
@@ -75,53 +80,58 @@ useEffect(() => {
  const filteredProducts = activeCategory === "all" ? productsWithOwnership
     : productsWithOwnership.filter( (product) => product.category === activeCategory);
 
-    
-const handlePurchase = async (product: Product) => {
-  try {
-    const res = await fetch("/api/purchase", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId: product.id, userId: user!.id,    }),
-    });
+      
+  const handlePurchase = async (product: Product) => {
+    try {
+      const res = await fetch("/api/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: product.id, userId: user!.id,    }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      // ❌ 포인트 부족, 이미 보유 등
-      alert(data.message ?? "구매에 실패했습니다");
-      return;
+      if (!res.ok) {
+        // ❌ 포인트 부족, 이미 보유 등
+        alert(data.message ?? "구매에 실패했습니다");
+        return;
+      }
+
+      // ⭕ 구매 성공
+      alert("구매 완료!");
+      await refetch();
+    } catch (error) {
+      console.error("purchase error:", error);
+      alert("구매 중 오류가 발생했습니다");
+    } finally {
+      // ✅ 구매 버튼이 눌렸고, 로직이 끝난 뒤에만 실행됨
+      setIsModalOpen(false);
+      setSelectedProduct(null);
     }
-
-    // ⭕ 구매 성공
-    alert("구매 완료!");
-     await refetch();
-  } catch (error) {
-    console.error("purchase error:", error);
-    alert("구매 중 오류가 발생했습니다");
-  } finally {
-    // ✅ 구매 버튼이 눌렸고, 로직이 끝난 뒤에만 실행됨
-    setIsModalOpen(false);
-    setSelectedProduct(null);
-  }
-};
+  };
 
 const handlePreviewItem = (product: Product) => {
-  // if (!product.style_key) return; // style_key 없는 상품이면 프리뷰 불가
+  if (!product.style_key) return;
+  if (!previewCharacter) return;
 
-  // setPreviewCharacter((prev) => {
-  //   if (!prev) return prev;
+  const partKey = SHOP_CATEGORY_TO_LPC_PART[product.category as ShopCategory];
+  if (!partKey) return;
 
-  //   return {
-  //     ...prev,
-  //     parts: {
-  //       ...prev.parts,
-  //       [product.category]: {
-  //         ...prev.parts[product.category],
-  //         styleId: product.style_key, // ✅ 여기만 바뀜
-  //       },
-  //     },
-  //   };
-  // });
+  setPreviewCharacter((prev) => {
+    if (!prev) return prev;
+
+    return {
+      ...prev,
+      parts: {
+        ...prev.parts,
+        [partKey]: {
+          ...prev.parts[partKey],
+          styleId: product.style_key, // ✅ style만 교체
+          // ❗ color / palette 그대로 유지
+        },
+      },
+    };
+  });
 };
 
 
@@ -147,7 +157,7 @@ const handlePreviewItem = (product: Product) => {
 
 
           {/* 사이드바 영역 */}
-          <aside className="side-content w-[320px]">
+          <aside className="side-content w-[150px]">
             <CategoryTabs
               activeCategory={activeCategory}
               onChange={setActiveCategory}
