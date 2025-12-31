@@ -30,13 +30,13 @@ export default function InventoryItemCard({
         }
       `}
     >
-      {/* <p>{name}</p> */}
-      <img
+      <p>{name}</p>
+      {/* <img
         src={imageUrl}
         alt={name}
         className="w-12 h-12 object-contain"
         draggable={false}
-      />
+      /> */}
     </div>
   );
 }

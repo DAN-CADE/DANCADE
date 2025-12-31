@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { fetchUserInventory } from "@/lib/supabase/inventory";
 
-export async function GET() {
+export async function POST(req : Request) {
   try {
-    // 지금은 가짜 유저 UUID를 고정
-    const DEV_USER_ID = "cab8399d-2411-4845-acce-dca3ba6093a5";
+    const body = await req.json()
+    const {userId} = body
 
-    const inventory = await fetchUserInventory(DEV_USER_ID);
+    const inventory = await fetchUserInventory(userId);
 
     return NextResponse.json(inventory, { status: 200 });
   } catch (error) {

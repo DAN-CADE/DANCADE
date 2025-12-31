@@ -2,50 +2,41 @@
 
 import { useEffect, useState } from "react";
 import InventoryItemCard from "@/components/inventory/InventoryItemCard";
+import { useInventoryList } from "@/hooks/inventory/useInventoryList";
+import { useAuth } from "@/hooks/useAuth";
 
 const CATEGORIES = ["Hair", "Top", "Bottom", "Shoes"] as const;
 type Category = (typeof CATEGORIES)[number];
 
-type InventoryItem = {
-  userItemId: string;
-  itemId: string;
-  category: string;
-  name: string;
-  imageUrl: string;
-  styleKey: string | null;
-  isEquipped: boolean;
-  purchasedAt: string | null;
-};
-
 export default function Inventory() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<Category>("Hair");
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  // 인벤토리 열기/닫기 이벤트
+  const { getCurrentUser } = useAuth();
+  const user = getCurrentUser();
+  const userId = user?.id ?? null;
+  const {
+    items,
+    loading,
+    fetchInventory,
+  } = useInventoryList(userId);
+
+  // 인벤토리 열기 / 닫기 이벤트
   useEffect(() => {
     const handleToggle = () => setIsOpen((prev) => !prev);
     window.addEventListener("inventory-toggle", handleToggle);
     return () => window.removeEventListener("inventory-toggle", handleToggle);
   }, []);
 
-  // 인벤토리 열릴 때 데이터 조회
+  // 인벤토리 열릴 때 + 로그인 상태일 때만 조회
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen && user) {
+      fetchInventory();
+    }
+  }, [isOpen,userId, fetchInventory]);
 
-    const fetchInventory = async () => {
-      setLoading(true);
-      const res = await fetch("/api/inventory");
-      const data = await res.json();
-      setItems(data);
-      setLoading(false);
-    };
-
-    fetchInventory();
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  // 로그인 안 했거나 닫혀 있으면 렌더 X
+  if (!isOpen || !user) return null;
 
   const filtered = items.filter(
     (it) => it.category === activeCategory.toLowerCase()
