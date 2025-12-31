@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { socket } from "@/lib/socket";
 import styles from "./ChatFrame.module.css";
 
+type MessageType = "chat" | "system" | "game" | "invite";
+
 interface Message {
-  id: string;
-  author: string;
-  content: string;
-  timestamp: Date;
+  id?: string;
+  username: string; // author → username으로 변경
+  message: string; // content → message로 변경
+  timestamp: number; // Date → number로 변경
+  messageType?: MessageType; // 메시지 타입 추가
 }
 
 interface ChatFrameProps {
@@ -18,6 +22,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isFullHeight, setIsFullHeight] = useState(false);
+  const [username, setUsername] = useState("익명"); // 추가
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -28,15 +33,39 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
     scrollToBottom();
   }, [messages]);
 
+  // ✅ Socket 로직 추가
+  useEffect(() => {
+    // localStorage에서 유저명 가져오기
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const { nickname } = JSON.parse(userData);
+        setUsername(nickname || "익명");
+      } catch (error) {
+        console.error("사용자 데이터 파싱 오류:", error);
+        setUsername("익명");
+      }
+    }
+
+    // 채팅 메시지 수신
+    socket.on("lobby:chatMessage", (data: Message) => {
+      setMessages((prev) => [...prev, data]);
+    });
+
+    // 클린업
+    return () => {
+      socket.off("lobby:chatMessage");
+    };
+  }, []);
+
   const handleSendMessage = () => {
     if (inputValue.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        author: "Player",
-        content: inputValue,
-        timestamp: new Date(),
-      };
-      setMessages([...messages, newMessage]);
+      // ✅ Socket으로 전송
+      socket.emit("lobby:chat", {
+        username,
+        message: inputValue,
+      });
+
       setInputValue("");
     }
   };
@@ -46,6 +75,14 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // ✅ 인사 메시지도 socket으로 전송
+  const handleWaveClick = () => {
+    socket.emit("lobby:chat", {
+      username,
+      message: "👋",
+    });
   };
 
   return (
@@ -73,23 +110,12 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
           </button>
         )}
       </div>
-
       {/* Messages Container */}
+
       <div className={styles.messagesContainer}>
         {messages.length === 0 ? (
           <div className={styles.emptyState}>
-            <div
-              className={styles.emptyIcon}
-              onClick={() => {
-                const newMessage: Message = {
-                  id: Date.now().toString(),
-                  author: "Player",
-                  content: "👋",
-                  timestamp: new Date(),
-                };
-                setMessages([...messages, newMessage]);
-              }}
-            >
+            <div className={styles.emptyIcon} onClick={handleWaveClick}>
               👋
             </div>
             <div className={styles.emptyText}>
@@ -98,19 +124,36 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
             <div className={styles.emojiContainer}></div>
           </div>
         ) : (
-          messages.map((msg) => (
-            <div key={msg.id} className={styles.message}>
-              <span className={styles.author}>{msg.author}</span>
-              <span className={styles.content}>{msg.content}</span>
-              <span className={styles.timestamp}>
-                {msg.timestamp.toLocaleTimeString()}
-              </span>
-            </div>
-          ))
+          messages.map((msg, idx) => {
+            // 메시지 타입에 따른 className 결정
+            let messageClass = styles.message; // 기본: 상대방 메시지
+
+            if (msg.messageType === "system") {
+              messageClass = styles.messageSystem;
+            } else if (msg.messageType === "game") {
+              messageClass = styles.messageGame;
+            } else if (msg.username === username) {
+              messageClass = styles.messageOwn; // 내 메시지
+            }
+
+            return (
+              <div key={msg.id || idx} className={messageClass}>
+                {msg.messageType !== "system" && (
+                  <span className={styles.author}>{msg.username}</span>
+                )}
+                <span className={styles.content}>{msg.message}</span>
+                <span className={styles.timestamp}>
+                  {new Date(msg.timestamp).toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
-
       {/* Input Area */}
       <div className={styles.inputContainer}>
         <div className={styles.inputWrapper}>

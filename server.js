@@ -38,6 +38,17 @@ io.on("connection", (socket) => {
   });
   omokHandler(io, socket, rooms);
 
+  // 채팅 이벤트
+  socket.on("lobby:chat", (data) => {
+    const { username, message } = data;
+
+    // 로비 전체에 브로드캐스트
+    io.emit("lobby:chatMessage", {
+      username,
+      message,
+      timestamp: Date.now(),
+    });
+  });
   // ✅ 미래 확장: 핑퐁 (예시)
   // const pingPongDisconnectHandler = baseGameHandler(io, socket, rooms, "pingpong", {
   //   maxPlayers: 2,
