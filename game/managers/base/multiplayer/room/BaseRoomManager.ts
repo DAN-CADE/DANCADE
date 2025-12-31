@@ -1,61 +1,47 @@
 // game/managers/base/multiplayer/room/BaseRoomManager.ts
 
 import { Socket } from "socket.io-client";
+import { getCurrentUser } from "@/lib/utils/auth";
 import { BaseRoomNetworkManager } from "@/game/managers/base/multiplayer/room/BaseRoomNetworkManager";
 import { BaseRoomUIManager } from "@/game/managers/base/multiplayer/room/BaseRoomUIManager";
+import type { RoomData } from "@/game/types/multiplayer/room.types";
 
 /**
  * BaseRoomManager
- * - 네트워크와 UI 매니저를 조합하는 조율자
- * - 팩토리 메서드 패턴: 게임별로 적절한 매니저 생성
- * - 오목의 OmokRoomManager를 기반으로 일반화
+ * - 모든 게임의 방 시스템 통합 관리
+ * - Network + UI 매니저 조합
+ * - 게임별 차이는 팩토리 메서드로 해결
  */
 export abstract class BaseRoomManager {
   protected scene: Phaser.Scene;
+  protected socket: Socket;
   protected networkManager: BaseRoomNetworkManager;
   protected uiManager: BaseRoomUIManager;
-
-  // 외부 콜백들
-  protected onGameStartCallback?: () => void;
-  protected onErrorCallback?: (message: string) => void;
-  protected onGameAbortedCallback?: (
+  private onGameStartCallback?: () => void;
+  private onGameAbortedCallback?: (
     reason: string,
     leavingPlayer: string
   ) => void;
+  private onErrorCallback?: (message: string) => void;
 
   constructor(scene: Phaser.Scene, socket: Socket) {
     this.scene = scene;
-
-    // 게임별 매니저 생성 (팩토리 패턴)
+    this.socket = socket;
     this.networkManager = this.createNetworkManager(socket);
     this.uiManager = this.createUIManager(scene, socket);
-
-    // 바인딩 설정
-    this.setupNetworkToUIBindings();
-    this.setupUIToNetworkBindings();
+    this.setupCallbacks();
+    this.setupUIEventHandlers();
   }
 
-  // =====================================================================
-  // 팩토리 메서드 (게임별 구현 필요)
-  // =====================================================================
-
   /**
-   * 게임별 네트워크 매니저 생성
-   * @example
-   * protected createNetworkManager(socket: Socket): BaseRoomNetworkManager {
-   *   return new BaseRoomNetworkManager(socket, "omok");
-   * }
+   * 팩토리 메서드: 네트워크 매니저 생성 (게임별 구현)
    */
   protected abstract createNetworkManager(
     socket: Socket
   ): BaseRoomNetworkManager;
 
   /**
-   * 게임별 UI 매니저 생성
-   * @example
-   * protected createUIManager(scene: Phaser.Scene, socket: Socket): BaseRoomUIManager {
-   *   return new OmokRoomUIManager(scene, socket);
-   * }
+   * 팩토리 메서드: UI 매니저 생성 (게임별 구현)
    */
   protected abstract createUIManager(
     scene: Phaser.Scene,
@@ -63,80 +49,149 @@ export abstract class BaseRoomManager {
   ): BaseRoomUIManager;
 
   // =====================================================================
-  // 네트워크 → UI 바인딩 (완전 공통)
+  // 콜백 설정
   // =====================================================================
 
-  private setupNetworkToUIBindings(): void {
-    // 방 목록 업데이트 시 UI 갱신
-    this.networkManager.setOnRoomListUpdate((rooms) => {
-      if (this.uiManager.getCurrentScreen() === "list") {
-        this.uiManager.renderRoomList(rooms);
+  private setupCallbacks(): void {
+    // 방 목록 업데이트 시 자동 렌더링
+    this.networkManager.setOnRoomListUpdate((rooms: RoomData[]) => {
+      const currentScreen = this.uiManager.getCurrentScreen();
+
+      // 대기실이나 메뉴 화면에서는 무시
+      if (currentScreen === "waiting" || currentScreen === "menu") {
+        return;
       }
+
+      this.uiManager.renderRoomList(rooms);
     });
 
-    // 방 생성 성공 시 대기실 표시
-    this.networkManager.setOnRoomCreated((roomId, roomData) => {
+    // 방 생성 성공 → 대기실로 이동
+    this.networkManager.setOnRoomCreated(
+      (roomId: string, roomData: RoomData) => {
+        this.uiManager.renderWaitingRoom(roomData);
+      }
+    );
+
+    // 방 입장 성공 → 대기실로 이동
+    this.networkManager.setOnJoinSuccess((roomData: RoomData) => {
       this.uiManager.renderWaitingRoom(roomData);
     });
 
-    // 방 입장 성공 시 대기실 표시
-    this.networkManager.setOnJoinSuccess((roomData) => {
-      this.uiManager.renderWaitingRoom(roomData);
-    });
-
-    // 방 입장 실패 시 알림
-    this.networkManager.setOnJoinError((message) => {
+    // 방 입장 실패
+    this.networkManager.setOnJoinError((message: string) => {
       alert(message);
+      this.requestRoomList(); // 방 목록 다시 불러오기
     });
 
-    // 플레이어 입장/준비 시 대기실 갱신
-    this.networkManager.setOnPlayerJoined((roomData) => {
+    // 플레이어 입장/퇴장/준비 → 대기실 갱신
+    this.networkManager.setOnPlayerJoined((roomData: RoomData) => {
       this.uiManager.renderWaitingRoom(roomData);
     });
 
-    this.networkManager.setOnPlayerReady((roomData) => {
+    this.networkManager.setOnPlayerLeft((roomData: RoomData) => {
       this.uiManager.renderWaitingRoom(roomData);
     });
 
-    // 플레이어 퇴장 시 처리
-    this.networkManager.setOnPlayerLeft((roomData, username) => {
-      this.onErrorCallback?.(`${username}님이 방을 나갔습니다.`);
-      this.uiManager.renderWaitingRoom(roomData);
-    });
-
-    // 방장 변경 시 처리
-    this.networkManager.setOnHostChanged((roomData) => {
-      this.onErrorCallback?.("방장이 나가서 새로운 방장이 지정되었습니다.");
-      this.uiManager.renderWaitingRoom(roomData);
-    });
-
-    // 게임 시작 시 UI 정리
-    this.networkManager.setOnGameStart(() => {
+    // 내가 방을 나감 → 온라인 메뉴로 복귀
+    this.networkManager.setOnLeftRoom(() => {
       this.uiManager.clearUI();
+      // ⭐ room:exit 이벤트 발생 (온라인 메뉴 표시)
+      this.scene.events.emit("room:exit");
+    });
+
+    this.networkManager.setOnPlayerReady((roomData: RoomData) => {
+      this.uiManager.renderWaitingRoom(roomData);
+    });
+
+    // 방장 변경 → 대기실 갱신
+    this.networkManager.setOnHostChanged((roomData: RoomData) => {
+      this.uiManager.renderWaitingRoom(roomData);
+    });
+
+    // 게임 시작
+    this.networkManager.setOnGameStart(() => {
       this.onGameStartCallback?.();
     });
 
-    // 게임 중단 시 처리
-    this.networkManager.setOnGameAborted((reason, leavingPlayer) => {
-      this.onGameAbortedCallback?.(reason, leavingPlayer);
-    });
+    // 게임 중단
+    this.networkManager.setOnGameAborted(
+      (reason: string, leavingPlayer: string) => {
+        this.onGameAbortedCallback?.(reason, leavingPlayer);
+      }
+    );
 
-    // 에러 처리
-    this.networkManager.setOnError((message) => {
+    // 에러
+    this.networkManager.setOnError((message: string) => {
+      console.error("에러:", message);
       this.onErrorCallback?.(message);
     });
   }
 
   // =====================================================================
-  // UI → 네트워크 바인딩 (완전 공통)
+  // UI 이벤트 핸들러
   // =====================================================================
 
-  private setupUIToNetworkBindings(): void {
-    // UI 이벤트 리스너 등록
-    this.scene.events.on("roomUI:joinRoomRequested", (roomId: string) => {
-      const username = this.getUsername();
-      this.networkManager.joinRoom(roomId, username);
+  private setupUIEventHandlers(): void {
+    // 방 생성 요청
+    this.scene.events.on("roomUI:createRoomRequested", async () => {
+      const input = this.uiManager.showCreateRoomPrompt();
+      if (!input) return;
+
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("유저 정보를 불러올 수 없습니다.");
+        return;
+      }
+
+      // ⭐ uuid 사용 (없으면 userId로 대체)
+      const userUUID = user.uuid || user.userId;
+
+      console.log("[BaseRoomManager] 방 생성 데이터:", {
+        userId: user.userId,
+        nickname: user.nickname,
+        uuid: userUUID,
+      });
+
+      this.networkManager.createRoom(
+        input.roomName,
+        user.userId, // "qwer1"
+        user.nickname, // "qwer1"
+        userUUID, // ⭐ UUID 또는 userId
+        input.isPrivate,
+        input.password
+      );
     });
+
+    // 방 입장 요청
+    this.scene.events.on(
+      "roomUI:joinRoomRequested",
+      async (roomId: string, isPrivate: boolean) => {
+        let password: string | undefined;
+
+        if (isPrivate) {
+          const input = this.uiManager.showJoinPasswordPrompt();
+          if (!input) return;
+          password = input;
+        }
+
+        const user = await getCurrentUser();
+        if (!user) {
+          alert("유저 정보를 불러올 수 없습니다.");
+          return;
+        }
+
+        // ⭐ uuid 사용 (없으면 userId로 대체)
+        const userUUID = user.uuid || user.userId;
+
+        this.networkManager.joinRoom(
+          roomId,
+          user.userId, // "qwer1"
+          user.nickname, // "qwer1"
+          userUUID, // ⭐ UUID 또는 userId
+          password
+        );
+      }
+    );
 
     this.scene.events.on("roomUI:toggleReadyRequested", () => {
       this.networkManager.toggleReady();
@@ -148,49 +203,39 @@ export abstract class BaseRoomManager {
 
     this.scene.events.on("roomUI:leaveRoomRequested", () => {
       this.networkManager.leaveRoom();
-      this.scene.scene.restart();
+      this.requestRoomList();
     });
 
     this.scene.events.on("roomUI:backRequested", () => {
-      this.scene.scene.restart();
+      this.uiManager.clearUI();
+      this.scene.events.emit("room:exit");
     });
   }
 
   // =====================================================================
-  // Public API (Scene에서 호출)
+  // 공개 API
   // =====================================================================
 
   /**
-   * 방 목록 요청 및 표시
+   * 방 목록 요청
    */
   public requestRoomList(): void {
     this.networkManager.requestRoomList();
   }
 
   /**
-   * 방 목록 렌더링
+   * 방 목록 렌더링 (안전한 처리)
    */
   public renderRoomList(): void {
     const rooms = this.networkManager.getRoomList();
-    this.uiManager.renderRoomList(rooms);
-  }
 
-  /**
-   * 방 생성 프롬프트 및 요청
-   */
-  public showCreateRoomPrompt(onCancel?: () => void): void {
-    const roomName = this.uiManager.showCreateRoomPrompt();
-
-    // 취소 시 콜백
-    if (!roomName || roomName.trim() === "") {
-      if (onCancel) {
-        onCancel();
-      }
+    // 배열이 아니거나 undefined면 빈 배열로 처리
+    if (!Array.isArray(rooms)) {
+      this.uiManager.renderRoomList([]);
       return;
     }
 
-    const username = this.getUsername();
-    this.networkManager.createRoom(roomName, username);
+    this.uiManager.renderRoomList(rooms);
   }
 
   /**
@@ -207,38 +252,27 @@ export abstract class BaseRoomManager {
     this.uiManager.clearUI();
   }
 
-  // =====================================================================
-  // 콜백 설정 (완전 공통)
-  // =====================================================================
-
+  /**
+   * 게임 시작 콜백 등록
+   */
   public setOnGameStart(callback: () => void): void {
     this.onGameStartCallback = callback;
   }
 
-  public setOnError(callback: (message: string) => void): void {
-    this.onErrorCallback = callback;
-  }
-
+  /**
+   * 게임 중단 콜백 등록
+   */
   public setOnGameAborted(
     callback: (reason: string, leavingPlayer: string) => void
   ): void {
     this.onGameAbortedCallback = callback;
   }
 
-  // =====================================================================
-  // 유틸리티
-  // =====================================================================
-
   /**
-   * 사용자 이름 가져오기 (게임별로 오버라이드 가능)
+   * 에러 콜백 등록
    */
-  protected getUsername(): string {
-    try {
-      const userData = localStorage.getItem("user");
-      return userData ? JSON.parse(userData).nickname : "플레이어";
-    } catch {
-      return "플레이어";
-    }
+  public setOnError(callback: (message: string) => void): void {
+    this.onErrorCallback = callback;
   }
 
   /**
@@ -247,8 +281,7 @@ export abstract class BaseRoomManager {
   public cleanup(): void {
     this.networkManager.cleanup();
     this.uiManager.clearUI();
-
-    // UI 이벤트 리스너 제거
+    this.scene.events.off("roomUI:createRoomRequested");
     this.scene.events.off("roomUI:joinRoomRequested");
     this.scene.events.off("roomUI:toggleReadyRequested");
     this.scene.events.off("roomUI:startGameRequested");
