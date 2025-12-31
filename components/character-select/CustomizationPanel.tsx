@@ -22,9 +22,26 @@ export function CustomizationPanel({
   const { assets } = lpcData;
   const gender = customization.gender as "male" | "female";
 
-  const availableHairStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'hair', gender);
-  const availableTorsoStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'torso', gender);
-  const availableLegsStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'legs', gender);
+  // const availableHairStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'hair', gender);
+  // const availableTorsoStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'torso', gender);
+  // const availableLegsStyles = lpcSpriteManager.getAssetsByPart(lpcData, 'legs', gender);
+  
+  const filterBasic = <T extends { tier?: string }>(styles: T[]) =>
+  styles.filter((style) => style.tier === "basic");
+
+  const availableHairStyles = filterBasic(
+  lpcSpriteManager.getAssetsByPart(lpcData, "hair", gender)
+);
+
+const availableTorsoStyles = filterBasic(
+  lpcSpriteManager.getAssetsByPart(lpcData, "torso", gender)
+);
+
+const availableLegsStyles = filterBasic(
+  lpcSpriteManager.getAssetsByPart(lpcData, "legs", gender)
+);
+
+
 
   // 범용 핸들러 함수
   const handleChange = useCallback(

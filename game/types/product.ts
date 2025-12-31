@@ -12,4 +12,5 @@ export interface Product {
 
   // 프론트 전용 상태 (나중)
   isOwned?: boolean;
+    available_genders?: ("male" | "female")[];
 }
