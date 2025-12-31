@@ -1,5 +1,10 @@
 // handlers/base/RoomManager.js
 
+const axios = require("axios");
+
+// 환경변수로 Next.js API URL 설정
+const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
+
 const {
   generateRoomId,
   getRoomList,
@@ -62,29 +67,33 @@ class RoomManager {
   }
 
   /**
-   * 방 생성 핸들러
+   * 방 생성 핸들러 (⭐ async로 수정)
    * @param {Object} data
    * @param {string} data.roomName - 방 이름
    * @param {boolean} [data.isPrivate] - 비공개 여부
    * @param {string} [data.password] - 방 비밀번호
+   * @param {string} data.userId - 유저 ID
    * @param {string} data.username - 사용자 이름
+   * @param {string} data.userUUID - 사용자 UUID
    */
-  handleCreateRoom(data) {
-    const { roomName, isPrivate, password, username } = data;
 
-    // 검증
+  async handleCreateRoom(data) {
+    const { roomName, isPrivate, password, userId, username, userUUID } = data;
+
     if (!validateUsername(username, this.socket, this.gamePrefix)) {
       return;
     }
 
-    // 방 생성
     const roomId = generateRoomId();
+
     const roomData = createRoomData({
       roomId,
       roomName,
       gamePrefix: this.gamePrefix,
       hostSocketId: this.socket.id,
-      username,
+      userId: userId,
+      username: username,
+      userUUID: userUUID,
       isPrivate,
       password,
       maxPlayers: this.config.maxPlayers,
@@ -93,24 +102,37 @@ class RoomManager {
     this.rooms.set(roomId, roomData);
     this.socket.join(roomId);
 
-    console.log(
-      `[${this.gamePrefix}][방생성] ${roomId} - ${roomData.roomName} (방장: ${this.socket.id})`
-    );
+    // DB 저장
+    try {
+      await axios.post(`${NEXT_API_URL}/api/rooms`, {
+        id: roomId,
+        room_name: roomName,
+        game_type: this.gamePrefix,
+        creator_id: userUUID ?? null, // userId 대신 userUUID 사용
+        status: "waiting",
+        is_private: isPrivate,
+        password: password,
+        max_players: this.config.maxPlayers,
+      });
+    } catch (e) {
+      console.error("방 DB 저장 실패:", e.message);
+    }
 
-    // 응답
     this.socket.emit(`${this.gamePrefix}:roomCreated`, { roomId, roomData });
-    broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
+    await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
   }
 
   /**
-   * 방 입장 핸들러
+   * 방 입장 핸들러 (⭐ async로 수정)
    * @param {Object} data
    * @param {string} data.roomId - 방 ID
    * @param {string} [data.password] - 방 비밀번호
+   * @param {string} data.userId - 유저 ID
    * @param {string} data.username - 사용자 이름
+   * @param {string} data.userUUID - 사용자 UUID
    */
-  handleJoinRoom(data) {
-    const { roomId, password, username } = data;
+  async handleJoinRoom(data) {
+    const { roomId, password, userId, username, userUUID } = data;
 
     // 필수 데이터 체크
     if (!roomId || !username) {
@@ -138,17 +160,19 @@ class RoomManager {
       return;
 
     // 플레이어 추가
-    const newPlayer = createPlayerData(this.socket.id, username);
+    const newPlayer = createPlayerData(this.socket.id, username, userId, userUUID);
     room.players.push(newPlayer);
     room.playerCount = room.players.length;
     this.socket.join(roomId);
 
-    console.log(`[${this.gamePrefix}][방입장] ${this.socket.id} → ${roomId}`);
+    console.log(
+      `[${this.gamePrefix}][방입장] ${username} (userId: ${userId}) → ${roomId}`
+    );
 
     // 알림
     notifyPlayerJoined(this.io, roomId, newPlayer, room, this.gamePrefix);
     this.socket.emit(`${this.gamePrefix}:joinSuccess`, { roomData: room });
-    broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
+    await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix); // ⭐ await 추가
 
     // 자동 시작 체크
     if (this.config.autoStart && room.players.length === room.maxPlayers) {
@@ -167,20 +191,37 @@ class RoomManager {
   }
 
   /**
-   * 방 목록 요청 핸들러
+   * 방 목록 요청 핸들러 (⭐ async로 수정)
    */
-  handleGetRoomList() {
-    this.socket.emit(
-      `${this.gamePrefix}:roomListUpdate`,
-      getRoomList(this.rooms, this.gamePrefix)
-    );
+  async handleGetRoomList() {
+    try {
+      console.log(`[${this.gamePrefix}] 방 목록 요청 받음`);
+
+      // ⭐ await 추가
+      const roomList = await getRoomList(this.rooms, this.gamePrefix);
+
+      // ⭐ 디버깅 로그
+      console.log(`[${this.gamePrefix}] 방 목록 조회 완료:`, {
+        type: typeof roomList,
+        isArray: Array.isArray(roomList),
+        length: roomList?.length,
+        value: roomList,
+      });
+
+      this.socket.emit(`${this.gamePrefix}:roomListUpdate`, roomList);
+    } catch (error) {
+      console.error(`[${this.gamePrefix}] 방 목록 조회 실패:`, error);
+      this.socket.emit(`${this.gamePrefix}:error`, {
+        message: "방 목록을 불러올 수 없습니다.",
+      });
+    }
   }
 
   /**
-   * 방 나가기 실행
+   * 방 나가기 실행 (⭐ async로 수정)
    * @param {string} roomId - 방 ID
    */
-  leaveRoom(roomId) {
+  async leaveRoom(roomId) {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
@@ -199,10 +240,20 @@ class RoomManager {
 
     console.log(`[${this.gamePrefix}][방퇴장] ${this.socket.id} ← ${roomId}`);
 
+    // ⭐ 나간 플레이어에게 알림 (방 삭제 전에 먼저!)
+    console.log(
+      `[${this.gamePrefix}] leftRoom 이벤트 전송 → ${this.socket.id}`
+    );
+    this.socket.emit(`${this.gamePrefix}:leftRoom`, { roomId });
+    console.log(`[${this.gamePrefix}] leftRoom 이벤트 전송 완료`);
+
     // 방이 비었으면 삭제
     if (room.players.length === 0) {
       this.rooms.delete(roomId);
       console.log(`[${this.gamePrefix}][방삭제] ${roomId}`);
+
+      // ⭐ 방 목록 업데이트 (방이 삭제됐으므로)
+      await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
       return;
     }
 
@@ -233,11 +284,8 @@ class RoomManager {
       );
     }
 
-    // 나간 플레이어에게 알림
-    this.socket.emit(`${this.gamePrefix}:leftRoom`, { roomId });
-
     // 방 목록 업데이트
-    broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
+    await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
   }
 
   /**
@@ -273,7 +321,7 @@ class RoomManager {
       player.isReady = true;
     });
 
-    const { notifyAutoStart } = require("./utils/eventEmitters");
+    const { notifyAutoStart } = require("./utils/EventEmitters");
     notifyAutoStart(this.io, room, this.gamePrefix);
   }
 
