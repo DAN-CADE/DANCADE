@@ -10,24 +10,26 @@ import { UserPointBar } from "@/components/common/UserPointBar";
 import { useAuth } from "@/hooks/useAuth";
 import { STORAGE_KEY } from "@/constants/character";
 import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ShopCharacterPreview from "@/components/shop/ShopCharacterPreview";
 
 
 export default function ShopPage(){
 
-  const { products, isLoading } = useProducts();
+  const [previewCharacter, setPreviewCharacter] =useState<CharacterState | null>(null);
+  const gender = previewCharacter?.gender as "male" | "female" | undefined;
+  const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
+
+  const { products, isLoading } = useProducts(gender);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { ownedItemIds, isLoading: ownedLoading,refetch  } = useShopOwnedItems();
-  const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
 
 
+  console.log(gender,"성별", previewCharacter)
 
-const [previewCharacter, setPreviewCharacter] =
-  useState<CharacterState | null>(null);
 
 useEffect(() => {
   const stored = localStorage.getItem(STORAGE_KEY);
