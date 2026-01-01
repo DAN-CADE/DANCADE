@@ -201,6 +201,10 @@ export class MainScene extends BaseGameScene {
     this.interactionManager = new InteractionManager(this);
     this.lpcSpriteManager = new LpcSpriteManager();
     this.uiManager = new UIManager(this);
+
+      // 🔥 React에서 접근 가능하도록 노출 => inventory 에서 두 매니저 접근
+    (window as any).__avatarDataManager = this.avatarDataManager;
+    (window as any).__avatarManager = this.player;
   }
 
   // 화면에 무엇을 그릴 것인가

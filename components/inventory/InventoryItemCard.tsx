@@ -4,16 +4,21 @@ type InventoryProps = {
   name: string;
   imageUrl: string;
   isEquipped: boolean;
+    onDoubleClick?: () => void;
 };
 
 export default function InventoryItemCard({
   name,
   imageUrl,
   isEquipped,
+  onDoubleClick,
 }: InventoryProps) {
   return (
     <div
+      onDoubleClick={onDoubleClick}
       className={`
+        title="더블클릭으로 장착"
+        role="button"
         h-[72px]
         rounded
         flex
