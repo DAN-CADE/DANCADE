@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import InventoryItemCard from "@/components/inventory/InventoryItemCard";
 import { useInventoryList } from "@/hooks/inventory/useInventoryList";
 import { useAuth } from "@/hooks/useAuth";
-
+import {
+  applyAvatarState,
+  buildNextColorState,
+  buildNextPartState,
+} from "@/game/utils/avatarCustomization";
+import { updateCharacterSkin } from "@/lib/api/inventory/character";
 
 const COLOR_CATEGORY_TO_PART = {
   Skin: ["body", "head", "nose"],
@@ -123,7 +128,6 @@ export default function Inventory() {
   const userId = user?.id ?? null;
   const { items, loading, fetchInventory } = useInventoryList(userId);
 
-
   useEffect(() => {
     const interval = setInterval(() => {
       const adm = (window as any).__avatarDataManager;
@@ -171,97 +175,58 @@ export default function Inventory() {
   );
 
 
-  
-function onEquipColor(category: ColorCategory, color: string) {
-  if (!avatarDataManager || !avatarManager) return;
 
+
+async function onEquipPart(item: any) {
+  if (!avatarDataManager || !avatarManager) return;
+  const current = avatarDataManager.customization;
+  if (!current) return;
+
+  const partKey =
+    PART_CATEGORY_TO_PART[item.category as keyof typeof PART_CATEGORY_TO_PART];
+  if (!partKey) return;
+
+  const next = buildNextPartState(
+    current,
+    partKey,
+    item.styleKey
+  );
+// ✅ 1. 즉시 반영 (UX)
+  applyAvatarState(next, avatarDataManager, avatarManager);
+  
+    // ✅ 2. 서버 저장 (비동기)
+  try {
+    await updateCharacterSkin(user!.id, next);
+  } catch (e) {
+    console.error("❌ 서버 저장 실패", e);
+    // (선택) 토스트 / 롤백 가능
+  }
+}
+
+
+async function onEquipColor(category: ColorCategory, color: string) {
+  if (!avatarDataManager || !avatarManager) return;
   const current = avatarDataManager.customization;
   if (!current) return;
 
   const targetParts = COLOR_CATEGORY_TO_PART[category];
   if (!targetParts) return;
 
-  // 1️⃣ parts 복사 + 색상 변경
-  const nextParts = { ...current.parts };
+  const next = buildNextColorState(
+    current,
+    targetParts,
+    color
+  );
 
-  targetParts.forEach((part) => {
-    nextParts[part] = {
-      ...nextParts[part],
-      color,
-    };
-  });
-
-  // 2️⃣ 새로운 정본 JSON 생성
-  const next = {
-    ...current,
-    parts: nextParts,
-  };
-
-  // 3️⃣ AvatarDataManager 정본 업데이트 ⭐
-  avatarDataManager.gameState.customization = next;
-  // 또는 (추천) 아래처럼 메서드로 만들 예정
-  // avatarDataManager.setCustomization(next);
-
-  // 4️⃣ 화면 즉시 반영 (맵 아바타)
-  avatarManager.getContainer().setCustomPart(next);
-
-  // 5️⃣ 로컬스토리지 저장
-  avatarDataManager.saveToStorage();
-
-  console.log("✅ 색상 장착 완료", {
-    category,
-    color,
-    next,
-  });
-}
-
-
-
-
-
-  function onEquipPart(item: any) {
-    // 0) 매니저 연결 안 됐으면 중단
-  if (!avatarDataManager || !avatarManager) return;
-
-  // 1) 정본 가져오기
-  const current = avatarDataManager.customization;
-  if (!current) return;
-
- 
-  console.log("✅ item", item);
-
-const partKey = PART_CATEGORY_TO_PART[item.category as keyof typeof PART_CATEGORY_TO_PART];
-// hair -> hair, top -> torso, bottom -> legs, shoes -> feet
-if (!partKey) return;
-
-console.log("✅ partKey", partKey);
-
-
-const next = {
-  ...current,
-  parts: {
-    ...current.parts,
-    [partKey]: {
-      ...(current.parts as any)[partKey],
-      styleId: item.styleKey, // 네 데이터에 맞게
-      // color는 그대로 유지 (current에 있던 color 유지)
-    },
-  },
-};
-
-//파츠교체 렌더링용
-avatarManager.getContainer().setCustomPart(next);
-//바뀐 파츠를 담고있는 json 으로 게임 내 정본 json 으로 업데이트
-avatarDataManager.setCustomization(next);
-//현재 게임 내 정본 josn 을 로컬스토리지에 저장
-avatarDataManager.saveToStorage();
-
-console.log("✅ applied next", next);
- console.log("✅ current", current);
-
-
+  applyAvatarState(next, avatarDataManager, avatarManager);
+      // ✅ 2. 서버 저장 (비동기)
+  try {
+    await updateCharacterSkin(user!.id, next);
+  } catch (e) {
+    console.error("❌ 서버 저장 실패", e);
+    // (선택) 토스트 / 롤백 가능
   }
-
+}
 
   
 

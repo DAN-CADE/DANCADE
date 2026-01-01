@@ -1,26 +1,22 @@
-// game/utils/avatarCustomization.ts
 import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 import type { AvatarManager } from "@/game/managers/global/AvatarManager";
 import type { AvatarDataManager } from "@/game/managers/global/AvatarDataManager";
 
 /**
- * 아바타 커스터마이징 공통 적용 함수
- *
- * 1. 게임 내 정본(CharacterState) 업데이트
- * 2. 맵에 렌더링 즉시 반영
- * 3. 로컬스토리지 저장
- *
- * ⚠️ 서버 저장은 여기서 하지 않는다 (UI / 비동기 레이어 책임)
+ * 공통 적용 함수
+ * - 정본 업데이트
+ * - 화면 렌더링
+ * - 로컬스토리지 저장
  */
-export function applyAvatarCustomization(
+export function applyAvatarState(
   next: CharacterState,
   avatarDataManager: AvatarDataManager,
   avatarManager: AvatarManager
 ) {
-  // 1️⃣ 게임 내 정본 업데이트
+  // 1️⃣ 정본 업데이트
   avatarDataManager.setCustomization(next);
 
-  // 2️⃣ 화면 즉시 반영 (Phaser 아바타)
+  // 2️⃣ 화면 즉시 반영
   avatarManager.getContainer().setCustomPart(next);
 
   // 3️⃣ 로컬스토리지 저장
@@ -28,7 +24,8 @@ export function applyAvatarCustomization(
 }
 
 /**
- * 파츠(styleId) 변경용 next state 생성
+ * ✅ 파츠 변경 (styleId만 변경, color 유지)
+ * 네 기존 onEquipPart 로직 그대로
  */
 export function buildNextPartState(
   current: CharacterState,
@@ -40,7 +37,7 @@ export function buildNextPartState(
     parts: {
       ...current.parts,
       [partKey]: {
-        ...current.parts[partKey],
+        ...current.parts[partKey], // ✅ 기존 color 유지
         styleId,
       },
     },
@@ -48,12 +45,12 @@ export function buildNextPartState(
 }
 
 /**
- * 색상(color) 변경용 next state 생성
- * 여러 파츠 동시 변경 가능
+ * ✅ 색상 변경 (color만 변경, styleId 유지)
+ * 네 기존 onEquipColor 로직 그대로
  */
 export function buildNextColorState(
   current: CharacterState,
-  partKeys: (keyof CharacterState["parts"])[],
+  partKeys: readonly (keyof CharacterState["parts"])[],
   color: string
 ): CharacterState {
   const nextParts = { ...current.parts };
