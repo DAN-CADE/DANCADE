@@ -144,9 +144,6 @@ const handlePreviewItem = (product: Product) => {
         <UserPointBar />
       </div>
 
-
-
-
       <TransparentFrame>
         <div className="flex h-full gap-6">
 

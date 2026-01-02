@@ -25,10 +25,9 @@ export async function POST(req: Request) {
   try {
     const { gender } = await req.json();
 
-    console.log(gender,"성별이지롱")
     let query = supabase
       .from("items")
-      .select("id, name, price, category, image_url, style_key, available_genders")
+      .select("id, name, price, category, image_url, style_key, available_genders,description")
       .eq("is_available", true)
       .order("created_at", { ascending: false });
 
@@ -49,7 +48,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(data,"data")
+    console.log(data,"data 상점아이템")
     return NextResponse.json(data, { status: 200 });
   } catch (err) {
     console.error("[POST /api/items] exception", err);
