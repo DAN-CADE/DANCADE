@@ -10,6 +10,7 @@ import {
   buildNextPartState,
 } from "@/game/utils/avatarCustomization";
 import { updateCharacterSkin } from "@/lib/api/inventory/character";
+import { equipItemParts } from "@/lib/api/inventory/equipItemParts";
 
 const COLOR_CATEGORY_TO_PART = {
   Skin: ["body", "head", "nose"],
@@ -118,6 +119,7 @@ const COLOR_HEX: Record<string, string> = {
  * ========================= */
 export default function Inventory() {
 
+  const [, forceRender] = useState(0);
   const [avatarDataManager, setAvatarDataManager] = useState<any>(null);
   const [avatarManager, setAvatarManager] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -176,7 +178,7 @@ export default function Inventory() {
 
 
 
-
+// 파츠 장착
 async function onEquipPart(item: any) {
   if (!avatarDataManager || !avatarManager) return;
   const current = avatarDataManager.customization;
@@ -192,18 +194,20 @@ async function onEquipPart(item: any) {
     item.styleKey
   );
 // ✅ 1. 즉시 반영 (UX)
-  applyAvatarState(next, avatarDataManager, avatarManager);
-  
+
+applyAvatarState(next, avatarDataManager, avatarManager);
     // ✅ 2. 서버 저장 (비동기)
   try {
     await updateCharacterSkin(user!.id, next);
+    await equipItemParts(user!.id, item.itemId)
+       await fetchInventory();
   } catch (e) {
     console.error("❌ 서버 저장 실패", e);
     // (선택) 토스트 / 롤백 가능
   }
 }
 
-
+// 색상 장착
 async function onEquipColor(category: ColorCategory, color: string) {
   if (!avatarDataManager || !avatarManager) return;
   const current = avatarDataManager.customization;
@@ -219,6 +223,8 @@ async function onEquipColor(category: ColorCategory, color: string) {
   );
 
   applyAvatarState(next, avatarDataManager, avatarManager);
+  forceRender((v) => v + 1);
+
       // ✅ 2. 서버 저장 (비동기)
   try {
     await updateCharacterSkin(user!.id, next);
@@ -227,8 +233,27 @@ async function onEquipColor(category: ColorCategory, color: string) {
     // (선택) 토스트 / 롤백 가능
   }
 }
+console.log("👀 customization", avatarDataManager.customization);
 
-  
+function isColorEquipped(
+  category: ColorCategory,
+  color: string
+) {
+  const customization = avatarDataManager?.customization;
+  if (!customization) return false;
+
+  const parts = customization.parts;
+  if (!parts) return false;
+
+  const targetParts = COLOR_CATEGORY_TO_PART[category];
+  if (!targetParts) return false;
+
+  // 해당 카테고리의 파츠 중
+  // 하나라도 이 색을 쓰고 있으면 장착 중
+  return targetParts.some((part) => {
+    return parts[part]?.color === color;
+  });
+}
 
 
   return (
@@ -303,15 +328,23 @@ async function onEquipColor(category: ColorCategory, color: string) {
       <div className="px-3 pb-3">
         <div className="flex gap-2 flex-wrap">
           {COLOR_PALETTES[activeColorCategory].map((color) => (
-            <button
-              key={color}
-              title={color}
-              className="w-6 h-6 rounded-full border border-white/40 hover:scale-110 transition"
-              style={{ backgroundColor: COLOR_HEX[color] }}
-               onDoubleClick={() =>
-                onEquipColor(activeColorCategory, color)
-              }
-            />
+           <button
+  key={color}
+  title={color}
+  onDoubleClick={() =>
+    onEquipColor(activeColorCategory, color)
+  }
+  className={`
+    w-6 h-6 rounded-full
+    transition
+    ${
+      isColorEquipped(activeColorCategory, color)
+        ? "ring-2 ring-white-400 scale-110"
+        : "border border-white/40 hover:scale-110"
+    }
+  `}
+  style={{ backgroundColor: COLOR_HEX[color] }}
+/>
           ))}
         </div>
       </div>

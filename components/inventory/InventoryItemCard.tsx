@@ -30,7 +30,7 @@ export default function InventoryItemCard({
         border
         ${
           isEquipped
-            ? "border-green-400 bg-green-500/20"
+            ? "border-blue-400 bg-blue-500/20"
             : "border-white/20 bg-white/10 hover:bg-white/20"
         }
       `}
