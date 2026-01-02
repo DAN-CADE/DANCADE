@@ -83,7 +83,7 @@ export class LpcUtils {
                 // 해당항목: hair, torso, legs, feet 
                 // 성별에 맞는 스타일 필터링
                 const validStyles = config.styles.filter(s => 
-                    !s.genders || s.genders.length === 0 || s.genders.includes(gender)
+                   ( !s.genders || s.genders.length === 0 || s.genders.includes(gender) )&& s.tier !== "point"
                 );
 
                 if (validStyles.length > 0) {
