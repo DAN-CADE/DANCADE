@@ -24,6 +24,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [isFullHeight, setIsFullHeight] = useState(false);
   const [username, setUsername] = useState("익명"); // 추가
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isHidden, setIsHidden] = useState(false); // 채팅창 숨기기
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -114,126 +115,154 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   }, [showEmojiPicker]);
 
   return (
-    <div
-      className={styles.chatFrame}
-      style={{ height: isFullHeight ? "calc(100vh - 50px)" : "415px" }}
-    >
-      {/* Header */}
-      <div className={styles.header}>
-        <span className={styles.title}>채팅</span>
-        <button
-          onClick={() => setIsFullHeight(!isFullHeight)}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          <img src="/assets/ui/chevrons-vertical.png" alt="expand" />
-        </button>
-        {onClose && (
-          <button className={styles.closeBtn} onClick={onClose}>
-            ✕
-          </button>
-        )}
-      </div>
-      {/* Messages Container */}
-
-      <div className={styles.messagesContainer}>
-        {messages.length === 0 ? (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon} onClick={handleWaveClick}>
-              👋
-            </div>
-            <div className={styles.emptyText}>
-              손을 눌러서 사람들에게 인사하세요!
-            </div>
-            <div className={styles.emojiContainer}></div>
+    <>
+      <div
+        className={styles.chatFrame}
+        style={{
+          height: isFullHeight ? "calc(100vh - 50px)" : "415px",
+          display: isHidden ? "none" : "flex",
+        }}
+      >
+        {/* Header */}
+        <div className={styles.header}>
+          <span className={styles.title}>채팅</span>
+          <div className={styles.headerButtons}>
+            <button
+              onClick={() => setIsFullHeight(!isFullHeight)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+              title={isFullHeight ? "원래 크기" : "전체 확대"}
+            >
+              <img src="/assets/ui/chevrons-vertical.png" alt="expand" />
+            </button>
+            <button
+              onClick={() => setIsHidden(true)}
+              className={styles.hideBtn}
+              title="채팅창 숨기기"
+            >
+              −
+            </button>
           </div>
-        ) : (
-          messages.map((msg, idx) => {
-            // 메시지 타입에 따른 className 결정
-            let messageClass = styles.message; // 기본: 상대방 메시지
-
-            if (msg.messageType === "system") {
-              messageClass = styles.messageSystem;
-            } else if (msg.messageType === "game") {
-              messageClass = styles.messageGame;
-            } else if (msg.username === username) {
-              messageClass = styles.messageOwn; // 내 메시지
-            }
-
-            return (
-              <div key={msg.id || idx} className={messageClass}>
-                {msg.messageType !== "system" && (
-                  <span className={styles.author}>{msg.username}</span>
-                )}
-                <span className={styles.content}>{msg.message}</span>
-                <span className={styles.timestamp}>
-                  {new Date(msg.timestamp).toLocaleTimeString("ko-KR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      {/* Input Area */}
-      <div className={styles.inputContainer}>
-        {/* 이모지 버튼 */}
-        <div className={styles.emojiPickerContainer} ref={emojiPickerRef}>
-          <button
-            className={styles.emojiPickerBtn}
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            title="이모지 추가"
-          >
-            😊
-          </button>
-          {showEmojiPicker && (
-            <div className={styles.emojiPanel}>
-              {["😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😇"].map((emoji) => (
-                <button
-                  key={emoji}
-                  className={styles.emojiOption}
-                  onClick={() => handleEmojiClick(emoji)}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+          {onClose && (
+            <button className={styles.closeBtn} onClick={onClose}>
+              ✕
+            </button>
           )}
         </div>
+        {/* Messages Container */}
 
-        <div className={styles.inputWrapper}>
-          <input
-            type="text"
-            className={styles.input}
-            placeholder="바르고 고운말을 씁시다"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-          />
+        <div className={styles.messagesContainer}>
+          {messages.length === 0 ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon} onClick={handleWaveClick}>
+                👋
+              </div>
+              <div className={styles.emptyText}>
+                손을 눌러서 사람들에게 인사하세요!
+              </div>
+              <div className={styles.emojiContainer}></div>
+            </div>
+          ) : (
+            messages.map((msg, idx) => {
+              // 메시지 타입에 따른 className 결정
+              let messageClass = styles.message; // 기본: 상대방 메시지
 
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            onClick={handleSendMessage}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M10 20H8V18H10V20ZM20 16H8V18H6V16H4V14H6V12H8V14H18V4H20V16ZM10 12H8V10H10V12Z"
-              fill="white"
-              fillOpacity="0.7"
+              if (msg.messageType === "system") {
+                messageClass = styles.messageSystem;
+              } else if (msg.messageType === "game") {
+                messageClass = styles.messageGame;
+              } else if (msg.username === username) {
+                messageClass = styles.messageOwn; // 내 메시지
+              }
+
+              return (
+                <div key={msg.id || idx} className={messageClass}>
+                  {msg.messageType !== "system" && (
+                    <span className={styles.author}>{msg.username}</span>
+                  )}
+                  <span className={styles.content}>{msg.message}</span>
+                  <span className={styles.timestamp}>
+                    {new Date(msg.timestamp).toLocaleTimeString("ko-KR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        {/* Input Area */}
+        <div className={styles.inputContainer}>
+          {/* 이모지 버튼 */}
+          <div className={styles.emojiPickerContainer} ref={emojiPickerRef}>
+            <button
+              className={styles.emojiPickerBtn}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              title="이모지 추가"
+            >
+              😊
+            </button>
+            {showEmojiPicker && (
+              <div className={styles.emojiPanel}>
+                {["😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😇"].map(
+                  (emoji) => (
+                    <button
+                      key={emoji}
+                      className={styles.emojiOption}
+                      onClick={() => handleEmojiClick(emoji)}
+                    >
+                      {emoji}
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.inputWrapper}>
+            <input
+              type="text"
+              className={styles.input}
+              placeholder="바르고 고운말을 씁시다"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
-          </svg>
+
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              onClick={handleSendMessage}
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 20H8V18H10V20ZM20 16H8V18H6V16H4V14H6V12H8V14H18V4H20V16ZM10 12H8V10H10V12Z"
+                fill="white"
+                fillOpacity="0.7"
+              />
+            </svg>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* 최소화된 채팅창 버튼 */}
+      {isHidden && (
+        <button
+          className={styles.minimizedChatBtn}
+          onClick={() => setIsHidden(false)}
+          title="채팅창 표시"
+        >
+          💬
+        </button>
+      )}
+    </>
   );
 }
