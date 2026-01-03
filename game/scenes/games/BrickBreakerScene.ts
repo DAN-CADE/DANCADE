@@ -142,12 +142,17 @@ export class BrickBreakerScene extends BaseGameScene {
     this.uiManager.showEndGameScreen(
       result as "win" | "gameOver",
       this.gameManager.getScore(),
-      () => this.restartGame()
+      () => this.restartGame(),
+      () => this.goHome()
     );
   }
 
   protected restartGame(): void {
     this.scene.restart();
+  }
+
+  private goHome(): void {
+    this.scene.start("MainScene");
   }
 
   protected cleanupManagers(): void {
