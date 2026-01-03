@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import ShopCharacterPreview from "@/components/shop/ShopCharacterPreview";
 import { ITEMS_PER_PAGE } from "@/constants/shopPageNation";
 import { useToast } from "@/components/common/ToastProvider";
+import Header from "@/components/shop/ShopHeader";
 
 
 
@@ -33,14 +34,14 @@ export default function ShopPage(){
   const user = getCurrentUser();
 
 
-const [currentPage, setCurrentPage] = useState(1);
-useEffect(() => {
-  setCurrentPage(1);
-}, [activeCategory]);
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory]);
 
 
-const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-const endIndex = startIndex + ITEMS_PER_PAGE;
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
 
 
 
@@ -100,7 +101,7 @@ const endIndex = startIndex + ITEMS_PER_PAGE;
  const filteredProducts = activeCategory === "all" ? productsWithOwnership
     : productsWithOwnership.filter( (product) => product.category === activeCategory);
 
-const pagedProducts = filteredProducts.slice(startIndex, endIndex);
+  const pagedProducts = filteredProducts.slice(startIndex, endIndex);
       const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
   const handlePurchase = async (product: Product) => {
@@ -147,7 +148,7 @@ const pagedProducts = filteredProducts.slice(startIndex, endIndex);
     }
   };
 
-const handlePreviewItem = (product: Product) => {
+  const handlePreviewItem = (product: Product) => {
   if (!product.style_key) return;
   if (!previewCharacter) return;
 
@@ -182,8 +183,8 @@ const handlePreviewItem = (product: Product) => {
       </div>
 
       <TransparentFrame>
+      <Header />
         <div  className="flex w-full h-full gap-6">
-
         <div className="flex gap-6 pr-20">
           <aside className="w-[280px] h-full flex items-center justify-center">
             {previewCharacter && (
@@ -230,15 +231,12 @@ const handlePreviewItem = (product: Product) => {
                 })}
               </div>}
 
-
-
             {isModalOpen && selectedProduct && (
               <ProductDetailModal
                 product={selectedProduct}
                 onClose={handleModal}
                  onPurchase={handlePurchase}
                    isPurchasing={isPurchasing}
-
               />
             )}
           </section>
