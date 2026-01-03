@@ -35,7 +35,7 @@ export default function InventoryItemCard({
         }
       `}
     >
-      <p className="text-sm">{name}</p>
+      <p className="w-full text-center text-sm leading-none text-sm">{name}</p>
     </div>
   );
 }
