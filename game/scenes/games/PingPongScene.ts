@@ -145,7 +145,8 @@ export class PingPongScene extends BaseGameScene {
       isPlayerWin,
       this.gameState.playerScore,
       this.gameState.aiScore,
-      () => this.restartGame()
+      () => this.restartGame(),
+      () => this.goHome()
     );
 
     this.inputManager.registerRestartListener(() => this.restartGame());
@@ -157,6 +158,10 @@ export class PingPongScene extends BaseGameScene {
     this.createGameObjects();
     this.uiManager.showGameUI();
     this.gameManager.prepareServe();
+  }
+
+  private goHome(): void {
+    this.scene.start("MainScene");
   }
 
   protected cleanupManagers(): void {
