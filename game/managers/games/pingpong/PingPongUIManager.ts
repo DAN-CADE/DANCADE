@@ -1,6 +1,7 @@
 // game/managers/games/pingpong/PingPongUIManager.ts
 
 import { BaseUIManager } from "@/game/managers/base";
+import { TEXT_STYLE } from "@/game/types/common/ui.constants";
 import { PINGPONG_CONFIG } from "@/game/types/realPingPong";
 
 /**
@@ -285,7 +286,7 @@ export class PingPongUIManager extends BaseUIManager {
 
     const resultText = this.scene.add
       .text(400, 200, winner, {
-        ...this.TEXT_STYLE.GAME_OVER,
+        ...TEXT_STYLE.GAME_OVER,
         color: isPlayerWin ? "#2ecc71" : "#e74c3c",
       })
       .setOrigin(0.5)
