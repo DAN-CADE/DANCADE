@@ -12,6 +12,9 @@ import { STORAGE_KEY } from "@/constants/character";
 import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 import { useEffect, useState } from "react";
 import ShopCharacterPreview from "@/components/shop/ShopCharacterPreview";
+import { ITEMS_PER_PAGE } from "@/constants/shopPageNation";
+import { useToast } from "@/components/common/ToastProvider";
+
 
 
 export default function ShopPage(){
@@ -19,7 +22,8 @@ export default function ShopPage(){
   const [previewCharacter, setPreviewCharacter] =useState<CharacterState | null>(null);
   const gender = previewCharacter?.gender as "male" | "female" | undefined;
   const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
-const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const { showToast } = useToast();
 
   const { products, isLoading } = useProducts(gender);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -28,8 +32,7 @@ const [isPurchasing, setIsPurchasing] = useState(false);
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
 
-  const ITEMS_PER_PAGE = 12; 
-// lg 기준: 4열 × 3줄
+
 const [currentPage, setCurrentPage] = useState(1);
 useEffect(() => {
   setCurrentPage(1);
@@ -69,7 +72,10 @@ const endIndex = startIndex + ITEMS_PER_PAGE;
   const requireUser = () => {
     const user = getCurrentUser();
     if (!user) {
-      alert("회원가입 후 이용 가능합니다");
+        showToast({
+          type: "info",
+          message:"회원 가입 후 진행해주세요.",
+        });
       return null;
     }
     return user;
@@ -114,16 +120,25 @@ const pagedProducts = filteredProducts.slice(startIndex, endIndex);
 
       if (!res.ok) {
         // ❌ 포인트 부족, 이미 보유 등
-        alert(data.message ?? "구매에 실패했습니다");
+        showToast({
+          type: "info",
+          message:"구매에 실패했습니다 포인트부족",
+        });
         return;
       }
 
       // ⭕ 구매 성공
-      alert("구매 완료!");
+      showToast({
+          type: "success",
+          message: "구매가 완료되었습니다!",
+        });
       await refetch();
     } catch (error) {
       console.error("purchase error:", error);
-      alert("구매 중 오류가 발생했습니다");
+      showToast({
+          type: "error",
+          message:"구매에 실패했습니다",
+        });
     } finally {
       // ✅ 구매 버튼이 눌렸고, 로직이 끝난 뒤에만 실행됨
        setIsPurchasing(false);
