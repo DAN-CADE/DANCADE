@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { socket } from "@/lib/socket";
+import { isGuestUser } from "@/types/user";
 import styles from "./ChatFrame.module.css";
 
 type MessageType = "chat" | "system" | "game" | "invite";
@@ -25,6 +26,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [username, setUsername] = useState("익명"); // 추가
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isHidden, setIsHidden] = useState(false); // 채팅창 숨기기
+  const [isGuestUser, setIsGuestUser] = useState(false); // 게스트 여부
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -42,8 +44,10 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
     const userData = localStorage.getItem("user");
     if (userData) {
       try {
-        const { nickname } = JSON.parse(userData);
-        setUsername(nickname || "익명");
+        const user = JSON.parse(userData);
+        setUsername(user.nickname || "익명");
+        // 게스트 사용자 확인
+        setIsGuestUser(user.isGuest === true);
       } catch (error) {
         console.error("사용자 데이터 파싱 오류:", error);
         setUsername("익명");
@@ -62,6 +66,11 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   }, []);
 
   const handleSendMessage = () => {
+    if (isGuestUser) {
+      alert("채팅은 회원가입 후 사용할 수 있습니다.");
+      return;
+    }
+
     if (inputValue.trim()) {
       // ✅ Socket으로 전송
       socket.emit("lobby:chat", {
@@ -85,6 +94,14 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
     socket.emit("lobby:chat", {
       username,
       message: "👋",
+    });
+  };
+
+  // ✅ 퀵메시지 전송
+  const sendQuickMessage = (emoji: string) => {
+    socket.emit("lobby:chat", {
+      username,
+      message: emoji,
     });
   };
 
@@ -199,57 +216,110 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
         </div>
         {/* Input Area */}
         <div className={styles.inputContainer}>
-          {/* 이모지 버튼 */}
-          <div className={styles.emojiPickerContainer} ref={emojiPickerRef}>
-            <button
-              className={styles.emojiPickerBtn}
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              title="이모지 추가"
-            >
-              😊
-            </button>
-            {showEmojiPicker && (
-              <div className={styles.emojiPanel}>
-                {["😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😇"].map(
-                  (emoji) => (
-                    <button
-                      key={emoji}
-                      className={styles.emojiOption}
-                      onClick={() => handleEmojiClick(emoji)}
-                    >
-                      {emoji}
-                    </button>
-                  )
+          {isGuestUser ? (
+            <>
+              <div className={styles.guestUpgradePrompt}>
+                <span>전체 채팅 기능을 원하시나요?</span>
+                <a href="/auth/login" className={styles.guestPromptBtn}>
+                  회원가입
+                </a>
+              </div>
+              <div className={styles.guestQuickMessagePanel}>
+                <div className={styles.quickMessageLabel}>퀵메시지</div>
+                <div className={styles.guestQuickMessageContent}>
+                  <button
+                    className={styles.quickMessageBtn}
+                    onClick={() => sendQuickMessage("👋")}
+                    title="인사"
+                  >
+                    👋
+                  </button>
+                  <button
+                    className={styles.quickMessageBtn}
+                    onClick={() => sendQuickMessage("👍")}
+                    title="좋아요"
+                  >
+                    👍
+                  </button>
+                  <button
+                    className={styles.quickMessageBtn}
+                    onClick={() => sendQuickMessage("❤️")}
+                    title="좋아합니다"
+                  >
+                    ❤️
+                  </button>
+                  <button
+                    className={styles.quickMessageBtn}
+                    onClick={() => sendQuickMessage("😂")}
+                    title="웃음"
+                  >
+                    😂
+                  </button>
+                  <button
+                    className={styles.quickMessageBtn}
+                    onClick={() => sendQuickMessage("🎉")}
+                    title="축하"
+                  >
+                    🎉
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 이모지 버튼 */}
+              <div className={styles.emojiPickerContainer} ref={emojiPickerRef}>
+                <button
+                  className={styles.emojiPickerBtn}
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  title="이모지 추가"
+                >
+                  😊
+                </button>
+                {showEmojiPicker && (
+                  <div className={styles.emojiPanel}>
+                    {["😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😇"].map(
+                      (emoji) => (
+                        <button
+                          key={emoji}
+                          className={styles.emojiOption}
+                          onClick={() => handleEmojiClick(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      )
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
 
-          <div className={styles.inputWrapper}>
-            <input
-              type="text"
-              className={styles.input}
-              placeholder="바르고 고운말을 씁시다"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-            />
+              <div className={styles.inputWrapper}>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="바르고 고운말을 씁시다"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                />
 
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              onClick={handleSendMessage}
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M10 20H8V18H10V20ZM20 16H8V18H6V16H4V14H6V12H8V14H18V4H20V16ZM10 12H8V10H10V12Z"
-                fill="white"
-                fillOpacity="0.7"
-              />
-            </svg>
-          </div>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  onClick={handleSendMessage}
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10 20H8V18H10V20ZM20 16H8V18H6V16H4V14H6V12H8V14H18V4H20V16ZM10 12H8V10H10V12Z"
+                    fill="white"
+                    fillOpacity="0.7"
+                  />
+                </svg>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
