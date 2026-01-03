@@ -233,7 +233,6 @@ async function onEquipColor(category: ColorCategory, color: string) {
     // (선택) 토스트 / 롤백 가능
   }
 }
-console.log("👀 customization", avatarDataManager.customization);
 
 function isColorEquipped(
   category: ColorCategory,
@@ -306,13 +305,13 @@ function isColorEquipped(
       </div>
 
       {/* ================= 색상 탭 ================= */}
-      <div className="px-3 py-2 border-t border-white/10">
+      <div className="pt-3 pb-3 px-3 py-2 border-t border-white/10">
         <div className="flex gap-2 flex-wrap">
           {COLOR_CATEGORIES.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveColorCategory(cat)}
-              className={`px-3 py-1 text-xs rounded ${
+              className={` px-3 py-1 text-xs rounded ${
                 activeColorCategory === cat
                   ? "bg-white text-black"
                   : "bg-white/10 text-white hover:bg-white/20"
@@ -326,25 +325,25 @@ function isColorEquipped(
 
       {/* ================= 색상 Picker ================= */}
       <div className="px-3 pb-3">
-        <div className="flex gap-2 flex-wrap">
+        <div className="pl-2 flex gap-2 flex-wrap">
           {COLOR_PALETTES[activeColorCategory].map((color) => (
            <button
-  key={color}
-  title={color}
-  onDoubleClick={() =>
-    onEquipColor(activeColorCategory, color)
-  }
-  className={`
-    w-6 h-6 rounded-full
-    transition
-    ${
-      isColorEquipped(activeColorCategory, color)
-        ? "ring-2 ring-white-400 scale-110"
-        : "border border-white/40 hover:scale-110"
-    }
-  `}
-  style={{ backgroundColor: COLOR_HEX[color] }}
-/>
+              key={color}
+              title={color}
+              onDoubleClick={() =>
+                onEquipColor(activeColorCategory, color)
+              }
+              className={`
+                w-6 h-6 rounded-full
+                transition
+                ${
+                  isColorEquipped(activeColorCategory, color)
+                    ? "ring-2 ring-white-400 scale-110"
+                    : "border border-white/40 hover:scale-110"
+                }
+              `}
+              style={{ backgroundColor: COLOR_HEX[color] }}
+            />
           ))}
         </div>
       </div>

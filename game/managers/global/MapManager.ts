@@ -16,7 +16,7 @@ const TILE_IMAGES: Array<[string, string]> = [
   ["storefrontSign", "/tilesets/storefrontSign.png"],
   ["userButton", "/tilesets/userButton.png"],
 ];
-const MAIN_MAP = "/maps/DanArcadeLast8.tmj";
+const MAIN_MAP = "/maps/DanArcadeLast9.tmj";
 
 export class MapManager {
   //MapManager의 인스턴스는 Scene의 종속된다.
