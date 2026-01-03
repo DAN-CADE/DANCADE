@@ -25,7 +25,8 @@ export class BrickBreakerUIManager extends BaseUIManager {
   showEndGameScreen(
     result: GameResult,
     score: number,
-    onRestart: () => void
+    onRestart: () => void,
+    onHome: () => void
   ): void {
     const depth = 10;
     const config = this.getEndGameConfig(result);
@@ -57,7 +58,7 @@ export class BrickBreakerUIManager extends BaseUIManager {
     this.createRestartButton(onRestart, 400, 400, depth + 1);
 
     // 홈으로 가기 버튼
-    this.createHomeButton(() => {}, 400, 480, depth + 1);
+    this.createHomeButton(onHome, 400, 480, depth + 1);
   }
 
   private getEndGameConfig(result: GameResult) {

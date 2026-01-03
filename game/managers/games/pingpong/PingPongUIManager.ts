@@ -277,7 +277,8 @@ export class PingPongUIManager extends BaseUIManager {
     isPlayerWin: boolean,
     playerScore: number,
     aiScore: number,
-    onRestart: () => void
+    onRestart: () => void,
+    onHome: () => void
   ): void {
     const depth = 10;
     const winner = isPlayerWin ? "YOU WIN!" : "GAME OVER";
@@ -305,7 +306,7 @@ export class PingPongUIManager extends BaseUIManager {
 
     this.createRestartButton(onRestart, 400, 440, depth + 1);
 
-    this.createHomeButton(() => {}, 400, 520, depth + 1);
+    this.createHomeButton(onHome, 400, 520, depth + 1);
   }
 
   private createFinalScoreDisplay(
