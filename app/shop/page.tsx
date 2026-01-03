@@ -27,6 +27,19 @@ export default function ShopPage(){
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
 
+  const ITEMS_PER_PAGE = 12; 
+// lg 기준: 4열 × 3줄
+const [currentPage, setCurrentPage] = useState(1);
+useEffect(() => {
+  setCurrentPage(1);
+}, [activeCategory]);
+
+
+const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+const endIndex = startIndex + ITEMS_PER_PAGE;
+
+
+
   const SHOP_CATEGORY_TO_LPC_PART: Record< ShopCategory, keyof CharacterState["parts"] | null > = {
   all: null,
   hair: "hair",
@@ -80,7 +93,9 @@ export default function ShopPage(){
  const filteredProducts = activeCategory === "all" ? productsWithOwnership
     : productsWithOwnership.filter( (product) => product.category === activeCategory);
 
-      
+const pagedProducts = filteredProducts.slice(startIndex, endIndex);
+      const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+
   const handlePurchase = async (product: Product) => {
     try {
       const res = await fetch("/api/purchase", {
@@ -145,29 +160,55 @@ const handlePreviewItem = (product: Product) => {
       </div>
 
       <TransparentFrame>
-        <div className="flex h-full gap-6">
+        <div  className="flex w-full h-full gap-6">
 
-            {/* 👈 STEP 2: 캐릭터 프리뷰 */}
-          <aside className="w-[280px]">
+        <div className="flex gap-6 pr-20">
+          <aside className="w-[280px] h-full flex items-center justify-center">
             {previewCharacter && (
               <ShopCharacterPreview character={previewCharacter} />
             )}
           </aside>
 
-
-
-          {/* 사이드바 영역 */}
-          <aside className="side-content w-[150px]">
+          <aside className="side-content w-[160px] h-full flex">
             <CategoryTabs
               activeCategory={activeCategory}
               onChange={setActiveCategory}
             />
           </aside>
+        </div>
 
           {/* 카드 리스트 영역 */}
-          <section className="shop-content flex-1">
-            <ProductList products={filteredProducts} 
+          <section className="shop-content flex-1 relative min-h-[720px]">
+            <ProductList products={pagedProducts} 
               onSelect={handleSelectProduct}/>
+
+            {/* 페이지네이션 */}
+            { <div className="absolute -bottom-7 left-0 right-0 flex justify-center gap-4">
+                {Array.from({ length: totalPages }).map((_, i) => {
+                  const page = i + 1;
+                  const isActive = page === currentPage;
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`
+                        px-3 py-1 rounded
+                        text-sm transition
+                        ${
+                          isActive
+                            ? "bg-teal-400 text-black"
+                            : "bg-black/40 text-gray-300 hover:bg-teal-400/30"
+                        }
+                      `}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>}
+
+
 
             {isModalOpen && selectedProduct && (
               <ProductDetailModal
