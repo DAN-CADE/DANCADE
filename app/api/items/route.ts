@@ -48,7 +48,6 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(data,"data 상점아이템")
     return NextResponse.json(data, { status: 200 });
   } catch (err) {
     console.error("[POST /api/items] exception", err);
