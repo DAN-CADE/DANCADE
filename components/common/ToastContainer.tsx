@@ -1,7 +1,7 @@
 // components/common/ToastContainer.tsx
 "use client";
 
-import { Toast } from "./toast";
+import { Toast } from "../../game/types/toast";
 
 export default function ToastContainer({ toasts }: { toasts: Toast[] }) {
   return (
@@ -10,7 +10,13 @@ export default function ToastContainer({ toasts }: { toasts: Toast[] }) {
         <div
           key={toast.id}
           className={`
-            px-4 py-3 rounded-md text-sm shadow-lg
+                min-w-[360px]          /* ✅ 가로 크기 */
+                px-6 py-4              /* ✅ 패딩 키움 */
+                rounded-lg
+                text-base              /* ✅ 글자 크기 */
+                font-medium
+                shadow-[0_0_18px_rgba(0,255,220,0.35)]
+                transition-all
             ${
               toast.type === "success" &&
               "bg-teal-400 text-black"

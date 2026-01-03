@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
-import { Toast } from "./toast";
+import { Toast } from "../../game/types/toast";
 import ToastContainer from "./ToastContainer";
 
 interface ToastContextValue {
