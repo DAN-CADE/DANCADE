@@ -19,6 +19,7 @@ export default function ShopPage(){
   const [previewCharacter, setPreviewCharacter] =useState<CharacterState | null>(null);
   const gender = previewCharacter?.gender as "male" | "female" | undefined;
   const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
+const [isPurchasing, setIsPurchasing] = useState(false);
 
   const { products, isLoading } = useProducts(gender);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -97,6 +98,11 @@ const pagedProducts = filteredProducts.slice(startIndex, endIndex);
       const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
   const handlePurchase = async (product: Product) => {
+
+    if (isPurchasing) return;
+      setIsPurchasing(true);
+
+
     try {
       const res = await fetch("/api/purchase", {
         method: "POST",
@@ -120,6 +126,7 @@ const pagedProducts = filteredProducts.slice(startIndex, endIndex);
       alert("구매 중 오류가 발생했습니다");
     } finally {
       // ✅ 구매 버튼이 눌렸고, 로직이 끝난 뒤에만 실행됨
+       setIsPurchasing(false);
       setIsModalOpen(false);
       setSelectedProduct(null);
     }
@@ -215,6 +222,8 @@ const handlePreviewItem = (product: Product) => {
                 product={selectedProduct}
                 onClose={handleModal}
                  onPurchase={handlePurchase}
+                   isPurchasing={isPurchasing}
+
               />
             )}
           </section>

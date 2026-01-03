@@ -7,6 +7,7 @@ interface Props {
   product: Product;
   onClose: () => void;
   onPurchase: (product: Product) => void;
+   isPurchasing: boolean;
 }
 
 export default function ProductDetailModal({
