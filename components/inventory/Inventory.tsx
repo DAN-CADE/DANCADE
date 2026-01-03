@@ -11,6 +11,7 @@ import {
 } from "@/game/utils/avatarCustomization";
 import { updateCharacterSkin } from "@/lib/api/inventory/character";
 import { equipItemParts } from "@/lib/api/inventory/equipItemParts";
+import { useToast } from "../common/ToastProvider";
 
 const COLOR_CATEGORY_TO_PART = {
   Skin: ["body", "head", "nose"],
@@ -129,7 +130,10 @@ export default function Inventory() {
   const user = getCurrentUser();
   const userId = user?.id ?? null;
   const { items, loading, fetchInventory } = useInventoryList(userId);
+  const { showToast } = useToast();
 
+
+  
   useEffect(() => {
     const interval = setInterval(() => {
       const adm = (window as any).__avatarDataManager;
@@ -155,11 +159,25 @@ export default function Inventory() {
   /* =========================
    * 인벤토리 토글
    * ========================= */
-  useEffect(() => {
-    const handleToggle = () => setIsOpen((prev) => !prev);
-    window.addEventListener("inventory-toggle", handleToggle);
-    return () => window.removeEventListener("inventory-toggle", handleToggle);
-  }, []);
+useEffect(() => {
+  const handleToggle = () => {
+    // ❌ 게스트면 토스트만
+    if (!user) {
+      showToast({
+        type: "info",
+        message: "게스트는 인벤토리를 사용할 수 없습니다",
+      });
+      return;
+    }
+
+    // ✅ 로그인 유저만 열기
+    setIsOpen((prev) => !prev);
+  };
+
+  window.addEventListener("inventory-toggle", handleToggle);
+  return () =>
+    window.removeEventListener("inventory-toggle", handleToggle);
+}, [user, showToast]);
 
   /* =========================
    * 인벤토리 열릴 때 fetch
