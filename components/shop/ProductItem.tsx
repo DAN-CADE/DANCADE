@@ -6,31 +6,55 @@ interface ProductItemProps {
   onClick: () => void;
 }
 
-export default function ProductItem({ product,onClick  }: ProductItemProps) {
-return (
-<div
-  onClick={onClick}
-  className={`
-    h-[180px] rounded-md border cursor-pointer
-    flex flex-col items-center justify-center gap-2
-    ${product.isOwned
-      ? "border-cyan-400 bg-cyan-400/10"
-      : "border-white/30 hover:border-white/60"}
-  `}
->
-  <div className="text-white text-sm font-semibold">
-    {product.name}
-  </div>
+export default function ProductItem({ product, onClick }: ProductItemProps) {
+  return (
+    <div
+      onClick={onClick}
+      className="relative cursor-pointer group"
+    >
+      {/* 🔹 네온 프레임 (뒤) */}
+      <div
+        className="
+          absolute inset-0
+          translate-x-1.5 translate-y-1.5
+          border-2 border-teal-400
+          pointer-events-none
+        "
+      />
 
-  {product.isOwned ? (
-    <div className="text-cyan-300 text-xs font-bold">
-      보유중
+      {/* 🔹 실제 카드 */}
+      <div
+        className={`
+          relative z-10
+          h-[200px] w-full
+          bg-black
+          flex flex-col justify-between
+          px-4 py-6
+          transition-all
+          ${
+            product.isOwned
+              ? "bg-black"
+              : "group-hover:translate-x-[-2px] group-hover:translate-y-[-2px]"
+          }
+        `}
+      >
+        {/* 아이템명 */}
+        <div className="text-white text-center text-sm tracking-wide pt-8">
+          {product.name}
+        </div>
+
+        {/* 가격 / 보유 */}
+        <div className="bg-white text-black flex items-center justify-center gap-2 py-1">
+          🪑 {product.isOwned ? (
+            <span className="text-xs font-bold opacity-40">보유중</span>
+          ) : (
+            <>
+              <span className="text-xs font-bold">{product.price}</span>
+              <span className="text-xs">P</span>
+            </>
+          )}
+        </div>
+      </div>
     </div>
-  ) : (
-    <div className="text-white/80 text-xs">
-      {product.price} P
-    </div>
-  )}
-</div>
   );
 }

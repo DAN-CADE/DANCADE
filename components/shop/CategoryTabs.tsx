@@ -20,13 +20,13 @@ export default function CategoryTabs({
   onChange,
 }: CategoryTabsProps) {
   return (
-    <nav className="pt-6">
-      <div className="flex">
-        {/* ✅ 왼쪽 큰 세로 가이드 바 */}
-        <div className="w-[3px] bg-cyan-400 mr-6 rounded-sm" />
+    <nav className="relative h-full ">
+      {/* ✅ 화면 전체를 채우는 기둥바 */}
+      <div className="absolute left-0 top-0 h-full w-[2px] bg-white/80 rounded-sm" />
 
-        {/* 카테고리 목록 */}
-        <ul className="flex flex-col gap-4">
+      {/* ✅ 세로 중앙에 오는 카테고리 텍스트 */}
+      <div className="h-full flex items-center ">
+        <ul className="flex flex-col gap-15 py-2">
           {SHOP_CATEGORIES.map((cat) => {
             const isActive = cat.key === activeCategory;
 
@@ -36,13 +36,14 @@ export default function CategoryTabs({
                 onClick={() => onChange(cat.key)}
                 className={`
                   cursor-pointer select-none
-                  h-14 flex items-center
+                  h-14 flex items-center gap-3
+                  px-4
                   text-xl
-                  transition-colors
+                  transition-all
                   ${
                     isActive
-                      ? "text-cyan-400 font-semibold"
-                      : "text-gray-400 hover:text-cyan-300"
+                    ? "bg-teal-400 text-black font-semibold pr-20"
+                    : "text-white/70 hover:text-white"
                   }
                 `}
               >

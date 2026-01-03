@@ -6,6 +6,7 @@ import {
   Noto_Sans_KR,
 } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/common/ToastProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,7 +46,9 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${notoSansKR.variable} font-neo antialiased`}
       >
+        <ToastProvider>
         {children}
+        </ToastProvider>
       </body>
     </html>
   );

@@ -19,6 +19,9 @@ export default function ProductList({ products, onSelect }: ProductListProps) {
         md:grid-cols-3
         lg:grid-cols-4
         gap-6
+        overflow-hidden
+        pr-2
+        pb-4   
       "
     >
       {products.map((product) => (

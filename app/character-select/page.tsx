@@ -73,7 +73,7 @@ export default function CharacterSelect() {
 
     // 2️⃣ 회원일 경우만 DB 저장
     if (memberUser) {
-      const res = await fetch("/api/users/character", {
+      const res = await fetch("/api/users/saveCharacter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

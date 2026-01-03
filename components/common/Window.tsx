@@ -11,6 +11,7 @@ interface WindowProps {
   children: React.ReactNode;
   className?: string;
   showMaximize?: boolean;
+  variant?: "page" | "modal"; // ✅ 추가
 }
 
 export default function Window({
@@ -18,19 +19,39 @@ export default function Window({
   children,
   className = "",
   showMaximize = true,
+  variant = "page", // ✅ 기본값
 }: WindowProps) {
   const router = useRouter();
+  const isModal = variant === "modal";
 
   return (
-    <section className="relative min-h-screen py-12 px-5 drop-shadow-[0_0_14px_rgba(108,173,247,0.55)] font-neo">
-      <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
+    <section
+      className={`
+        relative font-neo
+        ${isModal ? "" : "min-h-screen py-12 px-5"}
+        drop-shadow-[0_0_14px_rgba(108,173,247,0.55)]
+      `}
+    >
+      {/* ✅ 페이지에서만 배경 */}
+      {!isModal && (
+        <div className="absolute inset-0 bg-[url('/assets/background/common.png')] bg-cover bg-center bg-no-repeat opacity-15 -z-10" />
+      )}
+
       <div
-        className={`max-w-[1400px] w-full m-auto border border-[var(--color-navy)] ${className}`}
+        className={`
+          ${isModal ? "w-[420px]" : "max-w-[1400px] w-full"}
+          m-auto
+          border border-[var(--color-navy)]
+          ${className}
+        `}
       >
         {/* 핑크색 타이틀바 */}
         <div className="window-header bg-[var(--color-pink)] flex items-center justify-between px-4 py-3">
           {/* 좌측 아이콘 */}
-          <button className="window-icon">
+          <button
+            className="window-icon"
+            onClick={isModal ? undefined : () => router.back()}
+          >
             <Image src={windowClose} alt="" />
           </button>
 
@@ -39,7 +60,7 @@ export default function Window({
 
           {/* 우측 아이콘 */}
           <div className="flex gap-2">
-            {showMaximize && (
+            {showMaximize && !isModal && (
               <button className="window-btn">
                 <Image src={windowMaximize} alt="" />
               </button>
@@ -49,24 +70,25 @@ export default function Window({
 
         {/* 컨텐츠 영역 */}
         <div
-          className="
+          className={`
             window-content relative 
-            bg-[var(--color-dark-blue)] 
-            py-15 px-8
-            lg:p-8
-            h-full 
-            min-h-[800px]
-            lg:max-h-[800px] 
-            max-h-none
+            bg-[var(--color-dark-blue)]
             flex flex-col items-center justify-center gap-8
-          "
+            ${isModal
+              ? "p-6"
+              : "py-15 px-8 min-h-[800px] lg:max-h-[800px]"}
+          `}
         >
-          <Image
-            src={back}
-            alt="뒤로가기"
-            className="absolute left-5 top-5 cursor-pointer"
-            onClick={() => router.back()}
-          />
+          {/* ✅ 페이지에서만 뒤로가기 */}
+          {!isModal && (
+            <Image
+              src={back}
+              alt="뒤로가기"
+              className="absolute left-5 top-5 cursor-pointer"
+              onClick={() => router.back()}
+            />
+          )}
+
           {children}
         </div>
       </div>
