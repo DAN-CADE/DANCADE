@@ -23,7 +23,9 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [inputValue, setInputValue] = useState("");
   const [isFullHeight, setIsFullHeight] = useState(false);
   const [username, setUsername] = useState("익명"); // 추가
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -84,6 +86,32 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
       message: "👋",
     });
   };
+
+  // ✅ 이모지 추가
+  const handleEmojiClick = (emoji: string) => {
+    setInputValue((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // ✅ 외부 클릭 시 이모지 피커 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   return (
     <div
@@ -156,6 +184,30 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
       </div>
       {/* Input Area */}
       <div className={styles.inputContainer}>
+        {/* 이모지 버튼 */}
+        <div className={styles.emojiPickerContainer} ref={emojiPickerRef}>
+          <button
+            className={styles.emojiPickerBtn}
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            title="이모지 추가"
+          >
+            😊
+          </button>
+          {showEmojiPicker && (
+            <div className={styles.emojiPanel}>
+              {["😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😇"].map((emoji) => (
+                <button
+                  key={emoji}
+                  className={styles.emojiOption}
+                  onClick={() => handleEmojiClick(emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className={styles.inputWrapper}>
           <input
             type="text"
