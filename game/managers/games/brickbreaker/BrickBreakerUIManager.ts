@@ -2,6 +2,7 @@
 
 import { BaseUIManager } from "@/game/managers/base";
 import { GameResult } from "./BrickBreakerGameManager";
+import { TEXT_STYLE } from "@/game/types/common/ui.constants";
 
 /**
  * 벽돌깨기 UI 관리
@@ -14,12 +15,7 @@ export class BrickBreakerUIManager extends BaseUIManager {
   }
 
   private createScoreText(): void {
-    this.scoreText = this.scene.add.text(
-      16,
-      16,
-      "SCORE: 0",
-      this.TEXT_STYLE.SCORE
-    );
+    this.scoreText = this.scene.add.text(16, 16, "SCORE: 0", TEXT_STYLE.SCORE);
   }
 
   updateScore(score: number): void {
@@ -40,7 +36,7 @@ export class BrickBreakerUIManager extends BaseUIManager {
     // 메인 텍스트
     const mainText = this.scene.add
       .text(400, 200, config.mainText, {
-        ...this.TEXT_STYLE.GAME_OVER,
+        ...TEXT_STYLE.GAME_OVER,
         color: config.mainColor,
       })
       .setOrigin(0.5)

@@ -51,7 +51,7 @@ export abstract class BaseUIManager {
       onRestart,
       {
         size: "SMALL",
-        color: 0xffffff,
+        color: 0x000000,
         textColor: style.color,
         fontFamily: style.fontFamily,
         fontSize: style.fontSize,
@@ -80,7 +80,7 @@ export abstract class BaseUIManager {
       onHome,
       {
         size: "SMALL",
-        color: 0xffffff,
+        color: 0x000000,
         textColor: style.color,
         fontFamily: style.fontFamily,
         fontSize: style.fontSize,

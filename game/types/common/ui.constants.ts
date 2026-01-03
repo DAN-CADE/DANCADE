@@ -125,4 +125,18 @@ export const TEXT_STYLE = {
     fontFamily: FONT_CONFIG.FAMILY,
     color: COMMON_COLORS.TEXT_PRIMARY,
   },
+  GAME_OVER: {
+    fontSize: "64px",
+    fontFamily: FONT_CONFIG.FAMILY,
+    color: "#ffffff",
+    fontStyle: "bold",
+    stroke: "#000000",
+    strokeThickness: 6,
+  },
+  SCORE: {
+    fontSize: "32px",
+    fontFamily: FONT_CONFIG.FAMILY,
+    color: COMMON_COLORS.TEXT_GOLD,
+    fontStyle: "bold",
+  },
 } as const;
