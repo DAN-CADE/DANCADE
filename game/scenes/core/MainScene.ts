@@ -205,6 +205,7 @@ export class MainScene extends BaseGameScene {
       // 🔥 React에서 접근 가능하도록 노출 => inventory 에서 두 매니저 접근
     (window as any).__avatarDataManager = this.avatarDataManager;
     (window as any).__avatarManager = this.player;
+    (window as any).__mainScene = this; // 카메라 접근을 위해 씬 노출
   }
 
   // 화면에 무엇을 그릴 것인가
