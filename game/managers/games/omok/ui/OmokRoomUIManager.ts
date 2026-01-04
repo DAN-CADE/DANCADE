@@ -1,7 +1,10 @@
 import { Socket } from "socket.io-client";
-import { BaseRoomUIManager } from "@/game/managers/base/multiplayer";
+
 import { OMOK_CONFIG } from "@/game/types/omok";
-import type { RoomUIConfig } from "@/game/types/multiplayer/room.types";
+
+import { BaseRoomUIManager } from "@/game/managers/base/multiplayer/ui/BaseRoomUIManager";
+import { COMMON_COLORS, TEXT_STYLE } from "@/game/types/common/ui.constants";
+import { RoomUIConfig } from "@/game/types/common/ui.types";
 
 /**
  * 오목 Room UI 설정
@@ -10,11 +13,11 @@ const OMOK_ROOM_UI_CONFIG: RoomUIConfig = {
   colors: {
     panel: OMOK_CONFIG.COLORS.PANEL,
     primary: OMOK_CONFIG.COLORS.PRIMARY,
-    secondary: OMOK_CONFIG.COLORS.SECONDARY,
+    // secondary: OMOK_CONFIG.COLORS.SECONDARY,
     danger: OMOK_CONFIG.COLORS.DANGER,
     cardActive: OMOK_CONFIG.COLORS.CARD_ACTIVE,
     cardInactive: OMOK_CONFIG.COLORS.CARD_INACTIVE,
-    subText: OMOK_CONFIG.COLORS.SUB_TEXT,
+    subText: COMMON_COLORS.TEXT_SECONDARY,
     gold: OMOK_CONFIG.COLORS.GOLD,
   },
   layout: {
@@ -27,9 +30,9 @@ const OMOK_ROOM_UI_CONFIG: RoomUIConfig = {
     playerCardSpacing: 100,
   },
   textStyle: {
-    title: OMOK_CONFIG.TEXT_STYLE.SUBTITLE,
-    normal: OMOK_CONFIG.TEXT_STYLE.NORMAL,
-    small: OMOK_CONFIG.TEXT_STYLE.SMALL,
+    title: TEXT_STYLE.SUBTITLE,
+    normal: TEXT_STYLE.NORMAL,
+    // small: TEXT_STYLE.SMALL,
   },
 };
 

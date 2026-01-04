@@ -1,8 +1,9 @@
 // game/managers/games/omok/ui/OmokGameAbortedDialog.ts
 
 import { BaseGameAbortedDialog } from "@/game/managers/base/multiplayer/ui/BaseGameAbortedDialog";
+import { FONT_CONFIG } from "@/game/types/common/ui.constants";
+import { GameAbortedDialogConfig } from "@/game/types/common/ui.types";
 import { OMOK_CONFIG } from "@/game/types/omok";
-import type { GameAbortedDialogConfig } from "@/game/managers/base/multiplayer/ui/BaseGameAbortedDialog";
 
 /**
  * 오목 게임 중단 다이얼로그 설정
@@ -18,15 +19,15 @@ const OMOK_ABORT_CONFIG: GameAbortedDialogConfig = {
   textStyle: {
     title: {
       fontSize: "48px",
-      fontFamily: OMOK_CONFIG.FONT.FAMILY,
+      fontFamily: FONT_CONFIG.FAMILY,
       fontStyle: "bold",
     },
     reason: {
       fontSize: "24px",
-      fontFamily: OMOK_CONFIG.FONT.FAMILY,
+      fontFamily: FONT_CONFIG.FAMILY,
     },
   },
-  depth: 10000,
+  // depth: 10000,
 };
 
 /**

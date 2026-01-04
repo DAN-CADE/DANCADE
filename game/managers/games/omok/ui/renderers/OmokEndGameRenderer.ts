@@ -1,6 +1,7 @@
 import { BaseEndGameUIManager } from "@/game/managers/base/multiplayer/ui/BaseEndGameUIManager";
 import { OMOK_CONFIG } from "@/game/types/omok";
-import type { EndGameUIConfig } from "@/game/managers/base/multiplayer/ui/BaseEndGameUIManager";
+import { TEXT_STYLE } from "@/game/types/common/ui.constants";
+import { EndGameUIConfig } from "@/game/types/common/ui.types";
 
 /**
  * 오목 게임 종료 UI 설정
@@ -22,7 +23,7 @@ const OMOK_END_GAME_CONFIG: EndGameUIConfig = {
   },
   textStyle: {
     winner: {
-      ...OMOK_CONFIG.TEXT_STYLE.TITLE,
+      ...TEXT_STYLE.TITLE,
       fontStyle: "bold",
     },
   },
