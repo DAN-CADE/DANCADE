@@ -1,26 +1,25 @@
 // utils/ButtonFactory.ts
 // - 공통 버튼 생성 유틸리티
 
-import { BUTTON_SIZE } from "@/game/types/omok";
-
-export type ButtonSizeKey = keyof typeof BUTTON_SIZE;
-
-export interface ButtonOptions {
-  size?: ButtonSizeKey;
-  color?: number;
-  textColor?: string;
-  fontSize?: string;
-  fontFamily?: string;
-  cornerRadius?: number;
-}
+import { ButtonOptions } from "@/game/types/common/ui.types";
+import {
+  BUTTON_SIZE,
+  COMMON_COLORS,
+  FONT_CONFIG,
+} from "@/game/types/common/ui.constants";
 
 /**
  * 공통 버튼 생성 유틸리티
  */
 export class ButtonFactory {
+  // =====================================================================
+  // =====================================================================
   /**
    * 기본 버튼 생성
    */
+  // =====================================================================
+  // =====================================================================
+
   static createButton(
     scene: Phaser.Scene,
     x: number,
@@ -29,14 +28,15 @@ export class ButtonFactory {
     callback: () => void,
     options: ButtonOptions = {}
   ): Phaser.GameObjects.Container {
+    // 각 렌더러 파일에서 보내준 값이 있으면 그 값을 쓰고, 없으면 기본값으로 사용
     const {
       size = "MEDIUM",
-      color = 0xffffff,
+      color = COMMON_COLORS.WHITE,
       textColor = "#333333",
       fontSize = "16px",
-      fontFamily = "NeoDunggeunmo",
-      // cornerRadius = 12,
-    } = options;
+      fontFamily = FONT_CONFIG.PRIMARY,
+    }: // cornerRadius = 12,
+    ButtonOptions = options;
 
     const { width, height } = BUTTON_SIZE[size];
 
@@ -92,9 +92,14 @@ export class ButtonFactory {
     return container;
   }
 
+  // =====================================================================
+  // =====================================================================
   /**
    * 메뉴용 버튼 (넓은 버튼)
    */
+  // =====================================================================
+  // =====================================================================
+
   static createMenuButton(
     scene: Phaser.Scene,
     x: number,
@@ -109,6 +114,9 @@ export class ButtonFactory {
       textColor: "#ffffff",
     });
   }
+
+  // =====================================================================
+  // =====================================================================
 
   /**
    * 작은 버튼 (게임 내)
