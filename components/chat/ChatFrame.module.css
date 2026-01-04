@@ -384,7 +384,9 @@
 
 .inputContainer {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
   background: linear-gradient(
     90deg,
     rgba(100, 150, 255, 0.1) 0%,
@@ -392,6 +394,7 @@
   );
   border-top: 1px solid rgba(100, 150, 255, 0.2);
   border-radius: 0 0 2px 2px;
+  padding: 12px 15px;
 }
 
 /* 게스트 제한 패널 */
@@ -651,7 +654,7 @@
 .inputWrapper {
   display: flex;
   align-items: center;
-  width: 100%;
+  flex: 1;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(100, 150, 255, 0.3);
   border-radius: 8px;
@@ -765,6 +768,7 @@
   position: absolute;
   bottom: 100%;
   left: 0;
+  right: auto;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
@@ -773,7 +777,7 @@
   border: 1px solid rgba(100, 150, 255, 0.3);
   border-radius: 8px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5), 0 0 12px rgba(100, 150, 255, 0.15);
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   z-index: 1000;
 }
 
