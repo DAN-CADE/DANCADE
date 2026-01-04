@@ -9,17 +9,29 @@ import { TEXT_STYLE } from "@/game/types/common/ui.constants";
  */
 export class BrickBreakerUIManager extends BaseUIManager {
   private scoreText?: Phaser.GameObjects.Text;
+  private livesText?: Phaser.GameObjects.Text;
 
   createGameUI(): void {
     this.createScoreText();
+    this.createLivesText();
   }
 
   private createScoreText(): void {
     this.scoreText = this.scene.add.text(16, 16, "SCORE: 0", TEXT_STYLE.SCORE);
   }
 
+  private createLivesText(): void {
+    this.livesText = this.scene.add
+      .text(this.scene.scale.width - 120, 16, "LIVES: 3", TEXT_STYLE.SCORE)
+      .setOrigin(0);
+  }
+
   updateScore(score: number): void {
     this.scoreText?.setText(`SCORE: ${score}`);
+  }
+
+  updateLives(lives: number): void {
+    this.livesText?.setText(`LIVES: ${lives}`);
   }
 
   showEndGameScreen(

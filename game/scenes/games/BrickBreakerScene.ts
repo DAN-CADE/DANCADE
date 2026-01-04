@@ -44,6 +44,9 @@ export class BrickBreakerScene extends BaseGameScene {
 
   private readonly ASSET_PATH = "/assets/game/kenney_puzzle-pack/png/";
 
+  // 스페이스바 키
+  private spaceKey!: Phaser.Input.Keyboard.Key;
+
   constructor() {
     super({ key: "BrickBreakerScene" });
   }
@@ -116,6 +119,9 @@ export class BrickBreakerScene extends BaseGameScene {
         onScoreUpdate: (score) => {
           this.uiManager.updateScore(score);
         },
+        onLivesUpdate: (lives) => {
+          this.uiManager.updateLives(lives);
+        },
         onGameResult: (result) => {
           this.handleGameEnd(result);
         },
@@ -135,6 +141,11 @@ export class BrickBreakerScene extends BaseGameScene {
 
     this.gameManager.setGameObjects(this.paddle, this.ball, this.bricks);
     this.setupCollisions();
+
+    // ✅ 스페이스바 키 등록
+    this.spaceKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SPACE
+    );
   }
 
   // 5. 게임 종료 및 재시작 로직
@@ -162,8 +173,17 @@ export class BrickBreakerScene extends BaseGameScene {
   }
 
   update(): void {
+    // ✅ 패들 이동 입력
     const direction = this.inputManager.getPaddleMoveDirection();
     this.gameManager.movePaddle(direction);
+
+    // ✅ 스페이스바 눌렀을 때 공 발사
+    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+      this.gameManager.launchBall();
+    }
+
+    // ✅ GameManager update 호출 (공이 패들 위에 고정되어 있을 때 처리)
+    this.gameManager.update(0);
   }
 
   // ============================================================
@@ -184,10 +204,8 @@ export class BrickBreakerScene extends BaseGameScene {
 
     this.ball = this.physics.add.sprite(ballX, ballY, "ball");
     this.ball.setCollideWorldBounds(true).setBounce(1);
-    this.ball.setVelocity(
-      this.GAME_CONFIG.ballSpeed,
-      -this.GAME_CONFIG.ballSpeed
-    );
+    // ✅ 초기 속도는 설정하지 않음 (launchBall()에서 설정)
+    this.ball.setVelocity(0, 0);
 
     if (this.ball.body) {
       (this.ball.body as Phaser.Physics.Arcade.Body).onWorldBounds = true;

@@ -2,11 +2,16 @@
 
 import { BaseGameManager } from "@/game/managers/base";
 
+/*
+  todo: 라이프 시스템 / 볼 발사 메커니즘 / 볼, 패들 리셋 로직
+*/
+
 // Callback 타입 정의
 interface BrickBreakerCallbacks extends Record<string, unknown> {
   onScoreUpdate?: (score: number) => void;
   onGameResult?: (result: GameResult) => void;
   onBrickDestroy?: () => void;
+  onLivesUpdate?: (lives: number) => void;
 }
 
 interface BrickBreakerConfig {
@@ -14,6 +19,7 @@ interface BrickBreakerConfig {
   height: number;
   paddleSpeed: number;
   ballSpeed: number;
+  initialLives: number;
 }
 
 interface BrickLayoutConfig {
@@ -27,6 +33,7 @@ interface BrickLayoutConfig {
 
 interface GameState {
   score: number;
+  lives: number;
   isPlaying: boolean;
   isPaused: boolean;
 }
@@ -36,6 +43,7 @@ export const BRICKBREAKER_CONFIG: BrickBreakerConfig = {
   height: 600,
   paddleSpeed: 300,
   ballSpeed: 200,
+  initialLives: 3,
 };
 
 export const BRICK_LAYOUT: BrickLayoutConfig = {
@@ -70,6 +78,12 @@ export class BrickBreakerGameManager extends BaseGameManager<
   private readonly brickLayout: BrickLayoutConfig;
   private readonly pointsPerBrick: number = 10;
 
+  // 볼 발사 상태 & 초기 위치로 리셋 좌표
+  private isBallLaunched: boolean = false;
+  private initialBallY: number = 0;
+  private initialPaddleX: number = 0;
+  private initialPaddleY: number = 0;
+
   constructor(
     scene: Phaser.Scene,
     gameConfig: BrickBreakerConfig,
@@ -79,6 +93,7 @@ export class BrickBreakerGameManager extends BaseGameManager<
     // ✅ 부모 클래스 초기화
     const initialState: GameState = {
       score: 0,
+      lives: gameConfig.initialLives,
       isPlaying: true,
       isPaused: false,
     };
@@ -101,6 +116,35 @@ export class BrickBreakerGameManager extends BaseGameManager<
     this.paddle = paddle;
     this.ball = ball;
     this.bricks = bricks;
+
+    // 초기 위치 저장
+    this.initialBallY = ball.y;
+    this.initialPaddleX = paddle.x;
+    this.initialPaddleY = paddle.y;
+  }
+
+  launchBall(): void {
+    // 이미 발사했거나, 볼이 없거나, 게임이 안 돌아가면 무시
+    if (this.isBallLaunched || !this.ball || !this.gameState.isPlaying) return;
+
+    // 랜덤 각도로 볼 발사 (-45도 ~ 45도)
+    const angle = Phaser.Math.Between(-45, 45);
+    const rad = Phaser.Math.DegToRad(angle);
+
+    // 속도 설정
+    this.ball.setVelocity(
+      Math.sin(rad) * this.gameConfig.ballSpeed,
+      -this.gameConfig.ballSpeed // 위쪽으로 발사
+    );
+
+    this.isBallLaunched = true;
+  }
+
+  update(delta: number): void {
+    //  발사 전: 볼을 패들 위에 고정
+    if (!this.isBallLaunched && this.paddle && this.ball) {
+      this.ball.setPosition(this.paddle.x, this.paddle.y - 20);
+    }
   }
 
   /**
@@ -160,7 +204,32 @@ export class BrickBreakerGameManager extends BaseGameManager<
    * 바닥 충돌 처리 (게임 오버)
    */
   handleFloorCollision(): void {
-    this.handleGameOver();
+    // 라이프 차감
+    this.gameState.lives -= 1;
+    this.callCallback("onLivesUpdate", this.gameState.lives);
+
+    if (this.gameState.lives <= 0) {
+      // 라이프 0이 되었을 때만 게임오버
+      this.handleGameOver();
+    } else {
+      // 라이프 남음: 볼과 패들 리셋
+      this.resetBallAndPaddle();
+    }
+  }
+
+  private resetBallAndPaddle(): void {
+    if (!this.ball || !this.paddle) return;
+
+    // 패들 원위치
+    this.paddle.setPosition(this.initialPaddleX, this.initialPaddleY);
+    this.paddle.setVelocity(0, 0);
+
+    // 볼 원위치 -> 속도 0
+    this.ball.setPosition(this.paddle.x, this.initialBallY);
+    this.ball.setVelocity(0, 0);
+
+    // 볼 발사 상태 초기화
+    this.isBallLaunched = false;
   }
 
   /**
@@ -206,15 +275,24 @@ export class BrickBreakerGameManager extends BaseGameManager<
     return this.gameState.score;
   }
 
+  getLives(): number {
+    return this.gameState.lives;
+  }
+
   /**
    * 게임 리셋
    */
   resetGame(): void {
     this.gameState.score = 0;
+    this.gameState.lives = this.gameConfig.initialLives;
     this.gameState.isPlaying = true;
     this.gameState.isPaused = false;
+
     // ✅ BaseGameManager의 callCallback 사용
     this.callCallback("onScoreUpdate", 0);
+    this.callCallback("onLivesUpdate", this.gameState.lives);
+
+    this.resetBallAndPaddle();
   }
 }
 
