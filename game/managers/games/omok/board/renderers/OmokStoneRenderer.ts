@@ -1,155 +1,105 @@
-// game/managers/games/Omok/renderers/OmokStoneRenderer.ts
-import { OMOK_CONFIG } from "@/game/types/omok";
+import { COMMON_COLORS } from "@/game/types/common/ui.constants";
+import {
+  Coordinate,
+  OMOK_CONFIG,
+  OmokSide,
+  OmokSideType,
+} from "@/game/types/omok";
+import { StoneInfo } from "@/game/types/omok";
 
-/**
- * 돌 정보
- */
-interface StoneInfo {
-  stoneColor: number;
-  textColor: string;
-}
-
-/**
- * OmokStoneRenderer
- * - 돌과 수순 번호 렌더링만 담당
- */
 export class OmokStoneRenderer {
   private scene: Phaser.Scene;
-  private stones: Phaser.GameObjects.Arc[] = []; // 추가: 돌 저장
+  private stones: Phaser.GameObjects.Arc[] = [];
   private stoneNumbers: Phaser.GameObjects.Text[] = [];
-  private moveCount = 0;
 
-  // UI 스타일 상수
-  private readonly STYLE = {
-    STONE_BORDER: { width: 1, color: 0x888888 },
-    MOVE_NUMBER: { size: "18px", highlightColor: "#ffcc00" },
-  } as const;
+  private readonly STYLES: Record<OmokSideType, StoneInfo> = {
+    [OmokSide.BLACK]: { stoneColor: COMMON_COLORS.BLACK, textColor: "#ffffff" },
+    [OmokSide.WHITE]: { stoneColor: COMMON_COLORS.WHITE, textColor: "#000000" },
+    [OmokSide.NONE]: { stoneColor: 0, textColor: "transparent" },
+  };
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
 
   // =====================================================================
-  // Public API
   // =====================================================================
 
-  /**
-   * 돌 렌더링
-   * @param x - 월드 x 좌표
-   * @param y - 월드 y 좌표
-   * @param turn - 턴 (1: 흑, 2: 백)
-   */
-  public renderStone(x: number, y: number, turn: number): void {
-    const stoneInfo = this.getStoneInfo(turn);
-
-    this.moveCount++;
-
-    this.createStoneCircle(x, y, stoneInfo.stoneColor);
-    this.createMoveNumber(x, y, stoneInfo.textColor);
+  public clear(): void {
+    this.clearRenderedObjects();
   }
 
-  /**
-   * 수순 번호 표시
-   */
+  // =====================================================================
+  // =====================================================================
+
+  public renderStone(
+    coordinate: Coordinate,
+    turn: OmokSideType,
+    moveNumber: number
+  ): void {
+    const stoneInfo = this.STYLES[turn];
+
+    this.createStoneCircle(coordinate, stoneInfo.stoneColor);
+    this.createMoveNumber(coordinate, moveNumber, stoneInfo.textColor);
+  }
+
   public showMoveNumbers(): void {
-    const { highlightColor } = this.STYLE.MOVE_NUMBER;
+    const { HIGHLIGHT_COLOR } = OMOK_CONFIG.BOARD_STYLE.MOVE_NUMBER;
 
     this.stoneNumbers.forEach((txt) => {
       txt.setVisible(true);
-      txt.setColor(highlightColor);
+      txt.setColor(HIGHLIGHT_COLOR);
       txt.setShadow(2, 2, "#000000", 2);
     });
   }
 
-  /**
-   * 리셋
-   */
-  public reset(): void {
-    this.destroyStones(); // 추가: 돌 삭제
-    this.destroyStoneNumbers();
-    this.moveCount = 0;
-  }
-
-  /**
-   * 수순 번호 배열 반환
-   */
-  public getStoneNumbers(): Phaser.GameObjects.Text[] {
-    return this.stoneNumbers;
-  }
-
-  /**
-   * 현재 수 개수 반환
-   */
-  public getMoveCount(): number {
-    return this.moveCount;
-  }
-
   // =====================================================================
-  // Private 렌더링 로직
   // =====================================================================
 
-  /**
-   * 돌 정보 결정 (색상, 텍스트 색상)
-   */
-  private getStoneInfo(turn: number): StoneInfo {
-    return turn === 1
-      ? {
-          stoneColor: OMOK_CONFIG.COLORS.BLACK,
-          textColor: "#ffffff",
-        }
-      : {
-          stoneColor: OMOK_CONFIG.COLORS.WHITE,
-          textColor: "#000000",
-        };
-  }
+  private createStoneCircle(coordinate: Coordinate, color: number): void {
+    const { BORDER_WIDTH, BORDER_COLOR, RADIUS } =
+      OMOK_CONFIG.BOARD_STYLE.STONE;
+    const { STONE: depth } = OMOK_CONFIG.DEPTH;
+    const { x, y } = coordinate;
 
-  /**
-   * 돌 원 생성
-   */
-  private createStoneCircle(x: number, y: number, color: number): void {
-    const { width, color: borderColor } = this.STYLE.STONE_BORDER;
-
-    // 생성한 돌을 저장
     const stone = this.scene.add
-      .circle(x, y, OMOK_CONFIG.STONE_RADIUS, color)
-      .setStrokeStyle(width, borderColor)
-      .setDepth(OMOK_CONFIG.DEPTH.STONE);
+      .circle(x, y, RADIUS, color)
+      .setStrokeStyle(BORDER_WIDTH, BORDER_COLOR)
+      .setDepth(depth);
 
     this.stones.push(stone);
   }
 
-  /**
-   * 수순 번호 텍스트 생성 (처음엔 숨김)
-   */
-  private createMoveNumber(x: number, y: number, textColor: string): void {
-    const { size } = this.STYLE.MOVE_NUMBER;
+  private createMoveNumber(
+    coordinate: Coordinate,
+    moveNumber: number,
+    textColor: string
+  ): void {
+    const { SIZE } = OMOK_CONFIG.BOARD_STYLE.MOVE_NUMBER;
+    const { x, y } = coordinate;
+    const { STONE_NUMBER: depth } = OMOK_CONFIG.DEPTH;
 
     const numText = this.scene.add
-      .text(x, y, this.moveCount.toString(), {
-        fontSize: size,
+      .text(x, y, moveNumber.toString(), {
+        fontSize: SIZE,
         color: textColor,
         fontStyle: "bold",
       })
       .setOrigin(0.5)
-      .setDepth(OMOK_CONFIG.DEPTH.STONE + 1)
+      .setDepth(depth)
       .setVisible(false);
 
     this.stoneNumbers.push(numText);
   }
 
-  /**
-   * 수순 번호 제거
-   */
-  private destroyStoneNumbers(): void {
-    this.stoneNumbers.forEach((n) => n.destroy());
-    this.stoneNumbers = [];
-  }
+  // =====================================================================
+  // =====================================================================
 
-  /**
-   * 돌 제거
-   */
-  private destroyStones(): void {
+  private clearRenderedObjects(): void {
     this.stones.forEach((stone) => stone.destroy());
+    this.stoneNumbers.forEach((stoneNumber) => stoneNumber.destroy());
+
     this.stones = [];
+    this.stoneNumbers = [];
   }
 }
