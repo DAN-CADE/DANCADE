@@ -17,6 +17,8 @@ import type {
 } from "@/game/managers/games/brickbreaker/BrickBreakerGameManager";
 
 export class BrickBreakerScene extends BaseGameScene {
+  private sessionId: string = "";
+
   // Managers
   private gameManager!: BrickBreakerGameManager;
   private uiManager!: BrickBreakerUIManager;
@@ -55,6 +57,8 @@ export class BrickBreakerScene extends BaseGameScene {
 
   init(data: { gameConfig?: GameConfig }) {
     this.gameConfig = data.gameConfig;
+    // 중복 제출 방지용 sessionId 생성
+    this.sessionId = crypto.randomUUID();
   }
 
   // 1. 에셋 로드
@@ -211,7 +215,10 @@ export class BrickBreakerScene extends BaseGameScene {
       const response = await fetch("/api/games/brick-breaker/score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          sessionId: this.sessionId, // 중복 제출 방지용 sessionId 추가
+        }),
       });
 
       if (!response.ok) {
