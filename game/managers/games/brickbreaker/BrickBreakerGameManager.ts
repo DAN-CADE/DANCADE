@@ -12,6 +12,8 @@ interface BrickBreakerCallbacks extends Record<string, unknown> {
   onGameResult?: (result: GameResult) => void;
   onBrickDestroy?: () => void;
   onLivesUpdate?: (lives: number) => void;
+  onGamePause?: () => void;
+  onGameResume?: () => void;
 }
 
 interface BrickBreakerConfig {
@@ -36,6 +38,8 @@ interface GameState {
   lives: number;
   isPlaying: boolean;
   isPaused: boolean;
+  elapsedTime: number; // 플레이 시간
+  bricksDestroyed: number; // 제거된 벽돌 수
 }
 
 export const BRICKBREAKER_CONFIG: BrickBreakerConfig = {
@@ -84,6 +88,10 @@ export class BrickBreakerGameManager extends BaseGameManager<
   private initialPaddleX: number = 0;
   private initialPaddleY: number = 0;
 
+  // 일시정지 전 속도 저장용
+  private savedBallVelocity?: { x: number; y: number };
+  private savedPaddleVelocity?: number;
+
   constructor(
     scene: Phaser.Scene,
     gameConfig: BrickBreakerConfig,
@@ -96,6 +104,8 @@ export class BrickBreakerGameManager extends BaseGameManager<
       lives: gameConfig.initialLives,
       isPlaying: true,
       isPaused: false,
+      elapsedTime: 0,
+      bricksDestroyed: 0,
     };
 
     super(scene, initialState, callbacks);
@@ -145,6 +155,11 @@ export class BrickBreakerGameManager extends BaseGameManager<
     if (!this.isBallLaunched && this.paddle && this.ball) {
       this.ball.setPosition(this.paddle.x, this.paddle.y - 20);
     }
+
+    // 게임 플레이 중일 때만 시간 누적
+    if (this.gameState.isPlaying && !this.gameState.isPaused) {
+      this.gameState.elapsedTime += delta / 1000; // 초 단위 누적
+    }
   }
 
   /**
@@ -153,12 +168,24 @@ export class BrickBreakerGameManager extends BaseGameManager<
   movePaddle(direction: "left" | "right" | "stop"): void {
     if (!this.paddle) return;
 
+    const paddleHalfWidth = this.paddle.displayWidth / 2;
+
     switch (direction) {
       case "left":
-        this.paddle.setVelocityX(-this.gameConfig.paddleSpeed);
+        // 왼쪽 경계 체크: 패들이 왼쪽 끝에 닿지 않으면 이동
+        if (this.paddle.x > paddleHalfWidth) {
+          this.paddle.setVelocityX(-this.gameConfig.paddleSpeed);
+        } else {
+          this.paddle.setVelocityX(0);
+        }
         break;
       case "right":
-        this.paddle.setVelocityX(this.gameConfig.paddleSpeed);
+        // 오른쪽 경계 체크: 패들이 오른쪽 끝에 닿지 않으면 이동
+        if (this.paddle.x < this.gameConfig.width - paddleHalfWidth) {
+          this.paddle.setVelocityX(this.gameConfig.paddleSpeed);
+        } else {
+          this.paddle.setVelocityX(0);
+        }
         break;
       case "stop":
         this.paddle.setVelocityX(0);
@@ -180,6 +207,11 @@ export class BrickBreakerGameManager extends BaseGameManager<
 
     const diff = ballSprite.x - paddleSprite.x;
     ballSprite.setVelocityX(diff * 5);
+
+    // ✅ 수직 속도가 너무 작으면 보정 (너무 수평으로 움직이는 것 방지)
+    if (ballSprite.body && Math.abs(ballSprite.body.velocity.y) < 50) {
+      ballSprite.setVelocityY(ballSprite.body.velocity.y > 0 ? 100 : -100);
+    }
   }
 
   /**
@@ -190,8 +222,10 @@ export class BrickBreakerGameManager extends BaseGameManager<
     brick: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
   ): void {
     (brick as Phaser.GameObjects.GameObject).destroy();
+
+    this.gameState.bricksDestroyed += 1;
+
     this.addScore(this.pointsPerBrick);
-    // ✅ BaseGameManager의 callCallback 사용
     this.callCallback("onBrickDestroy");
 
     // 모든 벽돌 제거 시 승리
@@ -230,6 +264,102 @@ export class BrickBreakerGameManager extends BaseGameManager<
 
     // 볼 발사 상태 초기화
     this.isBallLaunched = false;
+  }
+
+  /**
+   * 일시정지 토글
+   */
+  pauseGame(): void {
+    if (!this.gameState.isPlaying || this.gameState.isPaused) {
+      console.log(
+        "⏸ 일시정지 불가능 - isPlaying:",
+        this.gameState.isPlaying,
+        "isPaused:",
+        this.gameState.isPaused
+      );
+      return;
+    }
+
+    console.log("⏸ 게임 일시정지 시작");
+
+    // 현재 속도 저장
+    if (this.ball?.body) {
+      this.savedBallVelocity = {
+        x: this.ball.body.velocity.x,
+        y: this.ball.body.velocity.y,
+      };
+    }
+    if (this.paddle?.body) {
+      this.savedPaddleVelocity = this.paddle.body.velocity.x;
+    }
+
+    console.log(
+      "저장된 속도 - 공:",
+      this.savedBallVelocity,
+      "패들:",
+      this.savedPaddleVelocity
+    );
+
+    // 속도 0으로 + 물리 비활성화
+    this.ball?.setVelocity(0, 0);
+    this.paddle?.setVelocity(0, 0);
+
+    // 물리 엔진에서 제외
+    if (this.ball?.body) {
+      this.ball.body.enable = false;
+    }
+    if (this.paddle?.body) {
+      this.paddle.body.enable = false;
+    }
+
+    this.gameState.isPaused = true;
+    console.log("✅ isPaused = true, 콜백 호출");
+    this.callCallback("onGamePause");
+  }
+
+  /**
+   * 일시정지 해제
+   */
+  resumeGame(): void {
+    if (!this.gameState.isPaused) {
+      console.log("▶ 재개 불가능 - isPaused:", this.gameState.isPaused);
+      return;
+    }
+
+    console.log("▶ 게임 재개 시작");
+
+    // 물리 엔진에 다시 추가
+    if (this.ball?.body) {
+      this.ball.body.enable = true;
+    }
+    if (this.paddle?.body) {
+      this.paddle.body.enable = true;
+    }
+
+    // 저장된 속도 복원 (물리 활성화 후 속도 설정)
+    if (this.ball && this.savedBallVelocity) {
+      this.ball.setVelocity(this.savedBallVelocity.x, this.savedBallVelocity.y);
+      console.log("복원된 공 속도:", this.savedBallVelocity);
+    }
+    if (this.paddle && this.savedPaddleVelocity !== undefined) {
+      this.paddle.setVelocityX(this.savedPaddleVelocity);
+      console.log("복원된 패들 속도:", this.savedPaddleVelocity);
+    }
+
+    this.gameState.isPaused = false;
+    console.log("✅ isPaused = false, 콜백 호출");
+    this.callCallback("onGameResume");
+  }
+
+  /**
+   * 일시정지 토글
+   */
+  togglePause(): void {
+    if (this.gameState.isPaused) {
+      this.resumeGame();
+    } else {
+      this.pauseGame();
+    }
   }
 
   /**
@@ -280,6 +410,32 @@ export class BrickBreakerGameManager extends BaseGameManager<
   }
 
   /**
+   * 일시정지 상태 확인
+   */
+  isPaused(): boolean {
+    return this.gameState.isPaused;
+  }
+
+  /**
+   * 게임 결과 데이터 반환 (서버 전송용)
+   */
+  getGameResult(): {
+    score: number;
+    elapsedTime: number;
+    bricksDestroyed: number;
+    isWin: boolean;
+    lives: number;
+  } {
+    return {
+      score: this.gameState.score,
+      elapsedTime: Math.floor(this.gameState.elapsedTime),
+      bricksDestroyed: this.gameState.bricksDestroyed,
+      isWin: this.bricks?.countActive() === 0,
+      lives: this.gameState.lives,
+    };
+  }
+
+  /**
    * 게임 리셋
    */
   resetGame(): void {
@@ -287,6 +443,8 @@ export class BrickBreakerGameManager extends BaseGameManager<
     this.gameState.lives = this.gameConfig.initialLives;
     this.gameState.isPlaying = true;
     this.gameState.isPaused = false;
+    this.gameState.elapsedTime = 0;
+    this.gameState.bricksDestroyed = 0;
 
     // ✅ BaseGameManager의 callCallback 사용
     this.callCallback("onScoreUpdate", 0);

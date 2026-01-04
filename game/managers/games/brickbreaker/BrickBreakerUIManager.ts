@@ -8,12 +8,27 @@ import { TEXT_STYLE } from "@/game/types/common/ui.constants";
  * 벽돌깨기 UI 관리
  */
 export class BrickBreakerUIManager extends BaseUIManager {
+  // ✅ 추가: 게임 크기 상수
+  private readonly GAME_WIDTH = 800;
+  private readonly GAME_HEIGHT = 600;
+
   private scoreText?: Phaser.GameObjects.Text;
   private livesText?: Phaser.GameObjects.Text;
+  private pauseButton?: Phaser.GameObjects.Text;
+  private pauseOverlay?: Phaser.GameObjects.Rectangle;
+  private pauseText?: Phaser.GameObjects.Text;
+  private pauseHelpTexts: Phaser.GameObjects.Text[] = []; // ✅ 추가
+  private isPauseScreenShown: boolean = false;
+  private onPauseToggle?: () => void;
+
+  setPauseToggleCallback(callback: () => void): void {
+    this.onPauseToggle = callback;
+  }
 
   createGameUI(): void {
     this.createScoreText();
     this.createLivesText();
+    this.createPauseButton();
   }
 
   private createScoreText(): void {
@@ -22,7 +37,7 @@ export class BrickBreakerUIManager extends BaseUIManager {
 
   private createLivesText(): void {
     this.livesText = this.scene.add
-      .text(this.scene.scale.width - 120, 16, "LIVES: 3", TEXT_STYLE.SCORE)
+      .text(this.GAME_WIDTH - 120, 16, "LIVES: 3", TEXT_STYLE.SCORE) // ✅ 수정
       .setOrigin(0);
   }
 
@@ -34,6 +49,123 @@ export class BrickBreakerUIManager extends BaseUIManager {
     this.livesText?.setText(`LIVES: ${lives}`);
   }
 
+  private createPauseButton(): void {
+    this.pauseButton = this.scene.add
+      .text(this.GAME_WIDTH - 20, this.GAME_HEIGHT - 20, "⏸", {
+        // ✅ 수정
+        fontFamily: "Arial",
+        fontSize: "36px",
+        color: "#ffffff",
+        backgroundColor: "#333333",
+        padding: { x: 10, y: 8 },
+      })
+      .setOrigin(1, 1)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(5);
+
+    // 호버 효과
+    this.pauseButton.on("pointerover", () => {
+      this.pauseButton?.setStyle({ backgroundColor: "#555555" });
+    });
+
+    this.pauseButton.on("pointerout", () => {
+      this.pauseButton?.setStyle({ backgroundColor: "#333333" });
+    });
+
+    this.pauseButton.on("pointerdown", () => {
+      this.onPauseToggle?.();
+    });
+  }
+
+  togglePauseScreen(isPaused?: boolean): void {
+    if (isPaused !== undefined) {
+      if (isPaused && !this.isPauseScreenShown) {
+        this.showPauseScreen();
+        this.pauseButton?.setText("▶"); // ✅ 추가
+      } else if (!isPaused && this.isPauseScreenShown) {
+        this.hidePauseScreen();
+        this.pauseButton?.setText("⏸"); // ✅ 추가
+      }
+    } else {
+      if (this.isPauseScreenShown) {
+        this.hidePauseScreen();
+        this.pauseButton?.setText("⏸");
+      } else {
+        this.showPauseScreen();
+        this.pauseButton?.setText("▶");
+      }
+    }
+  }
+
+  private showPauseScreen(): void {
+    this.pauseOverlay = this.scene.add.rectangle(
+      this.GAME_WIDTH / 2, // ✅ 수정
+      this.GAME_HEIGHT / 2, // ✅ 수정
+      this.GAME_WIDTH, // ✅ 수정
+      this.GAME_HEIGHT, // ✅ 수정
+      0x000000,
+      0.75
+    );
+    this.pauseOverlay.setDepth(10);
+
+    this.pauseText = this.scene.add
+      .text(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2 - 80, "PAUSED", {
+        // ✅ 수정
+        fontFamily: '"Press Start 2P"',
+        fontSize: "64px",
+        color: "#f1c40f",
+        align: "center",
+      })
+      .setOrigin(0.5, 0.5)
+      .setDepth(11);
+
+    // ✅ 수정: 참조 저장
+    const helpText1 = this.scene.add
+      .text(
+        this.GAME_WIDTH / 2,
+        this.GAME_HEIGHT / 2 + 30,
+        "Press ESC to Resume",
+        {
+          fontFamily: "Arial",
+          fontSize: "18px",
+          color: "#ffffff",
+          align: "center",
+        }
+      )
+      .setOrigin(0.5, 0.5)
+      .setDepth(11);
+
+    const helpText2 = this.scene.add
+      .text(
+        this.GAME_WIDTH / 2,
+        this.GAME_HEIGHT / 2 + 65,
+        "or click pause button",
+        {
+          fontFamily: "Arial",
+          fontSize: "16px",
+          color: "#bdc3c7",
+          align: "center",
+        }
+      )
+      .setOrigin(0.5, 0.5)
+      .setDepth(11);
+
+    this.pauseHelpTexts = [helpText1, helpText2]; // ✅ 추가
+
+    this.isPauseScreenShown = true;
+  }
+
+  private hidePauseScreen(): void {
+    this.pauseOverlay?.destroy();
+    this.pauseText?.destroy();
+
+    // ✅ 추가: 도움말 텍스트 제거
+    this.pauseHelpTexts.forEach((text) => text.destroy());
+    this.pauseHelpTexts = [];
+
+    this.isPauseScreenShown = false;
+  }
+
   showEndGameScreen(
     result: GameResult,
     score: number,
@@ -43,10 +175,8 @@ export class BrickBreakerUIManager extends BaseUIManager {
     const depth = 10;
     const config = this.getEndGameConfig(result);
 
-    // 오버레이
     this.createOverlay(config.overlayAlpha, depth);
 
-    // 메인 텍스트
     const mainText = this.scene.add
       .text(400, 200, config.mainText, {
         ...TEXT_STYLE.GAME_OVER,
@@ -55,7 +185,6 @@ export class BrickBreakerUIManager extends BaseUIManager {
       .setOrigin(0.5)
       .setDepth(depth + 1);
 
-    // 애니메이션
     this.scene.tweens.add({
       targets: mainText,
       ...config.animation,
@@ -63,13 +192,8 @@ export class BrickBreakerUIManager extends BaseUIManager {
       repeat: -1,
     });
 
-    // 점수 표시
     this.createScoreDisplay(score, depth);
-
-    // 재시작 버튼
     this.createRestartButton(onRestart, 400, 400, depth + 1);
-
-    // 홈으로 가기 버튼
     this.createHomeButton(onHome, 400, 480, depth + 1);
   }
 
@@ -113,6 +237,7 @@ export class BrickBreakerUIManager extends BaseUIManager {
   }
 
   cleanup(): void {
-    // UI cleanup if needed
+    // ✅ 추가: 일시정지 화면도 정리
+    this.hidePauseScreen();
   }
 }

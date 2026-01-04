@@ -46,6 +46,8 @@ export class BrickBreakerScene extends BaseGameScene {
 
   // 스페이스바 키
   private spaceKey!: Phaser.Input.Keyboard.Key;
+  // ESC 키 (일시정지)
+  private escKey!: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super({ key: "BrickBreakerScene" });
@@ -128,6 +130,14 @@ export class BrickBreakerScene extends BaseGameScene {
         onBrickDestroy: () => {
           // 벽돌 파괴 효과
         },
+        onGamePause: () => {
+          // 일시정지 UI 표시 (isPaused = true)
+          this.uiManager.togglePauseScreen(true);
+        },
+        onGameResume: () => {
+          // 일시정지 UI 숨김 (isPaused = false)
+          this.uiManager.togglePauseScreen(false);
+        },
       }
     );
   }
@@ -139,6 +149,11 @@ export class BrickBreakerScene extends BaseGameScene {
     this.createBricks();
     this.uiManager.createGameUI();
 
+    // ✅ 일시정지 버튼 콜백 설정
+    this.uiManager.setPauseToggleCallback(() => {
+      this.gameManager.togglePause();
+    });
+
     this.gameManager.setGameObjects(this.paddle, this.ball, this.bricks);
     this.setupCollisions();
 
@@ -146,10 +161,31 @@ export class BrickBreakerScene extends BaseGameScene {
     this.spaceKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.SPACE
     );
+
+    // ✅ ESC 키 등록 (일시정지)
+    this.escKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ESC
+    );
   }
 
   // 5. 게임 종료 및 재시작 로직
-  protected handleGameEnd(result: string): void {
+  protected async handleGameEnd(result: string): Promise<void> {
+    // ✅ 게임 종료 시 서버로 전송
+    const gameData = this.gameManager.getGameResult();
+
+    // 📊 게임 결과 상세 콘솔 출력
+    console.group("🎮 BrickBreaker 게임 종료");
+    console.log("게임 결과:", result === "win" ? "승리 ✅" : "패배 ❌");
+    console.log("점수:", gameData.score);
+    console.log("경과 시간:", `${gameData.elapsedTime}초`);
+    console.log("파괴된 벽돌:", `${gameData.bricksDestroyed}개`);
+    console.log("남은 라이프:", gameData.lives);
+    console.log("전체 데이터:", gameData);
+    console.groupEnd();
+
+    // 서버로 전송
+    await this.sendToServer(gameData);
+
     this.uiManager.showEndGameScreen(
       result as "win" | "gameOver",
       this.gameManager.getScore(),
@@ -166,13 +202,54 @@ export class BrickBreakerScene extends BaseGameScene {
     this.scene.start("MainScene");
   }
 
+  private async sendToServer(
+    data: ReturnType<typeof this.gameManager.getGameResult>
+  ): Promise<void> {
+    try {
+      console.log("📤 서버로 게임 결과 전송 중...");
+
+      const response = await fetch("/api/games/brick-breaker/score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`서버 오류: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.group("✅ 서버 응답 성공");
+      console.log("응답 데이터:", result);
+      console.groupEnd();
+    } catch (error) {
+      console.group("❌ 서버 전송 실패");
+      console.error("오류 내용:", error);
+      console.groupEnd();
+      // 서버 전송 실패해도 게임 진행은 계속됨
+    }
+  }
+
   protected cleanupManagers(): void {
     this.physics.world.off("worldbounds");
     this.inputManager.cleanup();
     this.uiManager.cleanup();
   }
 
-  update(): void {
+  update(time: number, delta: number): void {
+    // 일시정지 상태 확인
+    const isPaused = this.gameManager.isPaused();
+
+    // ESC 키는 항상 받음 (일시정지 토글용)
+    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+      this.gameManager.togglePause();
+    }
+
+    // 일시정지 중이면 다른 입력 무시
+    if (isPaused) {
+      return;
+    }
+
     // ✅ 패들 이동 입력
     const direction = this.inputManager.getPaddleMoveDirection();
     this.gameManager.movePaddle(direction);
@@ -183,7 +260,7 @@ export class BrickBreakerScene extends BaseGameScene {
     }
 
     // ✅ GameManager update 호출 (공이 패들 위에 고정되어 있을 때 처리)
-    this.gameManager.update(0);
+    this.gameManager.update(delta);
   }
 
   // ============================================================
