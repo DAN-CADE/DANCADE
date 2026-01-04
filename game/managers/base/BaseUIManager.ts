@@ -1,6 +1,7 @@
 // game/managers/base/BaseUIManager.ts
 
 import { TEXT_STYLE } from "@/game/types/common/ui.constants";
+import { ButtonOptions } from "@/game/types/common/ui.types";
 import { ButtonFactory } from "@/utils/ButtonFactory";
 
 /**
@@ -91,14 +92,28 @@ export abstract class BaseUIManager {
   }
 
   /**
+   * 공통 버튼 생성 헬퍼
+   */
+  protected createCommonButton(
+    x: number,
+    y: number,
+    text: string,
+    callback: () => void,
+    config?: ButtonOptions
+  ): Phaser.GameObjects.Container {
+    return ButtonFactory.createButton(this.scene, x, y, text, callback, config);
+  }
+
+  /**
    * 오버레이 생성 (공통 패턴)
    */
   protected createOverlay(
     alpha = 0.7,
     depth = 10
   ): Phaser.GameObjects.Rectangle {
+    const { width, height } = this.scene.scale;
     return this.scene.add
-      .rectangle(400, 300, 800, 600, 0x000000, alpha)
+      .rectangle(width / 2, height / 2, width, height, 0x000000, alpha)
       .setDepth(depth);
   }
 

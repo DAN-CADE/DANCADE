@@ -8,54 +8,21 @@
 // =====================================================================
 // Room 시스템
 // =====================================================================
-export { BaseRoomNetworkManager } from "@/game/managers/base/multiplayer/room/BaseRoomNetworkManager";
-export { BaseRoomUIManager } from "@/game/managers/base/multiplayer/room/BaseRoomUIManager";
+export { BaseGameNetworkManager } from "@/game/managers/base/multiplayer/game/BaseGameNetworkManager";
 export { BaseRoomManager } from "@/game/managers/base/multiplayer/room/BaseRoomManager";
-
-// =====================================================================
-// 타입
-// =====================================================================
-export type {
-  RoomData,
-  PlayerData,
-  RoomNetworkCallbacks,
-  RoomUIColors,
-  RoomUILayout,
-  RoomUIConfig,
-} from "@/game/types/multiplayer/room.types";
+export { BaseRoomNetworkManager } from "@/game/managers/base/multiplayer/room/BaseRoomNetworkManager";
+export { BaseEndGameUIManager } from "@/game/managers/base/multiplayer/ui/BaseEndGameUIManager";
+export { BaseGameAbortedDialog } from "@/game/managers/base/multiplayer/ui/BaseGameAbortedDialog";
+export { BaseOnlineUIManager } from "@/game/managers/base/multiplayer/ui/BaseOnlineUIManager";
+export { BaseRoomUIManager } from "@/game/managers/base/multiplayer/ui/BaseRoomUIManager";
 
 // =====================================================================
 // 사용 예시
 // =====================================================================
 
-/*
-// 오목 게임에서 사용:
-import {
-  BaseRoomNetworkManager,
-  BaseRoomUIManager,
-  BaseRoomManager,
-  type RoomUIConfig,
-} from "@/game/managers/base/multiplayer";
-
-export class OmokRoomNetworkManager extends BaseRoomNetworkManager {
-  constructor(socket: Socket) {
-    super(socket, "omok");
-  }
-}
-*/
-
-/*
-// 핑퐁 게임에서 사용:
-import {
-  BaseRoomNetworkManager,
-  BaseRoomUIManager,
-  BaseRoomManager,
-  type RoomUIConfig,
-} from "@/game/managers/base/multiplayer";
-
-export class PingPongRoomNetworkManager extends BaseRoomNetworkManager {
-  constructor(socket: Socket) {
-    super(socket, "pingpong");
-  }
-}
-*/
+// import {
+//   BaseRoomNetworkManager,
+//   BaseRoomUIManager,
+//   BaseRoomManager,
+//   type RoomUIConfig,
+// } from "@/game/managers/base/multiplayer";
