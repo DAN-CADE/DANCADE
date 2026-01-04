@@ -131,8 +131,9 @@ export class BrickBreakerScene extends BaseGameScene {
         onGameResult: (result) => {
           this.handleGameEnd(result);
         },
-        onBrickDestroy: () => {
-          // 벽돌 파괴 효과
+        onBrickDestroy: (x: number, y: number, brickColor: string) => {
+          // ✅ 벽돌 파괴 시 파티클 효과
+          this.effectsManager.createBrickDestroyEffect(x, y, brickColor);
         },
         onGamePause: () => {
           // 일시정지 UI 표시 (isPaused = true)
@@ -170,6 +171,32 @@ export class BrickBreakerScene extends BaseGameScene {
     this.escKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.ESC
     );
+
+    // ✅ 추가: "PRESS SPACE TO START" 텍스트
+    const startText = this.add
+      .text(400, 350, "PRESS SPACE TO START", {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "18px",
+        color: "#1af9d9",
+        stroke: "#000000",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(10);
+
+    // 깜빡이는 애니메이션
+    this.tweens.add({
+      targets: startText,
+      alpha: 0.3,
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // 볼 발사 시 제거
+    this.spaceKey.on("down", () => {
+      startText.destroy();
+    });
   }
 
   // 5. 게임 종료 및 재시작 로직

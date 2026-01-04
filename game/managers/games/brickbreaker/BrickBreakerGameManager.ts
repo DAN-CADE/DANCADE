@@ -10,7 +10,7 @@ import { BaseGameManager } from "@/game/managers/base";
 interface BrickBreakerCallbacks extends Record<string, unknown> {
   onScoreUpdate?: (score: number) => void;
   onGameResult?: (result: GameResult) => void;
-  onBrickDestroy?: () => void;
+  onBrickDestroy?: (x: number, y: number, brickColor: string) => void;
   onLivesUpdate?: (lives: number) => void;
   onGamePause?: () => void;
   onGameResume?: () => void;
@@ -221,12 +221,17 @@ export class BrickBreakerGameManager extends BaseGameManager<
     ball: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
     brick: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
   ): void {
-    (brick as Phaser.GameObjects.GameObject).destroy();
+    const brickSprite = brick as Phaser.Physics.Arcade.Sprite;
+    const brickX = brickSprite.x;
+    const brickY = brickSprite.y;
+    const brickTexture = brickSprite.texture.key;
+
+    brickSprite.destroy();
 
     this.gameState.bricksDestroyed += 1;
 
     this.addScore(this.pointsPerBrick);
-    this.callCallback("onBrickDestroy");
+    this.callCallback("onBrickDestroy", brickX, brickY, brickTexture);
 
     // 모든 벽돌 제거 시 승리
     if (this.bricks?.countActive() === 0) {

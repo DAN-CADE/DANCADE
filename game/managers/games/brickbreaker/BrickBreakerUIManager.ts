@@ -14,6 +14,7 @@ export class BrickBreakerUIManager extends BaseUIManager {
 
   private scoreText?: Phaser.GameObjects.Text;
   private livesText?: Phaser.GameObjects.Text;
+  private lifeIcons: Phaser.GameObjects.Text[] = []; // ✅ 추가: 하트 아이콘
   private pauseButton?: Phaser.GameObjects.Text;
   private pauseOverlay?: Phaser.GameObjects.Rectangle;
   private pauseText?: Phaser.GameObjects.Text;
@@ -27,18 +28,42 @@ export class BrickBreakerUIManager extends BaseUIManager {
 
   createGameUI(): void {
     this.createScoreText();
-    this.createLivesText();
+    this.createLivesDisplay();
     this.createPauseButton();
   }
 
   private createScoreText(): void {
-    this.scoreText = this.scene.add.text(16, 16, "SCORE: 0", TEXT_STYLE.SCORE);
+    this.scoreText = this.scene.add.text(16, 16, "SCORE: 0", {
+      fontFamily: '"Press Start 2P"',
+      fontSize: "24px",
+      color: "#f1c40f",
+      stroke: "#000000",
+      strokeThickness: 4,
+    });
   }
 
-  private createLivesText(): void {
-    this.livesText = this.scene.add
-      .text(this.GAME_WIDTH - 120, 16, "LIVES: 3", TEXT_STYLE.SCORE) // ✅ 수정
-      .setOrigin(0);
+  private createLivesDisplay(): void {
+    const startX = this.GAME_WIDTH - 200;
+    const startY = 20;
+
+    // "LIVES:" 텍스트
+    this.livesText = this.scene.add.text(startX, startY, "LIVES:", {
+      fontFamily: '"Press Start 2P"',
+      fontSize: "16px",
+      color: "#f1c40f",
+      stroke: "#000000",
+      strokeThickness: 3,
+    });
+
+    // 하트 아이콘 3개
+    this.lifeIcons = [];
+    for (let i = 0; i < 3; i++) {
+      const heart = this.scene.add.text(startX + 90 + i * 35, startY, "♥", {
+        fontSize: "24px",
+        color: "#e74c3c",
+      });
+      this.lifeIcons.push(heart);
+    }
   }
 
   updateScore(score: number): void {
@@ -46,7 +71,10 @@ export class BrickBreakerUIManager extends BaseUIManager {
   }
 
   updateLives(lives: number): void {
-    this.livesText?.setText(`LIVES: ${lives}`);
+    // 하트 아이콘 업데이트
+    this.lifeIcons?.forEach((icon, index) => {
+      icon.setAlpha(index < lives ? 1 : 0.3);
+    });
   }
 
   private createPauseButton(): void {
@@ -239,5 +267,8 @@ export class BrickBreakerUIManager extends BaseUIManager {
   cleanup(): void {
     // ✅ 추가: 일시정지 화면도 정리
     this.hidePauseScreen();
+    // ✅ 추가: 하트 아이콘 정리
+    this.lifeIcons.forEach((icon) => icon.destroy());
+    this.lifeIcons = [];
   }
 }
