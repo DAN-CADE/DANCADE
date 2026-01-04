@@ -5,7 +5,7 @@ import {
   OmokMoveData,
   Point,
 } from "@/game/types/omok";
-import { BaseOnlineUIManager } from "@/game/managers/base/multiplayer";
+import { BaseOnlineUIManager } from "@/game/managers/base/multiplayer/ui/BaseOnlineUIManager";
 import { BaseGameScene } from "@/game/scenes/base/BaseGameScene";
 import { OmokManager } from "@/game/managers/games/omok/core/OmokManager";
 import { OmokBoardManager } from "@/game/managers/games/omok/board/OmokBoardManager";
