@@ -1,4 +1,4 @@
-// game/types/omok/omok.network.types.ts
+import { Point, OmokSideType } from "@/game/types/omok";
 
 /**
  * 오목 네트워크 통신 관련 타입
@@ -75,24 +75,24 @@ export interface RoomData {
 /**
  * 소켓을 통해 전달되는 플레이어 정보
  */
-export interface OnlinePlayerData {
+export interface OnlinePlayerData<TRole = number> {
   socketId: string;
   userId: string;
   username: string;
   isReady?: boolean;
-  color?: number;
-  x?: number;
-  y?: number;
+  role?: TRole;
+  // x?: number;
+  // y?: number;
 }
 
 /**
  * 소켓을 통해 전달되는 착수 데이터
  */
-export interface OmokMoveData {
+export interface OmokMoveData extends Point {
+  roomId: string;
   socketId: string;
-  row: number;
-  col: number;
-  color: number;
+  side: OmokSideType;
+  moveNumber?: number;
 }
 
 // =====================================================================

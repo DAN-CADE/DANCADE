@@ -1,21 +1,10 @@
-// game/managers/games/Omok/renderers/OmokBoardRenderer.ts
 import { OMOK_CONFIG, STAR_POINTS } from "@/game/types/omok";
 
-/**
- * OmokBoardRenderer
- * - 바둑판 렌더링만 담당
- * - 선, 화점 등 기본 보드 요소 그리기
- */
 export class OmokBoardRenderer {
   private scene: Phaser.Scene;
   private boardOffsetX: number;
   private boardOffsetY: number;
-
-  // UI 스타일 상수
-  private readonly STYLE = {
-    BOARD_LINE: { width: 2, color: 0x000000, alpha: 0.8 },
-    STAR_POINT: { radius: 4, color: 0x000000 },
-  } as const;
+  private graphics: Phaser.GameObjects.Graphics | null = null;
 
   constructor(scene: Phaser.Scene, boardOffsetX: number, boardOffsetY: number) {
     this.scene = scene;
@@ -24,91 +13,87 @@ export class OmokBoardRenderer {
   }
 
   // =====================================================================
-  // Public API
   // =====================================================================
 
-  /**
-   * 바둑판 렌더링
-   */
-  public render(): void {
-    const graphics = this.createGraphics();
-    const totalSize = this.getBoardTotalSize();
-
-    this.drawLines(graphics, totalSize);
-    this.drawStarPoints(graphics);
+  public clear(): void {
+    this.graphics?.clear();
   }
 
-  /**
-   * 오프셋 업데이트
-   */
+  // =====================================================================
+  // =====================================================================
+
+  public render(): void {
+    this.prepareGraphics();
+
+    const totalSize = this.getBoardTotalSize();
+
+    this.drawLines(totalSize);
+    this.drawStarPoints();
+  }
+
   public updateOffsets(offsetX: number, offsetY: number): void {
     this.boardOffsetX = offsetX;
     this.boardOffsetY = offsetY;
   }
 
   // =====================================================================
-  // 렌더링 로직
   // =====================================================================
 
-  /**
-   * 그래픽 객체 생성
-   */
-  private createGraphics(): Phaser.GameObjects.Graphics {
-    const { width, color, alpha } = this.STYLE.BOARD_LINE;
-    return this.scene.add
-      .graphics()
-      .lineStyle(width, color, alpha)
-      .setDepth(OMOK_CONFIG.DEPTH.BOARD);
+  private prepareGraphics(): void {
+    if (!this.graphics) {
+      this.graphics = this.scene.add.graphics();
+    }
+
+    this.graphics.clear();
+
+    const { WIDTH, COLOR, ALPHA } = OMOK_CONFIG.BOARD_STYLE.LINE;
+    const { BOARD: depth } = OMOK_CONFIG.DEPTH;
+    this.graphics.lineStyle(WIDTH, COLOR, ALPHA).setDepth(depth);
   }
 
-  /**
-   * 보드 전체 크기 계산
-   */
   private getBoardTotalSize(): number {
-    return (OMOK_CONFIG.BOARD_SIZE - 1) * OMOK_CONFIG.CELL_SIZE;
+    const { SIZE, CELL_SIZE } = OMOK_CONFIG.BOARD_STYLE.BOARD;
+
+    return (SIZE - 1) * CELL_SIZE;
   }
 
-  /**
-   * 선 그리기 (가로 + 세로)
-   */
-  private drawLines(
-    graphics: Phaser.GameObjects.Graphics,
-    totalSize: number
-  ): void {
-    // 가로선
-    for (let i = 0; i < OMOK_CONFIG.BOARD_SIZE; i++) {
-      const pos = i * OMOK_CONFIG.CELL_SIZE;
-      graphics.lineBetween(
-        this.boardOffsetX,
-        this.boardOffsetY + pos,
-        this.boardOffsetX + totalSize,
-        this.boardOffsetY + pos
-      );
-    }
+  private drawLines(totalSize: number): void {
+    if (!this.graphics) return;
 
-    // 세로선
-    for (let i = 0; i < OMOK_CONFIG.BOARD_SIZE; i++) {
-      const pos = i * OMOK_CONFIG.CELL_SIZE;
-      graphics.lineBetween(
-        this.boardOffsetX + pos,
-        this.boardOffsetY,
-        this.boardOffsetX + pos,
-        this.boardOffsetY + totalSize
+    const { SIZE, CELL_SIZE } = OMOK_CONFIG.BOARD_STYLE.BOARD;
+
+    for (let i = 0; i < SIZE; i++) {
+      const pos = i * CELL_SIZE;
+
+      this.graphics.lineBetween(
+        this.boardOffsetX, // x1
+        this.boardOffsetY + pos, // y1
+        this.boardOffsetX + totalSize, // x2
+        this.boardOffsetY + pos // y2
+      );
+
+      this.graphics.lineBetween(
+        this.boardOffsetX + pos, // x1
+        this.boardOffsetY, // y1
+        this.boardOffsetX + pos, // x2
+        this.boardOffsetY + totalSize // y2
       );
     }
   }
 
-  /**
-   * 화점 그리기
-   */
-  private drawStarPoints(graphics: Phaser.GameObjects.Graphics): void {
-    const { radius, color } = this.STYLE.STAR_POINT;
-    graphics.fillStyle(color, 1);
+  private drawStarPoints(): void {
+    if (!this.graphics) return;
+
+    const { RADIUS, COLOR } = OMOK_CONFIG.BOARD_STYLE.STAR_POINT;
+    const { CELL_SIZE } = OMOK_CONFIG.BOARD_STYLE.BOARD;
+
+    this.graphics.fillStyle(COLOR, 1);
 
     for (const { row, col } of STAR_POINTS) {
-      const x = this.boardOffsetX + col * OMOK_CONFIG.CELL_SIZE;
-      const y = this.boardOffsetY + row * OMOK_CONFIG.CELL_SIZE;
-      graphics.fillCircle(x, y, radius);
+      const x = this.boardOffsetX + col * CELL_SIZE;
+      const y = this.boardOffsetY + row * CELL_SIZE;
+
+      this.graphics.fillCircle(x, y, RADIUS);
     }
   }
 }

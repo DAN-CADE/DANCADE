@@ -1,5 +1,3 @@
-// game/types/common/ui.constants.ts
-
 /**
  * 공통 UI 상수
  * - 모든 게임에서 재사용 가능한 UI 설정
@@ -88,6 +86,7 @@ export const ONLINE_MENU_LAYOUT = {
   BUTTON_GAP: 20,
   PADDING_TOP: 60,
   PADDING_BOTTOM: 60,
+  PANEL_RADIUS: 30,
 } as const;
 
 // =====================================================================

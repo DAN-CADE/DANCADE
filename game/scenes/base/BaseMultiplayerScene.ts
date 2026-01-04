@@ -1,6 +1,6 @@
 // game/scenes/base/BaseMultiplayerScene.ts
 import { BaseGameScene } from "./BaseGameScene";
-import { BaseOnlineUIManager } from "@/game/managers/base/BaseOnlineUIManager";
+import { BaseOnlineUIManager } from "@/game/managers/base/multiplayer/ui/BaseOnlineUIManager";
 import { BaseNetworkManager } from "@/game/managers/base/BaseNetworkManager";
 import { COMMON_COLORS } from "@/game/types/common/ui.constants";
 

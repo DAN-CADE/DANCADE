@@ -1,114 +1,62 @@
-// game/managers/base/multiplayer/ui/BaseEndGameUIManager.ts
+import { EndGameUIConfig, ButtonSizeKey } from "@/game/types/common/ui.types";
+import { BaseUIManager } from "@/game/managers/base/BaseUIManager";
 
-import { ButtonFactory } from "@/utils/ButtonFactory";
-
-/**
- * 게임 종료 UI 설정
- */
-export interface EndGameUIConfig {
-  colors: {
-    overlay: number;
-    overlayAlpha: number;
-    winnerText: string;
-    buttonPrimary: number;
-    buttonDanger: number;
-  };
-  layout: {
-    winnerTextY: number;
-    buttonYOffset: number;
-    buttonSpacing: number;
-    buttonWidth: number;
-    buttonHeight: number;
-  };
-  textStyle: {
-    winner: Partial<Phaser.Types.GameObjects.Text.TextStyle>;
-  };
-  depth: number;
-}
-
-/**
- * BaseEndGameUIManager
- * - 모든 게임의 종료 UI 공통화
- * - 승자 표시 + 재시작/나가기 버튼
- * - 게임별로 색상/레이아웃만 커스터마이징
- */
-export class BaseEndGameUIManager {
-  protected scene: Phaser.Scene;
+export class BaseEndGameUIManager extends BaseUIManager {
   protected config: EndGameUIConfig;
   protected endGameUI: Phaser.GameObjects.Container | null = null;
+  private readonly BUTTON_SIZE_KEY: ButtonSizeKey = "MEDIUM";
 
   constructor(scene: Phaser.Scene, config: EndGameUIConfig) {
-    this.scene = scene;
+    super(scene);
     this.config = config;
   }
 
   // =====================================================================
-  // Public API
   // =====================================================================
 
-  /**
-   * 게임 종료 UI 표시
-   * @param winnerName - 승자 이름
-   * @param onRestart - 재시작 콜백
-   * @param onExit - 나가기 콜백
-   */
+  public createGameUI(): void {}
+
+  public cleanup(): void {
+    if (this.endGameUI) {
+      this.endGameUI.destroy();
+      this.endGameUI = null;
+    }
+  }
+
+  // =====================================================================
+  // =====================================================================
+
   public show(
     winnerName: string,
     onRestart: () => void,
     onExit: () => void
   ): void {
-    this.clear();
+    this.cleanup();
 
     const { width, height } = this.scene.scale;
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // 컨테이너 생성
     this.endGameUI = this.scene.add
-      .container(centerX, centerY)
+      .container(width / 2, height / 2)
       .setDepth(this.config.depth);
 
-    // 반투명 배경
-    this.createOverlay(centerX, centerY);
+    const overlay = this.createOverlay(
+      this.config.colors.overlay,
+      this.config.colors.overlayAlpha
+    );
+    overlay.setPosition(0, 0);
 
-    // 승자 텍스트
-    this.createWinnerText(winnerName);
+    const winText = this.buildWinnerText(winnerName);
+    const buttons = this.buildButtons(onRestart, onExit);
 
-    // 버튼들
-    this.createButtons(onRestart, onExit);
-  }
+    this.endGameUI.add([overlay, winText, ...buttons]);
 
-  /**
-   * UI 제거
-   */
-  public clear(): void {
-    this.endGameUI?.destroy();
-    this.endGameUI = null;
+    this.animateEntrance(winText, buttons);
   }
 
   // =====================================================================
-  // Private 렌더링 로직
   // =====================================================================
 
-  /**
-   * 반투명 오버레이 생성
-   */
-  private createOverlay(centerX: number, centerY: number): void {
-    const { width, height } = this.scene.scale;
-    const { overlay, overlayAlpha } = this.config.colors;
-
-    const overlayRect = this.scene.add
-      .rectangle(-centerX, -centerY, width, height, overlay, overlayAlpha)
-      .setOrigin(0, 0);
-
-    this.endGameUI!.add(overlayRect);
-  }
-
-  /**
-   * 승자 텍스트 생성
-   */
-  private createWinnerText(winnerName: string): void {
-    const winText = this.scene.add
+  private buildWinnerText(winnerName: string): Phaser.GameObjects.Text {
+    return this.scene.add
       .text(0, this.config.layout.winnerTextY, `🎉 ${winnerName} 승리! 🎉`, {
         ...this.config.textStyle.winner,
         color: this.config.colors.winnerText,
@@ -116,80 +64,69 @@ export class BaseEndGameUIManager {
       .setOrigin(0.5)
       .setScale(0)
       .setShadow(4, 4, "#000000", 8);
-
-    // 팝 애니메이션
-    this.scene.tweens.add({
-      targets: winText,
-      scale: 1,
-      duration: 500,
-      ease: "Back.easeOut",
-    });
-
-    this.endGameUI!.add(winText);
   }
 
-  /**
-   * 버튼들 생성
-   */
-  private createButtons(onRestart: () => void, onExit: () => void): void {
-    const { buttonYOffset, buttonSpacing, buttonWidth, buttonHeight } =
-      this.config.layout;
+  private buildButtons(
+    onRestart: () => void,
+    onExit: () => void
+  ): Phaser.GameObjects.Container[] {
+    const { buttonYOffset, buttonSpacing, buttonHeight } = this.config.layout;
     const { buttonPrimary, buttonDanger } = this.config.colors;
 
-    // 재시작 버튼
-    const restartBtn = ButtonFactory.createButton(
-      this.scene,
+    const restartBtn = this.createCommonButton(
       0,
       buttonYOffset,
       "RESTART",
       () => {
-        this.clear();
+        this.cleanup();
         onRestart();
       },
       {
-        width: buttonWidth,
-        height: buttonHeight,
+        size: this.BUTTON_SIZE_KEY,
         color: buttonPrimary,
         textColor: "#ffffff",
       }
     );
 
-    // 나가기 버튼
-    const exitBtn = ButtonFactory.createButton(
-      this.scene,
+    const exitBtn = this.createCommonButton(
       0,
       buttonYOffset + buttonHeight + buttonSpacing,
       "EXIT",
       () => {
-        this.clear();
+        this.cleanup();
         onExit();
       },
       {
-        width: buttonWidth,
-        height: buttonHeight,
+        size: this.BUTTON_SIZE_KEY,
         color: buttonDanger,
         textColor: "#ffffff",
       }
     );
 
-    this.endGameUI!.add([restartBtn, exitBtn]);
-
-    // 버튼 애니메이션
-    this.animateButtons([restartBtn, exitBtn]);
+    return [restartBtn, exitBtn];
   }
 
-  /**
-   * 버튼 애니메이션
-   */
-  private animateButtons(buttons: Phaser.GameObjects.Container[]): void {
-    buttons.forEach((btn, index) => {
-      btn.setAlpha(0);
-      btn.y += 20;
+  // =====================================================================
+  // =====================================================================
 
+  private animateEntrance(
+    title: Phaser.GameObjects.Text,
+    buttons: Phaser.GameObjects.Container[]
+  ): void {
+    this.scene.tweens.add({
+      targets: title,
+      scale: 1,
+      duration: 500,
+      ease: "Back.easeOut",
+    });
+
+    buttons.forEach((btn, index) => {
+      const originalY = btn.y;
+      btn.setAlpha(0).setY(originalY + 20);
       this.scene.tweens.add({
         targets: btn,
         alpha: 1,
-        y: btn.y - 20,
+        y: originalY,
         duration: 300,
         delay: 200 + index * 100,
         ease: "Power2.easeOut",
