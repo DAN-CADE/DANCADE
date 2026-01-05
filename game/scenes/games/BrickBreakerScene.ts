@@ -237,6 +237,10 @@ export class BrickBreakerScene extends BaseGameScene {
     data: ReturnType<typeof this.gameManager.getGameResult>
   ): Promise<void> {
     try {
+      // userId를 localStorage에서 추출
+      const userStr = localStorage.getItem("user");
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
       console.log("📤 서버로 게임 결과 전송 중...");
 
       const response = await fetch("/api/games/brick-breaker/score", {
@@ -244,6 +248,7 @@ export class BrickBreakerScene extends BaseGameScene {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          userId, // userId 추가
           sessionId: this.sessionId, // 중복 제출 방지용 sessionId 추가
         }),
       });

@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabase } from "@/lib/supabase/server";
 
 // ✅ 게임 설정 (GameManager와 동일하게 유지)
 const GAME_CONFIG = {

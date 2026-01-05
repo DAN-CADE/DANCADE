@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 const socketUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 export const socket = io(socketUrl, {
-  autoConnect: true,
+  autoConnect: false,
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionAttempts: 5,
