@@ -1,7 +1,7 @@
 // game/types/pingpong/index.ts
 /**
  * 핑퐁 멀티플레이 타입 정의
- * - 기존 realPingPong.ts와 함께 사용
+ *
  */
 
 /**
