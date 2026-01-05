@@ -41,7 +41,7 @@ class OmokMatchmaking extends BaseMatchmaking {
 
       console.log(
         `[오목][빠른매칭] ${player.username} → ${
-          player.color === 1 ? "흑돌(선공)" : "백돌(후공)"
+          player.side === 1 ? "흑돌(선공)" : "백돌(후공)"
         } 할당`
       );
     });
