@@ -136,7 +136,7 @@ export interface OmokEventPayloads {
     roomId: string;
     row: number;
     col: number;
-    color: number;
+    side: number;
     socketId: string;
   };
 
@@ -212,7 +212,7 @@ export interface OmokEventPayloads {
   };
 
   [OmokEvent.ASSIGNED]: {
-    color: number;
+    side: number;
     roomId: string;
   };
 
