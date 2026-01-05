@@ -7,9 +7,10 @@ import { Product } from "@/game/types/product";
 interface ProductListProps {
   products: Product[];
   onSelect: (product: Product) => void;
+  onBuy: (product: Product) => void;
 }
 
-export default function ProductList({ products, onSelect }: ProductListProps) {
+export default function ProductList({ products, onSelect, onBuy }: ProductListProps) {
 
   return (
     <div
@@ -27,7 +28,9 @@ export default function ProductList({ products, onSelect }: ProductListProps) {
       {products.map((product) => (
         <ProductItem  key={product.id}
           product={product}
-          onClick={() => onSelect(product)}/>
+          onSelectItem={() => onSelect(product)}
+          onBuyItem={() => onBuy(product)}
+        />
       ))}
     </div>
   );

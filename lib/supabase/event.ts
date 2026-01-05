@@ -3,10 +3,18 @@ export type EventGameType = 'rock_paper_scissors' | 'consonant_quiz';
 interface EventGameProps {
   gameType: EventGameType;
   content: string;
+  details: any | undefined;
 }
 
 interface ResultProps {
-    data?: any[];
+  data: {
+    game_type: EventGameType
+    details: {
+      hint: string, 
+      result: string, 
+      consonant: string
+    }
+  }
 }
 
 const EVENT_GAME_BASE_URL = 'http://localhost:3000/api/event/game'

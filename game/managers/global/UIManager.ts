@@ -11,6 +11,16 @@ export class UIManager {
   private isPlaying: boolean = false;
   private currentNpc: AvatarManager | null = null;
 
+  private choseongUIContainer!: Phaser.GameObjects.Container;
+  private choseongQuizText!: Phaser.GameObjects.Text;
+  private choseongInputDisplay!: Phaser.GameObjects.Text;
+  private choseongHintText!: Phaser.GameObjects.Text; // 힌트 텍스트
+  private cursorDisplay!: Phaser.GameObjects.Text;    // 깜빡이는 커서
+  private cursorTimer: Phaser.Time.TimerEvent | null = null; // 커서 타이머
+  private hiddenInput!: HTMLInputElement; // 한글 입력을 위한 실제 입력창
+  private currentChoseongAnswer: string = "";
+  private currentChoseongInput: string = "";
+
   constructor(scene: MainScene) {
     this.scene = scene;
   }
@@ -200,6 +210,167 @@ export class UIManager {
 
     if (this.currentNpc) {
       this.showSpeechBubble(this.currentNpc, `${npcChoice}! ${result}`, 2000);
+    }
+  }
+
+  // 초성 게임
+  public createConsonantQuizUI() {
+    this.choseongUIContainer = this.scene.add.container(0, 0).setDepth(10000).setVisible(false);
+
+    const panelWidth = 320;
+    const panelHeight = 300; // 힌트 공간을 위해 높이 약간 추가
+
+    // 1. 패널 및 배경
+    const panelBg = this.scene.add.rectangle(0, -panelHeight / 2 - 20, panelWidth, panelHeight, 0x2c3e50, 0.95)
+      .setStrokeStyle(3, 0xffffff).setInteractive();
+    const tail = this.scene.add.rectangle(0, -25, 20, 20, 0x2c3e50).setAngle(45).setStrokeStyle(3, 0xffffff);
+
+    // 2. 문제 초성
+    this.choseongQuizText = this.scene.add.text(0, -panelHeight + 50, "", {
+      fontSize: '42px', fontStyle: 'bold', color: '#f1c40f'
+    }).setOrigin(0.5);
+
+    // 3. 힌트 텍스트 (추가됨)
+    this.choseongHintText = this.scene.add.text(0, -panelHeight + 95, "", {
+      fontSize: '16px', color: '#bdc3c7', fontStyle: 'italic'
+    }).setOrigin(0.5);
+
+    // 4. 입력창 영역
+    const inputBg = this.scene.add.rectangle(0, -130, 240, 50, 0x34495e)
+      .setStrokeStyle(2, 0x7f8c8d).setInteractive({ useHandCursor: true });
+
+    // 중앙 정렬을 위해 x를 0으로, setOrigin을 0.5로 설정
+    this.choseongInputDisplay = this.scene.add.text(0, -130, "", {
+      fontSize: '22px', color: '#ffffff'
+    }).setOrigin(0.5); 
+
+    // 커서는 텍스트의 바로 오른쪽에서 시작하도록 설정 (origin은 0, 0.5 유지)
+    this.cursorDisplay = this.scene.add.text(0, -130, "|", {
+      fontSize: '22px', color: '#ffffff'
+    }).setOrigin(0, 0.5).setVisible(false);
+
+    // 6. 확인 버튼
+    const submitBtnBg = this.scene.add.rectangle(0, -60, 110, 45, 0x27ae60).setInteractive({ useHandCursor: true });
+    const submitBtnText = this.scene.add.text(0, -60, "정답 확인", { fontSize: '18px', fontStyle: 'bold' }).setOrigin(0.5);
+    submitBtnBg.on('pointerdown', () => this.handleConsonantQuizSubmit());
+
+    // 7. 닫기 버튼
+    const closeBtn = this.scene.add.text(panelWidth/2 - 20, -panelHeight - 10, "✕", { fontSize: '22px' })
+      .setOrigin(0.5).setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.hideConsonantQuizUI());
+
+    this.choseongUIContainer.add([
+      tail, panelBg, this.choseongQuizText, this.choseongHintText, 
+      inputBg, this.choseongInputDisplay, this.cursorDisplay, 
+      submitBtnBg, submitBtnText, closeBtn
+    ]);
+
+    this.setupKoreanInput(inputBg);
+  }
+
+  private setupKoreanInput(inputBg: Phaser.GameObjects.Rectangle) {
+    this.hiddenInput = document.createElement('input');
+    this.hiddenInput.type = 'text';
+    // 스타일은 이전 답변과 동일하게 유지 (화면 밖 고정)
+    Object.assign(this.hiddenInput.style, {
+      position: 'fixed', top: '-100px', left: '0', width: '1px', height: '1px', opacity: '0'
+    });
+    document.body.appendChild(this.hiddenInput);
+
+    inputBg.on('pointerdown', () => {
+      this.hiddenInput.focus();
+      this.startCursorBlink();
+    });
+
+    this.hiddenInput.addEventListener('input', (e) => {
+      const val = (e.target as HTMLInputElement).value;
+      this.currentChoseongInput = val;
+      this.choseongInputDisplay.setText(val);
+      
+      // 핵심 로직: 중앙 정렬된 텍스트의 끝 지점으로 커서 이동
+      // 텍스트가 중앙(0)에 있으므로, 끝 지점은 (너비 / 2)입니다.
+      const textWidth = this.choseongInputDisplay.width;
+      const newCursorX = (textWidth / 2) + 2; // 약간의 간격(2px) 추가
+      
+      this.cursorDisplay.setX(newCursorX);
+    });
+
+    this.hiddenInput.addEventListener('blur', () => this.stopCursorBlink());
+  }
+
+  // 커서 깜빡임 타이머 시작
+  private startCursorBlink() {
+    this.stopCursorBlink(); // 기존 타이머 중복 방지
+    this.cursorDisplay.setVisible(true);
+    this.cursorTimer = this.scene.time.addEvent({
+      delay: 500,
+      callback: () => { this.cursorDisplay.setVisible(!this.cursorDisplay.visible); },
+      loop: true
+    });
+  }
+
+  private stopCursorBlink() {
+    if (this.cursorTimer) {
+      this.cursorTimer.remove();
+      this.cursorTimer = null;
+    }
+    this.cursorDisplay.setVisible(false);
+  }
+
+  // NPC 객체와 문제(quiz), 정답(answer)을 인자로 받습니다.
+  public showConsonantQuizUI(npc: any, quiz: string, answer: string, hint: string) {
+    this.currentNpc = npc;
+    this.isPlaying = true;
+    this.currentChoseongAnswer = answer;
+    this.currentChoseongInput = "";
+    this.hiddenInput.value = "";
+    
+    this.choseongQuizText.setText(quiz);
+    this.choseongHintText.setText(`힌트: ${hint}`); // 힌트 표시
+    this.choseongInputDisplay.setText("");
+    
+    // 커서 초기 위치 설정
+    this.cursorDisplay.setX(0).setVisible(false);
+
+    const target = npc.getContainer();
+    const targetY = target.y - (target.displayHeight / 2) - 10;
+    this.choseongUIContainer.setPosition(target.x, targetY).setVisible(true).setAlpha(1);
+  }
+
+  public hideConsonantQuizUI() {
+    this.isPlaying = false;
+    this.choseongUIContainer.setVisible(false);
+    
+    // 1. Input 값 초기화 및 포커스 해제
+    this.hiddenInput.value = "";
+    this.hiddenInput.blur(); 
+
+    // 2. 중요: 게임 화면(Canvas)으로 포커스 강제 이동
+    // 이 코드가 있어야 캐릭터 움직임(방향키/WASD)이 다시 작동합니다.
+    if (this.scene.game.canvas) {
+      this.scene.game.canvas.focus();
+    }
+
+    // 3. Phaser 키보드 입력이 비활성화 되어있을 경우를 대비해 다시 활성화
+    if (this.scene.input.keyboard) {
+      this.scene.input.keyboard.enabled = true;
+    }
+  }
+
+  public handleConsonantQuizSubmit() {
+    if (this.currentChoseongInput === this.currentChoseongAnswer) {
+      this.stopCursorBlink();
+      this.choseongQuizText.setText("정답! 🎉");
+      this.scene.time.delayedCall(1500, () => this.hideConsonantQuizUI());
+    } else {
+      this.scene.cameras.main.shake(200, 0.005);
+      this.currentChoseongInput = "";
+      this.hiddenInput.value = "";
+      this.choseongInputDisplay.setText("");
+      
+      // 커서 위치를 다시 중앙(0)으로 리셋
+      this.cursorDisplay.setX(0); 
+      this.hiddenInput.focus();
     }
   }
 }

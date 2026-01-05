@@ -88,6 +88,14 @@ export default function ShopPage(){
     if (!user) return;
 
     handlePreviewItem(product)
+    // setSelectedProduct(product);
+    // setIsModalOpen(true);
+  };
+
+  const handleBuyProduct = (product: Product) => {
+    const user = requireUser();
+    if (!user) return;
+
     setSelectedProduct(product);
     setIsModalOpen(true);
   };
@@ -203,7 +211,9 @@ export default function ShopPage(){
           {/* 카드 리스트 영역 */}
           <section className="shop-content flex-1 relative min-h-[720px]">
             <ProductList products={pagedProducts} 
-              onSelect={handleSelectProduct}/>
+              onSelect={handleSelectProduct}
+              onBuy={handleBuyProduct}
+              />
 
             {/* 페이지네이션 */}
             { <div className="absolute -bottom-7 left-0 right-0 flex justify-center gap-4">

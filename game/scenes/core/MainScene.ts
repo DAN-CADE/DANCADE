@@ -9,7 +9,6 @@ import LpcCharacter from "@/components/avatar/core/LpcCharacter";
 import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 import { UIManager } from "@/game/managers/global/UIManager";
-import { createEventGame } from "@/lib/supabase/event"
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -135,13 +134,9 @@ export class MainScene extends BaseGameScene {
         }
       }
     );
-
-
     
     this.socket.on("createEventGame", (data:any)=> {
-      createEventGame(data);
-      this.uiManager.showNotice(data.content);
-      
+      this.uiManager.showNotice(data.title);
     })
 
     this.socket.on("createNotice", (data:any)=> {
@@ -152,11 +147,7 @@ export class MainScene extends BaseGameScene {
     this.socket.on("disconnect", () => {
       console.log("❌ Socket.io 연결 끊김");
     });
-
-    
-  }
-
-  
+  }  
 
   // 게임에 입장
   private joinGame(): void {
@@ -211,7 +202,9 @@ export class MainScene extends BaseGameScene {
   // 화면에 무엇을 그릴 것인가
   protected createGameObjects(): void {
     this.mapManager.createMap();
+
     this.uiManager.createGameUI();
+    this.uiManager.createConsonantQuizUI();
 
     const currentData = this.avatarDataManager.customization;
     this.player.createAvatar(
