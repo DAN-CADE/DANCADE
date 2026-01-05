@@ -165,9 +165,23 @@ export class OmokScene extends BaseGameScene {
     });
 
     manager.setOnGameStart(() => {
-      if (this.onlineState.isSideAssigned) {
-        this.startOnlineGame();
-      }
+      console.log("[OmokScene] 게임 시작 이벤트 수신");
+
+      // 색상이 할당될 때까지 최대 0.5초간 체크하며 대기 (재귀적 체크)
+      const checkAndStart = (attempts: number) => {
+        if (this.onlineState.isSideAssigned) {
+          this.startOnlineGame();
+        } else if (attempts < 5) {
+          // 아직 할당 전이면 100ms 뒤에 다시 시도
+          this.time.delayedCall(100, () => checkAndStart(attempts + 1));
+        } else {
+          console.error(
+            "[OmokScene] 색상 할당 실패로 게임을 시작할 수 없습니다."
+          );
+        }
+      };
+
+      checkAndStart(0);
     });
 
     return manager;
@@ -332,17 +346,27 @@ export class OmokScene extends BaseGameScene {
     mySide: OmokSideType,
     firstTurn: OmokSideType
   ) {
+    // 방 대기실 UI 정리 (BaseRoomManager의 cleanup 사용)
+    if (mode === OmokMode.ONLINE) {
+      this.managers.room!.cleanup();
+    }
+
+    // 게임 상태 설정
     this.gameState.mode = mode;
     this.gameState.currentTurn = firstTurn;
     this.gameState.isStarted = true;
 
     this.managers.omok!.resetGame();
+
+    // 보드 초기화
     this.managers.board!.clear();
     this.managers.board!.renderBoard();
 
+    // 게임 UI 생성 (OmokUIManager의 메서드들)
     this.managers.ui!.createPlayerProfiles(mode, mySide);
     this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
 
+    // 금수 마커 표시
     this.managers.board!.updateForbiddenMarkers(
       this.gameState.currentTurn,
       true
@@ -370,12 +394,12 @@ export class OmokScene extends BaseGameScene {
     const sideName = side === OmokSide.BLACK ? "흑돌 (선공)" : "백돌 (후공)";
     this.managers.ui!.showWaitingMessage(`당신은 ${sideName}입니다!`);
 
-    this.time.delayedCall(1000, () => {
-      this.managers.ui!.clear();
-      if (this.onlineState.isSideAssigned && !this.gameState.isStarted) {
-        this.startOnlineGame();
-      }
-    });
+    // this.time.delayedCall(1000, () => {
+    //   this.managers.ui!.clear();
+    //   if (this.onlineState.isSideAssigned && !this.gameState.isStarted) {
+    //     this.startOnlineGame();
+    //   }
+    // });
   }
 
   private handleOpponentMove(action: OmokMoveData) {
