@@ -35,7 +35,6 @@ class GameOverHandler {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    // ⭐ [중복 방지] 이미 처리 중이거나 종료된 방이면 무시
     if (room.isProcessingEnd || room.status === "finished") {
       return;
     }
@@ -90,13 +89,13 @@ class GameOverHandler {
   findWinnerAndLoser(room, winner) {
     // 1. 승자 찾기 (입력받은 winner 값과 일치하는 플레이어)
     const winnerPlayer = room.players.find(
-      (p) => p.color === winner || p.side === winner || p.role === winner
+      (p) => p.side === winner || p.side === winner || p.role === winner
     );
 
     // 2. 패자 찾기 (승자가 아닌 남은 플레이어 한 명)
     // 승자를 찾았다면 그 승자의 socketId와 다른 사람을 찾으면 됩니다.
     const loserPlayer = room.players.find((p) =>
-      winnerPlayer ? p.socketId !== winnerPlayer.socketId : p.color !== winner
+      winnerPlayer ? p.socketId !== winnerPlayer.socketId : p.side !== winner
     );
 
     return { winnerPlayer, loserPlayer };
@@ -111,7 +110,6 @@ class GameOverHandler {
    * @returns {Promise<{winnerStats: Object|null, loserStats: Object|null}>}
    */
   async saveGameResult(roomId, winnerPlayer, loserPlayer, options = {}) {
-    // ⭐ userId가 없으면 저장하지 않음
     if (!winnerPlayer.userId || !loserPlayer.userId) {
       console.warn(`[${this.gamePrefix}][게임종료] userId 없음, DB 저장 생략`);
       console.warn(`[${this.gamePrefix}][디버그] winnerPlayer:`, winnerPlayer);
@@ -121,8 +119,8 @@ class GameOverHandler {
 
     console.log(`[${this.gamePrefix}][게임종료] DB 저장 시작:`, {
       roomId,
-      winner_user_id: winnerPlayer.userId,
-      loser_user_id: loserPlayer.userId,
+      winner_user_id: winnerPlayer.userUUID,
+      loser_user_id: loserPlayer.userUUID,
     });
 
     try {
@@ -131,8 +129,8 @@ class GameOverHandler {
         {
           room_id: roomId,
           game_type: this.gamePrefix,
-          winner_user_id: winnerPlayer.userId, // ⭐ userId 사용 (users 테이블의 userid와 매칭)
-          loser_user_id: loserPlayer.userId, // ⭐ userId 사용
+          winner_user_id: winnerPlayer.userUUID,
+          loser_user_id: loserPlayer.userUUID,
           winner_score: options.winnerScore,
           loser_score: options.loserScore,
         },

@@ -7,10 +7,12 @@ const {
 
 const { notifyPlayerReady, notifyAllReady } = require("./utils/EventEmitters");
 
+// =====================================================================
 /**
  * 플레이어 관리 클래스
  * - 플레이어 준비 상태, 게임 준비 체크 등
  */
+// =====================================================================
 class PlayerManager {
   /**
    * @param {Object} io - Socket.IO 서버 인스턴스
@@ -27,20 +29,26 @@ class PlayerManager {
     this.config = config;
   }
 
+  // =====================================================================
   /**
    * 이벤트 핸들러 등록
    */
+  // =====================================================================
+
   registerHandlers() {
     this.socket.on(`${this.gamePrefix}:toggleReady`, (data) =>
       this.handleToggleReady(data)
     );
   }
 
+  // =====================================================================
   /**
    * 준비 상태 토글 핸들러
    * @param {Object} data
    * @param {string} data.roomId - 방 ID
    */
+  // =====================================================================
+
   handleToggleReady(data) {
     const { roomId } = data;
     const room = this.rooms.get(roomId);
@@ -88,10 +96,13 @@ class PlayerManager {
     this.checkAllReady(room);
   }
 
+  // =====================================================================
   /**
    * 모든 플레이어 준비 상태 체크
    * @param {Object} room - 방 객체
    */
+  // =====================================================================
+
   checkAllReady(room) {
     // 최소 인원 미달
     if (room.players.length < this.config.minPlayers) {
