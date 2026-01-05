@@ -3,8 +3,8 @@ import {
   SaveGameResultResponse,
 } from "@/game/types/gameSessionData";
 import { createServerClient } from "@/lib/supabase/client";
-import { DB_TABLES } from "@/lib/constants/tables";
 import { getUserStats, upsertUserStats } from "@/lib/supabase/userStats";
+import { insertMultiGameResult } from "../supabase/gameResults";
 
 // =====================================================================
 /**
@@ -34,7 +34,7 @@ export class GameResultService {
 
     try {
       // 결정된 테이블과 함께 데이터 저장
-      await this.insertGameResult(data);
+      await this.insertMultiGameResult(data);
 
       // 유저별 누적 통계 업데이트
       await this.updateUserStats(winner_user_id, loser_user_id, game_type);
@@ -60,23 +60,17 @@ export class GameResultService {
    */
   // =====================================================================
 
-  private async insertGameResult(
+  private async insertMultiGameResult(
     data: SaveGameResultRequest
-    // targetTable: string
   ): Promise<void> {
-    const { error } = await this.supabase
-      .from(DB_TABLES.MULTI_GAME_RESULTS)
-      .insert({
-        room_id: data.room_id,
-        game_type: data.game_type,
-        winner_user_id: data.winner_user_id,
-        loser_user_id: data.loser_user_id,
-        winner_score: data.winner_score || null,
-        loser_score: data.loser_score || null,
-        played_at: new Date().toISOString(),
-      });
-
-    if (error) throw new Error(`게임 기록 삽입 실패: ${error.message}`);
+    await insertMultiGameResult({
+      room_id: data.room_id,
+      game_type: data.game_type,
+      winner_user_id: data.winner_user_id,
+      loser_user_id: data.loser_user_id,
+      winner_score: data.winner_score,
+      loser_score: data.loser_score,
+    });
   }
 
   // =====================================================================
@@ -99,7 +93,7 @@ export class GameResultService {
       const currentStats = await getUserStats(player.id);
 
       if (currentStats) {
-        const wins = currentStats.total_wins + (player.isWinner ? 1 : 0);
+        const wins = currentStats.total_wins + (player.isWinner ? 1 : 0); // 승수 증가
         const games = currentStats.total_games_played + 1;
 
         await upsertUserStats({
@@ -111,6 +105,7 @@ export class GameResultService {
           favorite_game: gameType,
         });
       } else {
+        // 첫 판인 경우
         await upsertUserStats({
           user_id: player.id,
           total_wins: player.isWinner ? 1 : 0,
@@ -121,37 +116,6 @@ export class GameResultService {
         });
       }
     }
-    console.log("[GameResultService] 통계 업데이트 완료");
-  }
-
-  // =====================================================================
-  /**
-   * 게임 랭킹 조회
-   */
-  // =====================================================================
-
-  async getRankings(gameType?: string, limit: number = 100) {
-    let query = this.supabase
-      .from(DB_TABLES.USER_STATS) // 미리 계산된 통계 테이블 사용
-      .select(
-        `
-      user_id,
-      total_wins,
-      total_games_played,
-      win_rate,
-      favorite_game,
-      users ( username ) 
-    `
-      )
-      .order("total_wins", { ascending: false }) // 승수 높은 순
-      .limit(limit);
-
-    if (gameType) {
-      query = query.eq("favorite_game", gameType);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+    console.log("[GameResultService] total_wins 업데이트 완료");
   }
 }

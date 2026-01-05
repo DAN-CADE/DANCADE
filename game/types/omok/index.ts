@@ -44,7 +44,6 @@ export {
 export {
   type OmokBoardState,
   type OmokUIState,
-  type PlayerProfile,
   type PlayerInfoUI,
   type StoneInfo,
 } from "./omok.ui.types";
