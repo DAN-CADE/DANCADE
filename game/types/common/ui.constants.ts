@@ -139,3 +139,14 @@ export const TEXT_STYLE = {
     fontStyle: "bold",
   },
 } as const;
+
+// =====================================================================
+// 온라인 메뉴
+// =====================================================================
+export const ONLINE_MENU_CONFIG = [
+  { id: "quickJoin", label: "빠른 매칭" },
+  { id: "createRoom", label: "방 만들기" },
+  { id: "showList", label: "방 목록" },
+  { id: "back", label: "뒤로가기" },
+  { id: "mainMove", label: "메인으로" },
+] as const;
