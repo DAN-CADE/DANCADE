@@ -9,6 +9,7 @@ import LpcCharacter from "@/components/avatar/core/LpcCharacter";
 import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 import { UIManager } from "@/game/managers/global/UIManager";
+import { createEventGame } from "@/lib/supabase/event";
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -95,7 +96,7 @@ export class MainScene extends BaseGameScene {
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
       withCredentials: true,
-      transports: ["websocket"]      
+      transports: ["websocket"],
     });
 
     // 연결 성공
@@ -134,20 +135,21 @@ export class MainScene extends BaseGameScene {
         }
       }
     );
-    
-    this.socket.on("createEventGame", (data:any)=> {
-      this.uiManager.showNotice(data.title);
-    })
 
-    this.socket.on("createNotice", (data:any)=> {
+    this.socket.on("createEventGame", (data: any) => {
+      createEventGame(data);
       this.uiManager.showNotice(data.content);
-    })
+    });
+
+    this.socket.on("createNotice", (data: any) => {
+      this.uiManager.showNotice(data.content);
+    });
 
     // 연결 끊김
     this.socket.on("disconnect", () => {
       console.log("❌ Socket.io 연결 끊김");
     });
-  }  
+  }
 
   // 게임에 입장
   private joinGame(): void {
@@ -193,7 +195,7 @@ export class MainScene extends BaseGameScene {
     this.lpcSpriteManager = new LpcSpriteManager();
     this.uiManager = new UIManager(this);
 
-      // 🔥 React에서 접근 가능하도록 노출 => inventory 에서 두 매니저 접근
+    // 🔥 React에서 접근 가능하도록 노출 => inventory 에서 두 매니저 접근
     (window as any).__avatarDataManager = this.avatarDataManager;
     (window as any).__avatarManager = this.player;
     (window as any).__mainScene = this; // 카메라 접근을 위해 씬 노출
@@ -202,9 +204,7 @@ export class MainScene extends BaseGameScene {
   // 화면에 무엇을 그릴 것인가
   protected createGameObjects(): void {
     this.mapManager.createMap();
-
     this.uiManager.createGameUI();
-    this.uiManager.createConsonantQuizUI();
 
     const currentData = this.avatarDataManager.customization;
     this.player.createAvatar(
@@ -243,26 +243,25 @@ export class MainScene extends BaseGameScene {
     }
     // ------------------------------ END 추후 지울 것
 
-
     // 인벤토리 HUD 토글 (I 키)
     if (this.input.keyboard) {
       this.input.keyboard.on("keydown-I", () => {
-        window.dispatchEvent(
-          new CustomEvent("inventory-toggle")
-        );
+        window.dispatchEvent(new CustomEvent("inventory-toggle"));
       });
     }
 
     // NPC 추가 및 상호작용 적용
-    const merchant = new AvatarManager(this).createNPC(1545, 241, 'MERCHANT');
-    const villager = new AvatarManager(this).createNPC(1616, 592, 'VILLAGER');
-    const gambler  = new AvatarManager(this).createNPC(1348, 592, 'EVENT');
+    const merchant = new AvatarManager(this).createNPC(1545, 241, "MERCHANT");
+    const villager = new AvatarManager(this).createNPC(1616, 592, "VILLAGER");
+    const gambler = new AvatarManager(this).createNPC(1348, 592, "EVENT");
 
     this.npcManagers.push(merchant, villager, gambler);
 
     if (this.input.keyboard) {
-      this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-      this.interactKey.on('down', () => {
+      this.interactKey = this.input.keyboard!.addKey(
+        Phaser.Input.Keyboard.KeyCodes.E
+      );
+      this.interactKey.on("down", () => {
         // 플레이어 매니저에게 주변 NPC와 상호작용하라고 명령
         this.player.tryInteract(this.npcManagers);
       });
@@ -331,8 +330,7 @@ export class MainScene extends BaseGameScene {
       }
     }
 
-
-    this.npcManagers.forEach(npc => npc.update());
+    this.npcManagers.forEach((npc) => npc.update());
   }
 
   // 온라인 플레이어 업데이트
@@ -487,15 +485,31 @@ export class MainScene extends BaseGameScene {
   }
 
   private cleanupSocket(): void {
-  if (this.socket) {
-    console.log("Cleanup: Socket.io 연결 해제");
-    this.socket.disconnect(); // 연결 종료
-    this.socket.removeAllListeners(); // 모든 이벤트 리스너 제거
+    if (this.socket) {
+      console.log("Cleanup: Socket.io 연결 해제");
+      this.socket.disconnect(); // 연결 종료
+      this.socket.removeAllListeners(); // 모든 이벤트 리스너 제거
+    }
   }
-}
+
+  // =====================================================
+  // 🎯 로비 씬 전용 채팅 표시
+  // =====================================================
+  protected onGameReady(): void {
+    // 로비에 진입하면 항상 채팅 표시
+    console.log("✅ [메인씬] 로비 진입 - 채팅 표시");
+    this.showChat();
+  }
+
+  // =====================================================
+  // 🎯 로비 씬 전용: 게임에서 돌아올 때 채팅 표시
+  // =====================================================
+  wake(): void {
+    console.log("✅ [메인씬] 씬 복귀 - 채팅 표시");
+    this.showChat();
+  }
 
   // 게임 종료 처리 구현 필수.
   protected handleGameEnd(): void {}
   protected restartGame(): void {}
-  
 }

@@ -1,10 +1,7 @@
 // game/managers/games/pingpong/PingPongInputManager.ts
 
 import { BaseInputManager } from "@/game/managers/base";
-import {
-  PingPongGameState,
-  PingPongInputState,
-} from "@/game/types/realPingPong";
+import { PingPongGameState, PingPongInputState } from "@/game/types/pingpong";
 
 /**
  * 탁구 게임 입력 관리

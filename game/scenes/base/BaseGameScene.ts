@@ -30,6 +30,33 @@ export abstract class BaseGameScene extends BaseScene {
   }
 
   // =================================
+  // 채팅 표시/숨김 헬퍼 메서드
+  // =================================
+  protected showChat(): void {
+    window.dispatchEvent(
+      new CustomEvent("chat:show", {
+        detail: { sceneName: this.scene.key },
+      })
+    );
+    console.log(`✅ [${this.scene.key}] 채팅 표시`);
+  }
+
+  protected hideChat(): void {
+    window.dispatchEvent(
+      new CustomEvent("chat:hide", {
+        detail: { sceneName: this.scene.key },
+      })
+    );
+    console.log(`🎮 [${this.scene.key}] 채팅 숨김`);
+  }
+
+  /** 현재 씬이 게임 씬인지 확인 (MainScene, StartScene 등은 게임씬 아님) */
+  protected isGameScene(): boolean {
+    const nonGameScenes = ["MainScene", "StartScene"];
+    return !nonGameScenes.includes(this.scene.key);
+  }
+
+  // =================================
   // 생명 주기 (각 게임에서 구현)
   // =================================
 
@@ -64,6 +91,10 @@ export abstract class BaseGameScene extends BaseScene {
     this.setupScene();
     this.initManagers();
     this.createGameObjects();
+
+    // 주의: 게임 씬에서만 game:started 이벤트를 발생시켜야 함
+    // (StartScene, MainScene 등에서는 오버라이드하여 이벤트 발생 안 함)
+
     this.onGameReady();
   }
 
@@ -88,6 +119,7 @@ export abstract class BaseGameScene extends BaseScene {
   // 정리
   // =================================
   shutdown(): void {
+    // 주의: 게임 씬에서만 game:ended 이벤트를 발생시켜야 함
     super.shutdown();
     this.cleanupManagers();
   }

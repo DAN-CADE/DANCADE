@@ -6,7 +6,8 @@ import {
   PingPongPaddle,
   PingPongBall,
   PingPongGameState,
-} from "@/game/types/realPingPong";
+  PingPongGameResult,
+} from "@/game/types/pingpong";
 
 type Scorer = "player" | "ai";
 
@@ -15,6 +16,8 @@ interface PingPongCallbacks {
   onGameOver?: (isPlayerWin: boolean) => void;
   onPointScored?: (scorer: Scorer) => void;
   onNetHit?: (x: number, y: number) => void;
+  onRallyUpdate?: (count: number) => void;
+  onPerfectHit?: () => void;
   [key: string]: unknown;
 }
 
@@ -55,6 +58,9 @@ export class PingPongGameManager extends BaseGameManager<
 
   update(deltaSeconds: number): void {
     if (!this.shouldUpdate()) return;
+
+    // ✅ 플레이 시간 누적
+    this.gameState.elapsedTime += deltaSeconds;
 
     this.updatePlayerPaddle(deltaSeconds);
     this.updateAIPaddle(deltaSeconds);
@@ -221,6 +227,25 @@ export class PingPongGameManager extends BaseGameManager<
     const bounceAngle =
       normalizedRelativeIntersectionY * PINGPONG_CONFIG.MAX_BOUNCE_ANGLE;
 
+    // ✅ 랠리 카운트 증가
+    this.gameState.currentRally++;
+    this.gameState.totalRallies++;
+    this.callCallback("onRallyUpdate", this.gameState.currentRally);
+
+    // ✅ 최장 랠리 기록 업데이트
+    if (this.gameState.currentRally > this.gameState.longestRally) {
+      this.gameState.longestRally = this.gameState.currentRally;
+    }
+
+    // ✅ 완벽한 타격 판정 (패들 중앙 30% 영역)
+    if (
+      Math.abs(normalizedRelativeIntersectionY) <=
+      PINGPONG_CONFIG.PERFECT_HIT_ZONE
+    ) {
+      this.gameState.perfectHits++;
+      this.callCallback("onPerfectHit");
+    }
+
     if (this.ball.speed < PINGPONG_CONFIG.BALL_MAX_SPEED) {
       this.ball.speed += PINGPONG_CONFIG.BALL_SPEED_INCREASE;
     }
@@ -250,6 +275,9 @@ export class PingPongGameManager extends BaseGameManager<
     this.scoringInProgress = true;
     this.gameState.isPlaying = false;
 
+    // ✅ 랠리 리셋 (득점 시)
+    this.gameState.currentRally = 0;
+
     if (scorer === "player") {
       this.gameState.playerScore++;
     } else {
@@ -272,7 +300,6 @@ export class PingPongGameManager extends BaseGameManager<
     } else {
       this.ball.speed = PINGPONG_CONFIG.BALL_INITIAL_SPEED;
 
-      //다음 서브 준비
       this.scene.time.delayedCall(1000, () => {
         this.prepareServe();
       });
@@ -378,5 +405,60 @@ export class PingPongGameManager extends BaseGameManager<
     this.gameState.servingPlayer = "player";
     this.scoringInProgress = false;
     this.aiReactionTimer = 0;
+
+    // ✅ 게임 기록 리셋
+    this.gameState.elapsedTime = 0;
+    this.gameState.totalRallies = 0;
+    this.gameState.currentRally = 0;
+    this.gameState.longestRally = 0;
+    this.gameState.perfectHits = 0;
+  }
+
+  // ✅ 게임 결과 반환
+  getGameResult(): PingPongGameResult {
+    const isWin = this.gameState.playerScore >= PINGPONG_CONFIG.WINNING_SCORE;
+
+    return {
+      playerScore: this.gameState.playerScore,
+      aiScore: this.gameState.aiScore,
+      elapsedTime: Math.round(this.gameState.elapsedTime),
+      totalRallies: this.gameState.totalRallies,
+      longestRally: this.gameState.longestRally,
+      perfectHits: this.gameState.perfectHits,
+      isWin,
+    };
+  }
+
+  // ✅ 게임 결과 검증 (클라이언트 측)
+  isValidGameResult(): boolean {
+    const result = this.getGameResult();
+
+    // 최소 플레이 시간 체크
+    if (result.elapsedTime < PINGPONG_CONFIG.MIN_PLAY_TIME) {
+      console.warn("⚠️ 게임 시간이 너무 짧습니다.");
+      return false;
+    }
+
+    // 점수/시간 비율 체크
+    const totalScore = result.playerScore + result.aiScore;
+    const scorePerSecond = totalScore / result.elapsedTime;
+    if (scorePerSecond > PINGPONG_CONFIG.MAX_SCORE_PER_SECOND) {
+      console.warn("⚠️ 점수 증가 속도가 비정상적입니다.");
+      return false;
+    }
+
+    // 랠리 수 검증 (점수보다 많아야 함)
+    if (result.totalRallies < totalScore) {
+      console.warn("⚠️ 랠리 수가 점수보다 적습니다.");
+      return false;
+    }
+
+    // 승리 조건 검증
+    if (result.isWin && result.playerScore < PINGPONG_CONFIG.WINNING_SCORE) {
+      console.warn("⚠️ 승리 조건이 맞지 않습니다.");
+      return false;
+    }
+
+    return true;
   }
 }

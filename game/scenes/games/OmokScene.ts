@@ -1,194 +1,210 @@
-import {
-  OmokMode,
-  OmokSide,
-  OmokSideType,
-  OmokMoveData,
-  Point,
-} from "@/game/types/omok";
-import { BaseOnlineUIManager } from "@/game/managers/base/multiplayer/ui/BaseOnlineUIManager";
+// game/scenes/OmokScene.ts (완전 수정 버전)
+
 import { BaseGameScene } from "@/game/scenes/base/BaseGameScene";
 import { OmokManager } from "@/game/managers/games/omok/core/OmokManager";
 import { OmokBoardManager } from "@/game/managers/games/omok/board/OmokBoardManager";
 import { OmokUIManager } from "@/game/managers/games/omok/ui/OmokUIManager";
 import { OmokRoomManager } from "@/game/managers/games/omok/network/room/OmokRoomManager";
 import { OmokNetworkManager } from "@/game/managers/games/omok/network/OmokNetworkManager";
+
+// 분리된 타입 import
+import { OMOK_CONFIG, OmokMode, type OmokMoveData } from "@/game/types/omok";
 import { OmokGameAbortedDialog } from "@/game/managers/games/omok/ui/OmokGameAbortedDialog";
 import { OmokAIManager } from "@/game/managers/games/omok/core/OmokAIManager";
-// import { BaseRoomUIManager } from "@/game/managers/base/multiplayer/ui/BaseRoomUIManager";
-import { OMOK_CONFIG } from "@/game/types/omok/omok.constants";
+import { BaseRoomUIManager } from "@/game/managers/base/multiplayer";
 
-import { GameNetworkCallbacks } from "@/game/types/multiplayer/network.types";
-import { gameState, onlineState } from "@/game/types/omok/omok.types";
-import { RoomUIEvent } from "@/game/types/common/common.network.types";
+/**
+ * OmokScene - 오목 게임 씬
+ *
+ * 책임:
+ * - 게임 생명주기 관리
+ * - 플레이어 입력 처리
+ * - 게임 모드별 흐름 제어
+ * - 매니저 간 조율
+ */
 export class OmokScene extends BaseGameScene {
-  constructor() {
-    super({ key: "OmokScene" });
-  }
-
-  create() {
-    super.create();
-
-    console.log("오목 씬 테스트 - 초기화 완료");
-  }
-
   // =====================================================================
+  // 게임 상태
   // =====================================================================
-
-  private gameState: gameState = {
+  private gameState = {
     isStarted: false,
-    currentTurn: OmokSide.BLACK,
+    currentTurn: 1, // 1(흑) 또는 2(백)
     mode: OmokMode.NONE,
   };
 
-  private onlineState: onlineState = {
-    mySide: OmokSide.NONE as OmokSideType,
-    isSideAssigned: false,
+  // =====================================================================
+  // 온라인 멀티플레이 상태
+  // =====================================================================
+  private onlineState = {
+    myColor: 0, // 0: 미할당, 1: 흑돌, 2: 백돌
+    isColorAssigned: false,
     currentRoomId: null as string | null,
   };
 
-  private managers!: {
-    omok: OmokManager;
-    board: OmokBoardManager;
-    ui: OmokUIManager;
-    room: OmokRoomManager;
-    network: OmokNetworkManager;
-    onlineUI: BaseOnlineUIManager;
-    abortDialog: OmokGameAbortedDialog;
-    ai: OmokAIManager;
-    // roomUI: BaseRoomUIManager;
+  // =====================================================================
+  // 매니저들
+  // =====================================================================
+  private managers = {
+    omok: null as OmokManager | null,
+    board: null as OmokBoardManager | null,
+    ui: null as OmokUIManager | null,
+    room: null as OmokRoomManager | null,
+    network: null as OmokNetworkManager | null,
+    onlineUI: null as BaseOnlineUIManager | null,
+    abortDialog: null as OmokGameAbortedDialog | null,
+    ai: null as OmokAIManager | null,
+    roomUI: null as BaseRoomUIManager | null,
   };
 
+  constructor() {
+    super("OmokScene");
+  }
+
   // =====================================================================
+  // Public Getters (UI 매니저에서 접근용)
   // =====================================================================
 
-  // BaseGameScene 필수 구현
-  protected loadAssets(): void {}
+  /**
+   * 내 돌 색깔 반환 (UI 매니저에서 사용)
+   */
+  public get myColor(): number {
+    return this.onlineState.myColor;
+  }
+
+  // =====================================================================
+  // BaseGameScene 라이프사이클
+  // =====================================================================
+
+  protected loadAssets(): void {
+    // 추후 이미지/사운드 로드 시 사용
+  }
+
+  // ⭐ Phaser 생명주기 메서드 추가
+  preload(): void {
+    console.log("🎮 [OmokScene] preload() 시작");
+    this.loadAssets();
+  }
+
+  // ⭐ Phaser 생명주기 메서드 추가
+  create(): void {
+    console.log("🎮 [OmokScene] create() 시작");
+
+    this.setupScene();
+    this.initManagers();
+    this.createGameObjects();
+
+    // ⭐ 채팅 숨김 (게임 씬이므로)
+    console.log("🎮 [OmokScene] 채팅 숨김 호출");
+    this.hideChat();
+
+    this.onGameReady();
+  }
+
+  protected initManagers(): void {
+    // 네트워크 매니저 (가장 먼저 초기화)
+    this.managers.network = this.createNetworkManager();
+
+    // AI 매니저
+    this.managers.ai = new OmokAIManager();
+
+    // UI 매니저들
+    this.managers.ui = new OmokUIManager(this);
+    this.managers.onlineUI = new BaseOnlineUIManager(this);
+
+    // 게임 로직 매니저
+    this.managers.omok = this.createOmokManager();
+
+    // 보드 매니저
+    this.managers.board = new OmokBoardManager(this, this.managers.omok);
+
+    // 방 매니저
+    this.managers.room = this.createRoomManager();
+
+    // 게임 중단 다이얼로그
+    this.managers.abortDialog = new OmokGameAbortedDialog(this);
+
+    // 이벤트 리스너 등록
+    this.setupEventListeners();
+  }
 
   protected setupScene(): void {
     this.cameras.main.setBackgroundColor(OMOK_CONFIG.COLORS.BOARD);
   }
 
   protected createGameObjects(): void {
-    this.managers.board.renderBoard();
-  }
-
-  protected onGameReady(): void {
-    this.showModeSelection(OmokSide.BLACK);
-
-    this.setupEventListeners();
+    this.managers.board!.setGameObjects();
     this.setupInputHandler();
   }
 
-  // =====================================================================
-  // =====================================================================
-
-  protected initManagers(): void {
-    const network = this.createNetworkManager();
-    const omok = this.createOmokManager();
-
-    this.managers = {
-      network: network,
-      ai: new OmokAIManager(),
-      ui: new OmokUIManager(this),
-      onlineUI: new BaseOnlineUIManager(this, OMOK_CONFIG.UI_CONFIG),
-      omok: omok,
-      board: new OmokBoardManager(this, omok),
-      room: this.createRoomManager(network),
-      abortDialog: new OmokGameAbortedDialog(this),
-      // roomUI: new BaseRoomUIManager(this)
-    };
+  protected onGameReady(): void {
+    this.showModeSelection();
   }
 
   // =====================================================================
+  // 매니저 생성 헬퍼
   // =====================================================================
 
-  // 네트워크 통신을 담당하고 있는 OmokNetworkManager 생성하고 초기화
-  // 서버와의 소켓 통신(매칭, 상대방 수 수신 등)에 필요한 콜백들을 정의
+  /**
+   * 네트워크 매니저 생성 및 초기화
+   */
   private createNetworkManager(): OmokNetworkManager {
-    // 서버 이벤트가 발생했을 때 Scene에서 실행할 행동 정의
-    const callbacks: GameNetworkCallbacks<OmokMoveData, OmokSideType> = {
-      // 서버로부터 매칭 대기 메시지를 받았을 때
+    const manager = new OmokNetworkManager(this, {
       onWaiting: (message) => this.handleWaitingForMatch(message),
+      onColorAssigned: (color, roomId) =>
+        this.handleColorAssignment(color, roomId),
+      onOpponentMove: (data) => this.handleOpponentMove(data),
+    });
 
-      // 서버에서 방 번호와 내 역할(흑/백)을 할당받았을 때
-      onRoleAssigned: (role, roomId) => this.handleRoleAssignment(role, roomId),
+    if (!manager.isSocketInitialized()) {
+      manager.initializeSocket();
+    }
 
-      // 상대방이 돌을 두어 서버가 좌표 데이터를 보내줬을 때
-      onOpponentAction: (action) => this.handleOpponentMove(action),
-
-      // 게임 종료 또는 승리 판정 결과가 서버로부터 왔을 때
-      onGameOver: (winner) => this.handleGameEnd?.(winner),
-      onWin: (winner) => this.handleGameEnd?.(winner),
-    };
-
-    // 정의된 콜백을 들고 있는 네트워크 매니저를 생성하여 반환함
-    const manager = new OmokNetworkManager(callbacks);
     return manager;
   }
 
-  // 게임의 핵심 룰을 담당하는 OmokManager 생성
-  // 오목판 상태 관리 및 승패 로직에 필요한 콜백 정의
+  /**
+   * 오목 로직 매니저 생성
+   */
   private createOmokManager(): OmokManager {
-    // 오목판 사이즈 가져옴
-    const { SIZE } = OMOK_CONFIG.BOARD_STYLE.BOARD;
-
-    // OmokManager에 전달할 콜백과 함께 인스턴스 생성
-    return new OmokManager(this, SIZE, {
-      // 매니저가 승리 조건을 만족하는 수를 발견했을 때
+    return new OmokManager(this, OMOK_CONFIG.BOARD_SIZE, {
       onWin: (winner) => this.handleGameEnd(winner),
-
-      // 유효한 위치에 돌이 놓였을 때, 실제로 오목판에 돌을 렌더링하도록
-      onMove: (point: Point, side, moveNumber) =>
-        this.managers.board.renderStoneAtGrid(point, side, moveNumber),
-
-      // 흑돌 3-3 등 금수 규칙에 어긋났을 때 UI 매니저를 통해 경고 메시지 표시
-      onForbidden: (reason) => this.managers.ui.showForbiddenMessage(reason),
+      onMove: (row, col, color) =>
+        this.managers.board!.renderStone(row, col, color),
+      onForbidden: (reason) => this.managers.ui!.showForbiddenMessage(reason),
     });
   }
 
-  private createRoomManager(network: OmokNetworkManager): OmokRoomManager {
-    // 얘는 BaseNetworkManager의 getSocket 메서드를 사용할 수 있습니다
-    // (OmokNetworkManager -> BaseGameNetworkManager 상속,
-    // BaseGameNetworkManager -> BaseNetworkManager를 상속받아서)
-    // 그래서 네트워크 매니저에 소켓을 받고,
-    const socket = network.getSocket();
-    // 소켓을 넘겨주며 roomManager 생성
-    const manager = new OmokRoomManager(this, socket);
+  /**
+   * 방 매니저 생성 및 콜백 설정
+   */
+  private createRoomManager(): OmokRoomManager {
+    const manager = new OmokRoomManager(
+      this,
+      this.managers.network!.getSocket()
+    );
 
-    // 부모 BaseRoomManager의 setOnError, setOnGameAborted, setOnGameStart를 호출
     manager.setOnError((message) => {
+      console.error("[OmokScene] 방 에러:", message);
       this.managers.ui!.showForbiddenMessage(message);
     });
 
     manager.setOnGameAborted((reason, leavingPlayer) => {
+      console.warn("[OmokScene] 게임 중단:", reason, leavingPlayer);
       this.handleGameAborted(reason, leavingPlayer);
     });
 
     manager.setOnGameStart(() => {
-      console.log("[OmokScene] 게임 시작 이벤트 수신");
-
-      // 색상이 할당될 때까지 최대 0.5초간 체크하며 대기 (재귀적 체크)
-      const checkAndStart = (attempts: number) => {
-        if (this.onlineState.isSideAssigned) {
-          this.startOnlineGame();
-        } else if (attempts < 5) {
-          // 아직 할당 전이면 100ms 뒤에 다시 시도
-          this.time.delayedCall(100, () => checkAndStart(attempts + 1));
-        } else {
-          console.error(
-            "[OmokScene] 색상 할당 실패로 게임을 시작할 수 없습니다."
-          );
-        }
-      };
-
-      checkAndStart(0);
+      if (this.onlineState.isColorAssigned) {
+        this.startOnlineGame();
+      }
     });
 
     return manager;
   }
 
-  // 클릭된 위치(x, y) 좌표가 pointer 객체에 담기고
-  // 그걸 handlePlayerInput에 넘김
+  /**
+   * 입력 핸들러 설정
+   */
   private setupInputHandler(): void {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handlePlayerInput(pointer);
@@ -196,33 +212,60 @@ export class OmokScene extends BaseGameScene {
   }
 
   // =====================================================================
+  // 게임 모드 선택
   // =====================================================================
 
-  // 메뉴 모드 선택 (싱글 / 로컬 / 온라인 / 나가기)
-  private showModeSelection(mySide: OmokSideType): void {
-    this.managers.ui.showModeSelection((mode) => {
-      switch (mode) {
-        case OmokMode.SINGLE:
-          this.startSingleGame(mySide);
-          break;
-        case OmokMode.LOCAL:
-          this.startLocalGame(mode, mySide);
-          break;
-        case OmokMode.ONLINE:
-          this.showOnlineMenu();
-          break;
-        default:
-          this.exitToMainScene();
+  /**
+   * 모드 선택 화면 표시
+   */
+  private showModeSelection(): void {
+    this.managers.ui!.showModeSelection((mode) => {
+      if (mode === OmokMode.NONE) {
+        // EXIT 처리
+        this.exitToMainScene();
+        return;
+      }
+
+      if (mode === OmokMode.ONLINE) {
+        this.showOnlineMenu();
+      } else {
+        this.startLocalGame(mode);
       }
     });
   }
 
   // =====================================================================
+  // 로컬 게임 (싱글/로컬 모드)
   // =====================================================================
 
-  // BaseOnlineUIManager의 showOnlineMenu에 가 실행됨
-  // (각 콜백 함수 -> showOnlineMenu(options: OnlineMenuOptions) 에서
-  // options로 들어감)
+  /**
+   * 로컬 게임 시작 (싱글 AI 또는 2인 대전)
+   */
+  private startLocalGame(mode: OmokMode): void {
+    this.gameState.mode = mode;
+    this.gameState.currentTurn = Math.random() < 0.5 ? 1 : 2;
+    this.gameState.isStarted = true;
+
+    this.managers.ui!.createPlayerProfiles(mode);
+    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
+    this.managers.board!.updateForbiddenMarkers(
+      this.gameState.currentTurn,
+      this.gameState.isStarted
+    );
+
+    // AI 모드이고 AI가 선공이면 AI가 먼저 수를 둠
+    if (mode === OmokMode.SINGLE && this.gameState.currentTurn === 2) {
+      this.executeAiTurn();
+    }
+  }
+
+  // =====================================================================
+  // 온라인 게임
+  // =====================================================================
+
+  /**
+   * 온라인 메뉴 표시
+   */
   private showOnlineMenu(): void {
     this.gameState.mode = OmokMode.ONLINE;
 
@@ -240,8 +283,10 @@ export class OmokScene extends BaseGameScene {
     });
   }
 
-  private async startQuickMatch(): Promise<void> {
-    // BaseNetworkManager의 isConnected 메서드 실행하여 소켓 연결 됐는지 확인
+  /**
+   * 빠른 매칭 시작
+   */
+  private startQuickMatch(): void {
     if (!this.managers.network!.isConnected()) {
       this.managers.ui!.showForbiddenMessage(
         "서버 연결 실패. 다시 시도해주세요."
@@ -249,197 +294,363 @@ export class OmokScene extends BaseGameScene {
       return;
     }
 
-    // 온라인 메뉴 숨기기
     this.managers.onlineUI!.hideOnlineMenu();
 
-    // 비동기 매칭 요청 및 결과 피드백
-    // OmokUIManager 내 showWaitingMessage, showForbiddenMessage 실행
-    // 다시 OmokMessageRenderer에서 메세지를 받아 생성
-    // => Scene -> OmokUIManager -> OmokMessageRenderer
     try {
-      // 서버에 매칭 패킷 전송
-      // BaseGameNetworkManager의 joinMatch 실행
-      await this.managers.network!.joinMatch();
-
-      // 성공 시 대기 메시지 표시
+      this.managers.network!.joinMatch();
       this.managers.ui!.showWaitingMessage("빠른 매칭 중...");
     } catch (error) {
       console.error("[오목] 빠른 매칭 실패:", error);
-
-      // 실패 시 경고 메시지 표시
       this.managers.ui!.showForbiddenMessage(
         "매칭 요청 실패. 다시 시도해주세요."
       );
     }
   }
 
-  // 방 만들기
+  /**
+   * 방 생성 다이얼로그 표시
+   */
   private showCreateRoomDialog(): void {
-    // this.managers.onlineUI!.hideOnlineMenu();
-    this.events.emit(RoomUIEvent.CREATE_ROOM);
+    this.managers.onlineUI!.hideOnlineMenu();
+
+    this.events.emit("roomUI:createRoomRequested");
   }
 
+  /**
+   * 방 목록 표시
+   */
   private showRoomList(): void {
-    // this.managers.onlineUI!.hideOnlineMenu();
-
-    // 데이터 요청: NetworkManager를 통해 서버에 최신 방 목록 패킷 송신 (gamePrefix: "omok" 사용)
+    this.managers.onlineUI!.hideOnlineMenu();
     this.managers.room!.requestRoomList();
-
-    // NetworkManager가 보유한 현재 방 리스트(RoomData[])를 가져옴
-    // UI Manager에게 전달하여 실제 캔버스에 방 리스트를 생성
     this.managers.room!.renderRoomList();
   }
 
-  // 모드 선택 (뒤로가기)
+  /**
+   * 모드 선택으로 돌아가기
+   */
   private returnToModeSelection(): void {
+    // 게임 상태 초기화
     this.resetAllManagers();
 
-    this.onlineState.mySide = OmokSide.NONE;
-    this.onlineState.isSideAssigned = false;
+    // 온라인 상태 초기화
+    this.onlineState.myColor = 0;
+    this.onlineState.isColorAssigned = false;
     this.onlineState.currentRoomId = null;
 
+    // 게임 상태 초기화
     this.gameState.mode = OmokMode.NONE;
     this.gameState.isStarted = false;
-    this.gameState.currentTurn = OmokSide.BLACK;
+    this.gameState.currentTurn = 1;
 
+    // 씬 재시작 (자동으로 모드 선택 화면 표시)
     this.scene.restart();
   }
 
-  private exitToMainScene(): void {
-    this.scene.start("MainScene");
-  }
-
-  private exitToMainMenu(): void {
-    this.resetAllManagers();
-    this.exitToMainScene();
-  }
-
-  // =====================================================================
-  // =====================================================================
-
-  private startLocalGame(mode: OmokMode, mySide: OmokSideType): void {
-    const firstTurn = Math.random() < 0.5 ? OmokSide.BLACK : OmokSide.WHITE;
-    this.setupGame(mode, mySide, firstTurn);
-  }
-
-  private startSingleGame(mySide: OmokSideType): void {
-    this.setupGame(OmokMode.SINGLE, mySide, OmokSide.BLACK);
-
-    // 내가 백이면 AI가 바로 시작
-    if (mySide === OmokSide.WHITE) {
-      this.executeAiTurn();
-    }
-  }
-
+  /**
+   * 온라인 게임 시작
+   */
   private startOnlineGame(): void {
-    if (!this.onlineState.isSideAssigned || this.gameState.isStarted) {
-      console.warn("[OmokScene] 시작 조건 미충족");
+    if (!this.onlineState.isColorAssigned || this.gameState.isStarted) {
+      console.warn("[OmokScene] 게임 시작 조건 미충족", {
+        isColorAssigned: this.onlineState.isColorAssigned,
+        isStarted: this.gameState.isStarted,
+      });
       return;
     }
 
-    this.managers.room!.cleanup();
-    this.setupGame(OmokMode.ONLINE, this.onlineState.mySide, OmokSide.BLACK);
-  }
-
-  private setupGame(
-    mode: OmokMode,
-    mySide: OmokSideType,
-    firstTurn: OmokSideType
-  ) {
-    // 방 대기실 UI 정리 (BaseRoomManager의 cleanup 사용)
-    if (mode === OmokMode.ONLINE) {
-      this.managers.room!.cleanup();
-    }
-
-    // 게임 상태 설정
-    this.gameState.mode = mode;
-    this.gameState.currentTurn = firstTurn;
     this.gameState.isStarted = true;
-
-    this.managers.omok!.resetGame();
+    this.gameState.currentTurn = 1;
+    this.gameState.mode = OmokMode.ONLINE;
 
     // 보드 초기화
-    this.managers.board!.clear();
+    this.managers.omok!.resetBoard();
+    this.managers.board!.resetGame();
     this.managers.board!.renderBoard();
+    this.managers.board!.updateForbiddenMarkers(1, true);
 
-    // 게임 UI 생성 (OmokUIManager의 메서드들)
-    this.managers.ui!.createPlayerProfiles(mode, mySide);
-    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
-
-    // 금수 마커 표시
-    this.managers.board!.updateForbiddenMarkers(
-      this.gameState.currentTurn,
-      true
+    // UI 초기화
+    this.managers.room!.clearUI();
+    this.managers.ui!.createPlayerProfiles(
+      OmokMode.ONLINE,
+      this.onlineState.myColor
     );
+    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
   }
 
   // =====================================================================
+  // 네트워크 이벤트 핸들러
   // =====================================================================
 
-  private handleWaitingForMatch(message: string) {
+  /**
+   * 매칭 대기 처리
+   */
+  private handleWaitingForMatch(message: string): void {
     console.log("[OmokScene] 매칭 대기:", message);
     this.managers.ui!.showWaitingMessage(message);
   }
 
-  private handleRoleAssignment(side: OmokSideType, roomId?: string) {
-    console.log("[OmokScene] 색깔 할당:", side, roomId);
+  /**
+   * 색깔 할당 처리
+   */
+  private handleColorAssignment(color: number, roomId?: string): void {
+    console.log("[OmokScene] 색깔 할당:", color, roomId);
 
-    this.onlineState.mySide = side;
-    this.onlineState.isSideAssigned = true;
+    this.onlineState.myColor = color;
+    this.onlineState.isColorAssigned = true;
 
     if (roomId) {
       this.managers.network!.setRoomId(roomId);
     }
 
-    const sideName = side === OmokSide.BLACK ? "흑돌 (선공)" : "백돌 (후공)";
-    this.managers.ui!.showWaitingMessage(`당신은 ${sideName}입니다!`);
+    const colorName = color === 1 ? "흑돌 (선공)" : "백돌 (후공)";
+    this.managers.ui!.showWaitingMessage(`당신은 ${colorName}입니다!`);
 
-    // this.time.delayedCall(1000, () => {
-    //   this.managers.ui!.clear();
-    //   if (this.onlineState.isSideAssigned && !this.gameState.isStarted) {
-    //     this.startOnlineGame();
-    //   }
-    // });
+    // 1초 후 게임 시작
+    this.time.delayedCall(1000, () => {
+      this.managers.ui!.hideWaitingMessage();
+      if (this.onlineState.isColorAssigned && !this.gameState.isStarted) {
+        this.startOnlineGame();
+      }
+    });
   }
 
-  private handleOpponentMove(action: OmokMoveData) {
+  /**
+   * 상대방 수 처리
+   */
+  private handleOpponentMove(data: OmokMoveData): void {
     if (this.gameState.mode !== OmokMode.ONLINE) return;
 
-    // 좌표를 Point 객체로 생성
-    const point: Point = { row: action.row, col: action.col };
-
-    // 돌 놓기
-    const success = this.managers.omok!.placeStone(point, action.side);
-
+    const success = this.managers.omok!.placeStone(
+      data.row,
+      data.col,
+      data.color
+    );
     if (success) {
-      // 화면에 돌 렌더링 (생성한 point 객체 전달)
-      this.managers.board!.renderStoneAtGrid(
-        point,
-        action.side,
-        action.moveNumber ?? 0
-      );
-
-      this.advanceGameStep(point);
+      this.managers.board!.renderStone(data.row, data.col, data.color);
+      this.advanceGameStep(data.row, data.col);
     } else {
-      console.error("[오목] 상대방의 유효하지 않은 수:", action);
+      console.error("[오목] 상대방의 유효하지 않은 수:", data);
     }
   }
 
-  // private handleGameStart() {}
-
+  /**
+   * 게임 중단 처리
+   */
   private handleGameAborted(reason: string, leavingPlayer: string): void {
     this.gameState.isStarted = false;
     this.showGameAbortedDialog(reason, leavingPlayer);
   }
 
-  protected handleGameEnd(winner: OmokSideType) {
-    if (!this.gameState.isStarted) return;
+  // =====================================================================
+  // 플레이어 입력 처리
+  // =====================================================================
 
+  /**
+   * 플레이어 클릭 처리
+   */
+  private handlePlayerInput(pointer: Phaser.Input.Pointer): void {
+    // 기본 가드
+    if (!this.canAcceptInput()) return;
+
+    // 온라인 모드 전용 체크
+    if (this.gameState.mode === OmokMode.ONLINE && !this.canPlayOnlineTurn()) {
+      return;
+    }
+
+    // 좌표 변환 및 유효성 검증
+    const { row, col } = this.managers.board!.worldToGrid(pointer.x, pointer.y);
+    if (!this.isValidPosition(row, col)) return;
+
+    // 금수 체크
+    if (!this.checkForbiddenMove(row, col)) return;
+
+    // 돌 배치
+    this.placeStoneAndAdvance(row, col);
+  }
+
+  /**
+   * 입력 가능 여부 확인
+   */
+  private canAcceptInput(): boolean {
+    return this.gameState.isStarted && !this.managers.ai!.isAiThinking();
+  }
+
+  /**
+   * 온라인 턴 플레이 가능 여부 확인
+   */
+  private canPlayOnlineTurn(): boolean {
+    if (!this.onlineState.isColorAssigned) {
+      this.managers.ui!.showForbiddenMessage("색깔 할당 대기 중...");
+      return false;
+    }
+
+    if (this.gameState.currentTurn !== this.onlineState.myColor) {
+      this.managers.ui!.showForbiddenMessage("상대방의 턴입니다.");
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 좌표 유효성 검증
+   */
+  private isValidPosition(row: number, col: number): boolean {
+    return (
+      row >= 0 &&
+      row < OMOK_CONFIG.BOARD_SIZE &&
+      col >= 0 &&
+      col < OMOK_CONFIG.BOARD_SIZE
+    );
+  }
+
+  /**
+   * 금수 체크
+   */
+  private checkForbiddenMove(row: number, col: number): boolean {
+    const forbiddenCheck = this.managers.omok!.checkForbidden(
+      row,
+      col,
+      this.gameState.currentTurn
+    );
+
+    if (!forbiddenCheck.can) {
+      this.managers.ui!.showForbiddenMessage(
+        forbiddenCheck.reason || "둘 수 없는 곳"
+      );
+      this.cameras.main.shake(200, 0.005);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 돌 배치 및 게임 진행
+   */
+  private placeStoneAndAdvance(row: number, col: number): void {
+    if (this.managers.omok!.placeStone(row, col, this.gameState.currentTurn)) {
+      this.managers.board!.renderStone(row, col, this.gameState.currentTurn);
+
+      // 온라인 모드일 경우 서버에 수 전송
+      if (this.gameState.mode === OmokMode.ONLINE) {
+        this.managers.network!.sendMove(row, col, this.onlineState.myColor);
+      }
+
+      this.advanceGameStep(row, col);
+    }
+  }
+
+  // =====================================================================
+  // 게임 진행 로직
+  // =====================================================================
+
+  /**
+   * 게임 단계 진행 (승리 체크 → 턴 전환 → AI 실행)
+   */
+  private advanceGameStep(row: number, col: number): void {
+    // 승리 체크
+    if (this.managers.omok!.checkWin(row, col, this.gameState.currentTurn)) {
+      this.handleGameEnd(this.gameState.currentTurn);
+      return;
+    }
+
+    // 턴 전환
+    this.switchTurn();
+
+    // AI 턴이면 AI 실행
+    if (this.shouldExecuteAiTurn()) {
+      this.executeAiTurn();
+    }
+  }
+
+  /**
+   * 턴 전환
+   */
+  private switchTurn(): void {
+    this.gameState.currentTurn = this.gameState.currentTurn === 1 ? 2 : 1;
+
+    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
+    this.managers.board!.updateForbiddenMarkers(
+      this.gameState.currentTurn,
+      this.gameState.isStarted
+    );
+  }
+
+  /**
+   * AI 턴 실행 여부
+   */
+  private shouldExecuteAiTurn(): boolean {
+    return (
+      this.gameState.mode === OmokMode.SINGLE &&
+      this.gameState.currentTurn === 2
+    );
+  }
+
+  // =====================================================================
+  // AI 로직
+  // =====================================================================
+
+  /**
+   * AI 수 실행
+   */
+  private executeAiTurn(): void {
+    if (!this.gameState.isStarted || this.managers.ai!.isAiThinking()) {
+      return;
+    }
+
+    const currentTurn = this.gameState.currentTurn;
+    const threats = this.managers.omok!.getThreats(currentTurn);
+    const board = this.managers.omok!.getBoardState();
+    const lastMove = undefined;
+
+    this.managers.ai!.executeAiTurn(
+      board,
+      threats || [],
+      lastMove,
+      (row, col) => this.isValidPosition(row, col),
+      (result) => this.handleAiTurnResult(result, currentTurn)
+    );
+  }
+
+  /**
+   * AI 턴 결과 처리
+   */
+  private handleAiTurnResult(
+    result: { success: boolean; move: { row: number; col: number } | null },
+    currentTurn: number
+  ): void {
+    if (!this.gameState.isStarted) {
+      return;
+    }
+
+    if (!result.success || !result.move || result.move.row === -1) {
+      console.error("[AI] 유효한 수를 찾지 못함");
+      return;
+    }
+
+    const { row, col } = result.move;
+
+    // AI 수 실행
+    if (this.managers.omok!.placeStone(row, col, currentTurn)) {
+      this.managers.board!.renderStone(row, col, currentTurn);
+      this.advanceGameStep(row, col);
+    }
+  }
+
+  // =====================================================================
+  // 게임 종료
+  // =====================================================================
+
+  /**
+   * 게임 종료 처리
+   */
+  protected handleGameEnd(winner: number): void {
     this.gameState.isStarted = false;
 
-    // 종료 후 수순 보여주기
-    this.managers.board!.displayMoveSequence();
+    this.managers.board!.showMoveNumbers();
 
+    // ⭐ 온라인 모드일 때 서버에 게임 종료 알림
     if (this.gameState.mode === OmokMode.ONLINE) {
       console.log(`🏆 [OmokScene] 게임 종료 - 승자: ${winner}`);
       this.managers.network!.notifyGameOver(winner);
@@ -454,212 +665,26 @@ export class OmokScene extends BaseGameScene {
     );
   }
 
+  /**
+   * 승자 이름 결정
+   */
   private getWinnerName(winner: number): string {
-    switch (this.gameState.mode) {
-      case OmokMode.SINGLE:
-        return winner === OmokSide.BLACK ? "나" : "GPT";
-
-      case OmokMode.LOCAL:
-        return winner === OmokSide.BLACK ? "플레이어1" : "플레이어2";
-
-      case OmokMode.ONLINE:
-        return winner === this.onlineState.mySide ? "나" : "상대";
-
-      default:
-        return "알 수 없음";
+    if (this.gameState.mode === OmokMode.SINGLE) {
+      return winner === 1 ? "나" : "GPT";
+    } else if (this.gameState.mode === OmokMode.LOCAL) {
+      return winner === 1 ? "플레이어1" : "플레이어2";
+    } else if (this.gameState.mode === OmokMode.ONLINE) {
+      return winner === this.onlineState.myColor ? "나" : "상대";
     }
+    return "알 수 없음";
   }
 
-  // =====================================================================
-  // =====================================================================
-
-  private handlePlayerInput(pointer: Phaser.Input.Pointer): void {
-    if (!this.isInputValid()) return;
-
-    // 인자 전달 방식 확인 (객체 형태 {x, y})
-    const point = this.managers.board!.getGridIndex({
-      x: pointer.x,
-      y: pointer.y,
-    });
-
-    if (!this.isValidPosition(point)) return;
-    if (!this.checkForbiddenMove(point.row, point.col)) return;
-
-    // 현재 수(moveNumber) 계산
-    const currentMoveNumber =
-      this.managers.omok!.getGameState().moves.length + 1;
-
-    // 인자 개수 맞춰서 호출
-    this.placeStoneAndAdvance(point, currentMoveNumber);
-  }
-
-  private isInputValid(): boolean {
-    // 게임이 시작되지 않았거나 AI가 생각중일 때
-    if (!this.canAcceptInput()) {
-      return false;
-    }
-
-    // 온라인 전용:
-    if (this.gameState.mode === OmokMode.ONLINE && !this.canPlayOnlineTurn()) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private canAcceptInput(): boolean {
-    return this.gameState.isStarted && !this.managers.ai!.isAiThinking();
-  }
-
-  private canPlayOnlineTurn(): boolean {
-    if (!this.onlineState.isSideAssigned) {
-      this.managers.ui!.showForbiddenMessage("색깔 할당 대기 중...");
-      return false;
-    }
-
-    if (this.gameState.currentTurn !== this.onlineState.mySide) {
-      this.managers.ui!.showForbiddenMessage("상대방의 턴입니다.");
-      return false;
-    }
-
-    return true;
-  }
-
-  // =====================================================================
-  // =====================================================================
-
-  private isValidPosition(point: Point): boolean {
-    const { row, col } = point;
-    return (
-      row >= 0 &&
-      row < OMOK_CONFIG.BOARD_STYLE.BOARD.SIZE &&
-      col >= 0 &&
-      col < OMOK_CONFIG.BOARD_STYLE.BOARD.SIZE
-    );
-  }
-
-  private checkForbiddenMove(row: number, col: number): boolean {
-    const forbiddenCheck = this.managers.omok!.checkForbidden(
-      { row, col },
-      this.gameState.currentTurn
-    );
-
-    if (!forbiddenCheck.can) {
-      this.cameras.main.shake(200, 0.005);
-      return false;
-    }
-
-    return true;
-  }
-
-  private placeStoneAndAdvance(point: Point, moveNumber: number): void {
-    if (this.managers.omok!.placeStone(point, this.gameState.currentTurn)) {
-      this.managers.board!.renderStoneAtGrid(
-        point,
-        this.gameState.currentTurn,
-        moveNumber
-      );
-
-      if (this.gameState.mode === OmokMode.ONLINE) {
-        this.managers.network!.sendMove(point, this.onlineState.mySide);
-      }
-
-      this.advanceGameStep(point);
-    }
-  }
-
-  // =====================================================================
-  // =====================================================================
-
-  private advanceGameStep(point: Point): void {
-    if (this.managers.omok!.checkWin(point, this.gameState.currentTurn)) {
-      this.handleGameEnd(this.gameState.currentTurn);
-      return;
-    }
-
-    this.switchTurn();
-
-    if (this.shouldExecuteAiTurn()) {
-      this.executeAiTurn();
-    }
-  }
-
-  private switchTurn(): void {
-    this.gameState.currentTurn = this.gameState.currentTurn === 1 ? 2 : 1;
-
-    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
-    this.managers.board!.updateForbiddenMarkers(
-      this.gameState.currentTurn,
-      this.gameState.isStarted
-    );
-  }
-
-  private shouldExecuteAiTurn(): boolean {
-    return (
-      this.gameState.mode === OmokMode.SINGLE &&
-      this.gameState.currentTurn === OmokSide.WHITE
-    );
-  }
-
-  // =====================================================================
-  // =====================================================================
-
-  private executeAiTurn(): void {
-    if (!this.gameState.isStarted || this.managers.ai!.isAiThinking()) {
-      return;
-    }
-
-    const currentTurn = this.gameState.currentTurn;
-    const threats = this.managers.omok!.getThreats(currentTurn);
-    const board = this.managers.omok!.board;
-    const lastMove = undefined;
-
-    this.managers.ai!.executeAiTurn(
-      board,
-      threats || [],
-      lastMove,
-      (row, col) => this.isValidPosition({ row, col }),
-      (result) => this.handleAiTurnResult(result, currentTurn)
-    );
-  }
-
-  private handleAiTurnResult(
-    result: { success: boolean; move: Point | null },
-    currentTurn: OmokSideType
-  ): void {
-    if (!this.gameState.isStarted) return;
-
-    // AI가 수를 찾지 못한 경우 예외 처리
-    if (!result.success || !result.move || result.move.row === -1) {
-      console.error("[AI] 유효한 수를 찾지 못함");
-      return;
-    }
-
-    // AI가 결정한 좌표 (이미 {row, col} 형태)
-    const movePoint = result.move;
-
-    // 현재 수(moveNumber) 계산
-    const nextMoveNumber = this.managers.omok!.getGameState().moves.length + 1;
-
-    // 로직상 돌 놓기
-    if (this.managers.omok!.placeStone(movePoint, currentTurn)) {
-      // 화면에 돌 그리기
-      this.managers.board!.renderStoneAtGrid(
-        movePoint,
-        currentTurn,
-        nextMoveNumber
-      );
-
-      this.advanceGameStep(movePoint);
-    }
-  }
-
-  // =====================================================================
-  // =====================================================================
-
+  /**
+   * 게임 중단 다이얼로그 표시
+   */
   private showGameAbortedDialog(reason: string, leavingPlayer: string): void {
-    this.managers.room!.cleanup();
-    this.managers.ui!.clear();
+    this.managers.room!.clearUI();
+    this.managers.ui!.hideWaitingMessage();
 
     this.managers.abortDialog!.show(reason, leavingPlayer, () => {
       this.exitToMainMenu();
@@ -667,18 +692,29 @@ export class OmokScene extends BaseGameScene {
   }
 
   // =====================================================================
+  // 씬 전환
   // =====================================================================
 
-  public get myColor(): number {
-    return this.onlineState.mySide;
+  /**
+   * 메인 씬으로 이동
+   */
+  private exitToMainScene(): void {
+    this.scene.start("MainScene");
   }
 
-  // =====================================================================
-  // =====================================================================
+  /**
+   * 메인 메뉴로 이동
+   */
+  private exitToMainMenu(): void {
+    this.resetAllManagers();
+    this.exitToMainScene();
+  }
 
+  /**
+   * 게임 재시작
+   */
   protected restartGame(): void {
-    const mode = this.gameState.mode;
-    const mySide = this.onlineState.mySide || OmokSide.BLACK;
+    const previousMode = this.gameState.mode;
 
     this.resetAllManagers();
     this.managers.board?.renderBoard();
@@ -686,29 +722,35 @@ export class OmokScene extends BaseGameScene {
     this.gameState.isStarted = false;
     this.gameState.currentTurn = 1;
 
-    if (mode === OmokMode.ONLINE) {
-      this.onlineState.mySide = 0;
-      this.onlineState.isSideAssigned = false;
+    if (previousMode === OmokMode.ONLINE) {
+      this.onlineState.myColor = 0;
+      this.onlineState.isColorAssigned = false;
       this.onlineState.currentRoomId = null;
     }
 
-    if (mode === OmokMode.SINGLE || mode === OmokMode.LOCAL) {
-      this.startLocalGame(mode, mySide);
-    } else if (mode === OmokMode.ONLINE) {
+    if (previousMode === OmokMode.SINGLE || previousMode === OmokMode.LOCAL) {
+      this.startLocalGame(previousMode);
+    } else if (previousMode === OmokMode.ONLINE) {
       this.showOnlineMenu();
     } else {
       this.scene.restart();
     }
   }
 
+  /**
+   * 모든 매니저 초기화
+   */
   private resetAllManagers(): void {
-    this.managers.board?.clear();
-    this.managers.ui?.clear();
+    this.managers.board?.resetGame();
+    this.managers.ui?.resetGame();
     this.managers.omok?.resetGame();
     this.managers.room?.cleanup();
     this.managers.ai?.cleanup();
   }
 
+  /**
+   * 이벤트 리스너 설정
+   */
   private setupEventListeners(): void {
     // 방에서 나가기/뒤로가기 → 온라인 메뉴 표시
     this.events.on("room:exit", () => {
@@ -717,6 +759,13 @@ export class OmokScene extends BaseGameScene {
     });
   }
 
+  // =====================================================================
+  // 씬 종료
+  // =====================================================================
+
+  /**
+   * 씬 종료 시 정리
+   */
   shutdown(): void {
     this.managers.abortDialog?.clear();
     this.managers.network?.cleanup();
