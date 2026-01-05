@@ -19,12 +19,12 @@ const OmokMatchmaking = require("./OmokMatchmaking");
  *   omokHandler(io, socket, rooms);
  * });
  */
-module.exports = (io, socket, rooms) => {
+module.exports = (io, socket, rooms, supabase) => {
   console.log(`[Omok Handler] 핸들러 등록: ${socket.id}`);
 
   // 매니저 인스턴스 생성
   const gameManager = new OmokGameManager(io, socket, rooms);
-  const matchmaking = new OmokMatchmaking(io, socket, rooms);
+  const matchmaking = new OmokMatchmaking(io, socket, rooms, supabase);
 
   // 이벤트 핸들러 등록
   gameManager.registerHandlers();

@@ -1,5 +1,7 @@
 // handlers/base/BaseMatchmaking.js
 
+const { generateRoomId } = require("./utils/RoomUtils");
+
 /**
  * BaseMatchmaking
  * - 모든 게임의 빠른 매칭 공통 로직
@@ -27,6 +29,8 @@ class BaseMatchmaking {
     this.QUICK_MATCH_ROOM =
       config.quickMatchRoomId || `${gamePrefix}_quick_match`;
 
+    this.supabase = config.supabase;
+
     console.log(
       `[${this.gamePrefix}][Matchmaking] 초기화 (최대: ${this.maxPlayers}명)`
     );
@@ -36,8 +40,8 @@ class BaseMatchmaking {
    * 이벤트 핸들러 등록
    */
   registerHandlers() {
-    this.socket.on(`${this.gamePrefix}:quickMatch`, () =>
-      this.handleQuickMatch()
+    this.socket.on(`${this.gamePrefix}:quickMatch`, (payload) =>
+      this.handleQuickMatch(payload)
     );
   }
 
@@ -48,15 +52,19 @@ class BaseMatchmaking {
   /**
    * 빠른 매칭 핸들러
    */
-  handleQuickMatch() {
+  async handleQuickMatch(payload) {
     console.log(`[${this.gamePrefix}][빠른매칭] 요청: ${this.socket.id}`);
 
-    let room = this.rooms.get(this.QUICK_MATCH_ROOM);
+    let room = Array.from(this.rooms.values()).find(
+      (r) =>
+        r.isQuickMatch &&
+        r.status === "waiting" &&
+        r.players.length < this.maxPlayers
+    );
 
-    // 방이 없으면 생성
     if (!room) {
-      room = this.createQuickMatchRoom();
-      this.rooms.set(this.QUICK_MATCH_ROOM, room);
+      room = await this.createQuickMatchRoom(payload);
+      this.rooms.set(room.roomId, room);
     }
 
     // 방이 가득 찼으면 에러
@@ -68,7 +76,9 @@ class BaseMatchmaking {
     }
 
     // 플레이어 추가
-    this.addPlayerToQuickMatch(room);
+    this.addPlayerToQuickMatch(room, payload);
+
+    this.socket.join(room.roomId);
 
     const numClients = room.players.length;
     console.log(
@@ -97,14 +107,43 @@ class BaseMatchmaking {
    * 빠른 매칭 방 생성
    * @returns {Object} 방 데이터
    */
-  createQuickMatchRoom() {
-    console.log(
-      `[${this.gamePrefix}][빠른매칭] 방 생성: ${this.QUICK_MATCH_ROOM}`
-    );
+  async createQuickMatchRoom(payload) {
+    const newRoomId = generateRoomId(); // 고유 ID 생성 (예: 'room_12345')
+    const hostUUID = payload?.uuid || payload?.userId;
+
+    const roomCount = this.rooms.size + 1;
+    const roomName = `빠른 매칭 #${roomCount}`;
+
+    console.log(`[${this.gamePrefix}][빠른매칭] DB 방 생성 시작: ${newRoomId}`);
+
+    if (this.supabase) {
+      try {
+        const { error } = await this.supabase.from("multi_rooms").insert({
+          id: newRoomId,
+          host_user_id: hostUUID,
+          room_name: roomName,
+          game_type: this.gamePrefix,
+          is_private: false,
+          status: "waiting",
+          max_players: this.maxPlayers,
+          created_at: new Date().toISOString(),
+        });
+        if (error) {
+          console.error(`[DB에러] 빠른매칭 방 생성 실패:`, error.message);
+        } else {
+          console.log(`[DB성공] 빠른매칭 방 생성 완료: ${newRoomId}`);
+        }
+      } catch (err) {
+        console.error(
+          `[${this.gamePrefix}][DB에러] 방 생성 실패:`,
+          err.message
+        );
+      }
+    }
 
     return {
-      roomId: this.QUICK_MATCH_ROOM,
-      roomName: "빠른 매칭",
+      roomId: newRoomId,
+      roomName: roomName,
       gameType: this.gamePrefix,
       hostSocketId: this.socket.id,
       players: [],
@@ -114,6 +153,7 @@ class BaseMatchmaking {
       playerCount: 0,
       status: "waiting",
       createdAt: Date.now(),
+      isQuickMatch: true,
     };
   }
 
@@ -125,17 +165,20 @@ class BaseMatchmaking {
    * 빠른 매칭 방에 플레이어 추가
    * @param {Object} room - 방 객체
    */
-  addPlayerToQuickMatch(room) {
+  addPlayerToQuickMatch(room, payload) {
     const player = {
       socketId: this.socket.id,
-      username: `플레이어${room.players.length + 1}`,
+      username: payload?.nickname || `플레이어${room.players.length + 1}`,
+      userId: payload?.uuid || payload?.userId,
+      userUUID: payload?.uuid || payload?.userId,
       isReady: true, // 빠른 매칭은 자동 준비
       joinedAt: Date.now(),
     };
 
     room.players.push(player);
     room.playerCount = room.players.length;
-    this.socket.join(this.QUICK_MATCH_ROOM);
+
+    this.socket.join(room.roomId);
 
     console.log(
       `[${this.gamePrefix}][빠른매칭] 플레이어 추가: ${player.username} (${this.socket.id})`
@@ -162,7 +205,7 @@ class BaseMatchmaking {
     room.status = "playing";
 
     // 게임 시작 알림
-    this.io.to(this.QUICK_MATCH_ROOM).emit(`${this.gamePrefix}:gameStart`, {
+    this.io.to(room.roomId).emit(`${this.gamePrefix}:gameStart`, {
       roomId: this.QUICK_MATCH_ROOM,
       roomData: room,
     });
