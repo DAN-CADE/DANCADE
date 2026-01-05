@@ -78,7 +78,7 @@ class OmokGameManager {
     console.log(`[오목][게임시작] ${room.roomId}`);
 
     // 색깔 할당
-    this.assignColors(room);
+    this.assignsides(room);
 
     // 게임 시작 알림
     this.io.to(room.roomId).emit("omok:gameStart", {
@@ -93,19 +93,19 @@ class OmokGameManager {
    * 플레이어에게 색깔 할당 (방장=흑돌, 입장자=백돌)
    * @param {Object} room - 방 객체
    */
-  assignColors(room) {
+  assignsides(room) {
     room.players.forEach((p) => {
       const isHost = p.socketId === room.hostSocketId;
-      p.color = isHost ? 1 : 2; // 방장=흑돌(1), 입장자=백돌(2)
+      p.side = isHost ? 1 : 2; // 방장=흑돌(1), 입장자=백돌(2)
 
       this.io.to(p.socketId).emit("omok:assigned", {
-        color: p.color,
+        side: p.side,
         roomId: room.roomId,
       });
 
       console.log(
         `[오목][색깔할당] ${p.username} → ${
-          p.color === 1 ? "흑돌(선공)" : "백돌(후공)"
+          p.side === 1 ? "흑돌(선공)" : "백돌(후공)"
         } ${isHost ? "(방장)" : ""}`
       );
     });
@@ -117,7 +117,7 @@ class OmokGameManager {
    * @param {string} data.roomId - 방 ID
    * @param {number} data.row - 행
    * @param {number} data.col - 열
-   * @param {number} data.color - 돌 색깔
+   * @param {number} data.side - 돌 색깔
    */
   handleMove(data) {
     const { roomId, row, col, side } = data;

@@ -437,6 +437,7 @@ export class OmokScene extends BaseGameScene {
 
     this.gameState.isStarted = false;
 
+    // 종료 후 수순 보여주기
     this.managers.board!.displayMoveSequence();
 
     if (this.gameState.mode === OmokMode.ONLINE) {
