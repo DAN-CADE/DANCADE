@@ -3,13 +3,14 @@ import {
   SaveGameResultResponse,
 } from "@/game/types/gameSessionData";
 import { createServerClient } from "@/lib/supabase/client";
-import { UserStats } from "@/types/user";
 import { DB_TABLES } from "@/lib/constants/tables";
 import { getUserStats, upsertUserStats } from "@/lib/supabase/userStats";
 
+// =====================================================================
 /**
  * GameResultService - 게임 결과 저장 및 통계 업데이트 전용
  */
+// =====================================================================
 export class GameResultService {
   private supabase = createServerClient();
 
@@ -32,15 +33,15 @@ export class GameResultService {
     });
 
     try {
-      // 게임 결과 상세 기록 (multi_game_results)
+      // 결정된 테이블과 함께 데이터 저장
       await this.insertGameResult(data);
 
       // 유저별 누적 통계 업데이트
       await this.updateUserStats(winner_user_id, loser_user_id, game_type);
 
       // 최신화된 통계 데이터 가져오기
-      const winnerStats = await this.getUserStats(winner_user_id);
-      const loserStats = await this.getUserStats(loser_user_id);
+      const winnerStats = await getUserStats(winner_user_id);
+      const loserStats = await getUserStats(loser_user_id);
 
       if (!winnerStats || !loserStats) {
         throw new Error("결과 저장 후 통계 데이터를 불러오는 데 실패했습니다.");
@@ -59,7 +60,10 @@ export class GameResultService {
    */
   // =====================================================================
 
-  private async insertGameResult(data: SaveGameResultRequest): Promise<void> {
+  private async insertGameResult(
+    data: SaveGameResultRequest
+    // targetTable: string
+  ): Promise<void> {
     const { error } = await this.supabase
       .from(DB_TABLES.MULTI_GAME_RESULTS)
       .insert({
@@ -122,17 +126,32 @@ export class GameResultService {
 
   // =====================================================================
   /**
-   * 특정 유저의 현재 통계 조회
+   * 게임 랭킹 조회
    */
   // =====================================================================
 
-  async getUserStats(userId: string): Promise<UserStats | null> {
-    const { data, error } = await this.supabase
-      .from("user_stats")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+  async getRankings(gameType?: string, limit: number = 100) {
+    let query = this.supabase
+      .from(DB_TABLES.USER_STATS) // 미리 계산된 통계 테이블 사용
+      .select(
+        `
+      user_id,
+      total_wins,
+      total_games_played,
+      win_rate,
+      favorite_game,
+      users ( username ) 
+    `
+      )
+      .order("total_wins", { ascending: false }) // 승수 높은 순
+      .limit(limit);
 
-    return error ? null : data;
+    if (gameType) {
+      query = query.eq("favorite_game", gameType);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
   }
 }
