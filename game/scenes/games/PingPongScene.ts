@@ -59,6 +59,11 @@ export class PingPongScene extends BaseGameScene {
     );
   }
 
+  // Phaser 생명주기: 에셋 로드
+  preload(): void {
+    this.loadAssets();
+  }
+
   // 매개변수 타입을 'string'으로 지정해야 에러가 나지 않습니다.
   protected centerViewport(backgroundColor: string = "#2c2c2c"): void {
     const { width: screenWidth, height: screenHeight } = this.scale;
@@ -83,6 +88,19 @@ export class PingPongScene extends BaseGameScene {
   protected setupScene(): void {
     this.centerViewport(PINGPONG_CONFIG.BACKGROUND_COLOR);
     this.initGameState();
+  }
+
+  // 게임 시작 이벤트 발생
+  create(): void {
+    this.setupScene();
+    this.initManagers();
+    this.createGameObjects();
+
+    // ⭐ 채팅 숨김 (게임 씬이므로)
+    console.log("🎮 [핑퐁] 채팅 숨김 호출");
+    this.hideChat();
+
+    this.onGameReady();
   }
 
   protected initManagers(): void {
@@ -390,5 +408,16 @@ export class PingPongScene extends BaseGameScene {
       sprite: ballSprite,
       motionSprite: undefined,
     };
+  }
+
+  // 게임 종료 이벤트 발생
+  shutdown(): void {
+    const endEvent = new CustomEvent("game:ended", {
+      detail: { sceneName: this.scene.key },
+    });
+    window.dispatchEvent(endEvent);
+    console.log("🛑 [핑퐁] 게임 종료 - 채팅 표시");
+
+    super.shutdown();
   }
 }

@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { socket } from "@/lib/socket";
-import { isGuestUser } from "@/types/user";
 import styles from "./ChatFrame.module.css";
 
 type MessageType = "chat" | "system" | "game" | "invite";
@@ -38,6 +37,33 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // =====================================================
+  // 🎯 게임 씬 이벤트 리스너 추가
+  // =====================================================
+  useEffect(() => {
+    const handleChatShow = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      console.log("📢 [React] 채팅 표시:", customEvent.detail?.sceneName);
+      setIsHidden(false); // 채팅 표시
+    };
+
+    const handleChatHide = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      console.log("📢 [React] 채팅 숨김:", customEvent.detail?.sceneName);
+      setIsHidden(true); // 채팅 숨김
+    };
+
+    // 이벤트 리스너 등록
+    window.addEventListener("chat:show", handleChatShow);
+    window.addEventListener("chat:hide", handleChatHide);
+
+    // 클린업
+    return () => {
+      window.removeEventListener("chat:show", handleChatShow);
+      window.removeEventListener("chat:hide", handleChatHide);
+    };
+  }, []);
 
   // ✅ Socket 로직 추가
   useEffect(() => {

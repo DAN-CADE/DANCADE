@@ -80,6 +80,27 @@ export class OmokScene extends BaseGameScene {
     // 추후 이미지/사운드 로드 시 사용
   }
 
+  // ⭐ Phaser 생명주기 메서드 추가
+  preload(): void {
+    console.log("🎮 [OmokScene] preload() 시작");
+    this.loadAssets();
+  }
+
+  // ⭐ Phaser 생명주기 메서드 추가
+  create(): void {
+    console.log("🎮 [OmokScene] create() 시작");
+
+    this.setupScene();
+    this.initManagers();
+    this.createGameObjects();
+
+    // ⭐ 채팅 숨김 (게임 씬이므로)
+    console.log("🎮 [OmokScene] 채팅 숨김 호출");
+    this.hideChat();
+
+    this.onGameReady();
+  }
+
   protected initManagers(): void {
     // 네트워크 매니저 (가장 먼저 초기화)
     this.managers.network = this.createNetworkManager();

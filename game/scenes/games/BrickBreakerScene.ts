@@ -61,6 +61,11 @@ export class BrickBreakerScene extends BaseGameScene {
     this.sessionId = crypto.randomUUID();
   }
 
+  // Phaser 생명주기: 에셋 로드
+  preload(): void {
+    this.loadAssets();
+  }
+
   // 1. 에셋 로드
   protected loadAssets(): void {
     this.load.image("paddle", `${this.ASSET_PATH}paddleBlu.png`);
@@ -109,6 +114,19 @@ export class BrickBreakerScene extends BaseGameScene {
     const graphics = this.add.graphics();
     graphics.lineStyle(2, 0xff006e, 1);
     graphics.strokeRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+  }
+
+  // 게임 시작 이벤트 발생
+  create(): void {
+    this.setupScene();
+    this.initManagers();
+    this.createGameObjects();
+
+    // ⭐ 채팅 숨김 (게임 씬이므로)
+    console.log("🎮 [벽돌깨기] 채팅 숨김 호출");
+    this.hideChat();
+
+    this.onGameReady();
   }
 
   // 3. 매니저 초기화
@@ -364,5 +382,16 @@ export class BrickBreakerScene extends BaseGameScene {
         this.gameManager.handleFloorCollision();
       }
     });
+  }
+
+  // 게임 종료 이벤트 발생
+  shutdown(): void {
+    const endEvent = new CustomEvent("game:ended", {
+      detail: { sceneName: this.scene.key },
+    });
+    window.dispatchEvent(endEvent);
+    console.log("🛑 [벽돌깨기] 게임 종료 - 채팅 표시");
+
+    super.shutdown();
   }
 }
