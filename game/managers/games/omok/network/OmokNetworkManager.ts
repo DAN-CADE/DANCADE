@@ -4,6 +4,7 @@ import {
   OmokMoveData,
   OmokEvent,
   Point,
+  OmokSide,
 } from "@/game/types/omok";
 import { GameNetworkCallbacks } from "@/game/types/multiplayer/network.types";
 
@@ -28,6 +29,13 @@ export class OmokNetworkManager extends BaseGameNetworkManager<
         console.log("[OmokNetworkManager] 상대방 수:", data);
         this.gameCallbacks.onOpponentAction?.(data);
       }
+    });
+
+    this.safeOnTyped<OmokMoveData>(OmokEvent.ASSIGNED, (data) => {
+      console.log("[NetworkManager] 서버로부터 색상 수신 (safeOnTyped):", data);
+
+      const role = data.side === 1 ? OmokSide.BLACK : OmokSide.WHITE;
+      this.gameCallbacks.onRoleAssigned?.(role, data.roomId);
     });
   }
 

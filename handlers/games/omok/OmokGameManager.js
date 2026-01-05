@@ -39,6 +39,7 @@ class OmokGameManager {
    */
   handleStartGame(data) {
     const { roomId } = data;
+    console.log(`[서버] 게임 시작 요청 수신: ${roomId}`);
     const room = this.rooms.get(roomId);
 
     // 검증
@@ -119,14 +120,14 @@ class OmokGameManager {
    * @param {number} data.color - 돌 색깔
    */
   handleMove(data) {
-    const { roomId, row, col, color } = data;
+    const { roomId, row, col, side } = data;
 
     // 필수 데이터 체크
     if (
       !roomId ||
       row === undefined ||
       col === undefined ||
-      color === undefined
+      side === undefined
     ) {
       this.socket.emit("omok:error", { message: "잘못된 수 데이터" });
       return;
@@ -140,7 +141,7 @@ class OmokGameManager {
       socketId: this.socket.id,
       row,
       col,
-      color,
+      side,
     });
   }
 

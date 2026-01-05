@@ -77,7 +77,7 @@ export interface RoomUIConfig {
     roomCardSpacing: number;
     playerCardHeight: number;
     playerCardSpacing: number;
-    buttonGap?: number;
+    buttonGap: number;
   };
   textStyle: {
     title: Partial<Phaser.Types.GameObjects.Text.TextStyle>;
