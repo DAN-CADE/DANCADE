@@ -1,9 +1,10 @@
-// handlers/base/utils/validation.js
-
+// =====================================================================
 /**
  * 검증 관련 유틸리티 함수 모음
  */
+// =====================================================================
 
+// =====================================================================
 /**
  * 방 존재 여부 검증
  * @param {Object|null} room - 방 객체
@@ -11,6 +12,8 @@
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateRoomExists(room, socket, gamePrefix) {
   if (!room) {
     socket.emit(`${gamePrefix}:joinError`, {
@@ -21,6 +24,7 @@ function validateRoomExists(room, socket, gamePrefix) {
   return true;
 }
 
+// =====================================================================
 /**
  * 방 인원 체크
  * @param {Object} room - 방 객체
@@ -28,6 +32,8 @@ function validateRoomExists(room, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateRoomNotFull(room, socket, gamePrefix) {
   if (room.players.length >= room.maxPlayers) {
     socket.emit(`${gamePrefix}:joinError`, {
@@ -38,6 +44,7 @@ function validateRoomNotFull(room, socket, gamePrefix) {
   return true;
 }
 
+// =====================================================================
 /**
  * 방 비밀번호 체크
  * @param {Object} room - 방 객체
@@ -46,6 +53,8 @@ function validateRoomNotFull(room, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateRoomPassword(room, password, socket, gamePrefix) {
   if (room.isPrivate && room.password !== password) {
     socket.emit(`${gamePrefix}:joinError`, {
@@ -56,6 +65,7 @@ function validateRoomPassword(room, password, socket, gamePrefix) {
   return true;
 }
 
+// =====================================================================
 /**
  * 중복 입장 체크
  * @param {Object} room - 방 객체
@@ -64,6 +74,8 @@ function validateRoomPassword(room, password, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateNotAlreadyInRoom(room, socketId, socket, gamePrefix) {
   const alreadyInRoom = room.players.some((p) => p.socketId === socketId);
   if (alreadyInRoom) {
@@ -75,6 +87,7 @@ function validateNotAlreadyInRoom(room, socketId, socket, gamePrefix) {
   return true;
 }
 
+// =====================================================================
 /**
  * 방장 권한 체크
  * @param {Object} room - 방 객체
@@ -83,6 +96,8 @@ function validateNotAlreadyInRoom(room, socketId, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateIsHost(room, socketId, socket, gamePrefix) {
   if (socketId !== room.hostSocketId) {
     socket.emit(`${gamePrefix}:error`, {
@@ -93,6 +108,7 @@ function validateIsHost(room, socketId, socket, gamePrefix) {
   return true;
 }
 
+// =====================================================================
 /**
  * 플레이어가 방에 있는지 체크
  * @param {Object} room - 방 객체
@@ -101,6 +117,8 @@ function validateIsHost(room, socketId, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {Object|null} 플레이어 객체 또는 null
  */
+// =====================================================================
+
 function validatePlayerInRoom(room, socketId, socket, gamePrefix) {
   const player = room.players.find((p) => p.socketId === socketId);
   if (!player) {
@@ -112,6 +130,7 @@ function validatePlayerInRoom(room, socketId, socket, gamePrefix) {
   return player;
 }
 
+// =====================================================================
 /**
  * 사용자 이름 체크
  * @param {string} username - 사용자 이름
@@ -119,6 +138,8 @@ function validatePlayerInRoom(room, socketId, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateUsername(username, socket, gamePrefix) {
   if (!username) {
     socket.emit(`${gamePrefix}:joinError`, {
@@ -129,6 +150,7 @@ function validateUsername(username, socket, gamePrefix) {
   return true;
 }
 
+// =====================================================================
 /**
  * 필수 데이터 체크
  * @param {Object} data - 데이터 객체
@@ -137,6 +159,8 @@ function validateUsername(username, socket, gamePrefix) {
  * @param {string} gamePrefix - 게임 타입
  * @returns {boolean} 검증 성공 여부
  */
+// =====================================================================
+
 function validateRequiredFields(data, requiredFields, socket, gamePrefix) {
   for (const field of requiredFields) {
     if (data[field] === undefined || data[field] === null) {

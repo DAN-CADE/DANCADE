@@ -3,13 +3,14 @@ import { Product } from "@/game/types/product";
 
 interface ProductItemProps {
   product: Product;
-  onClick: () => void;
+  onSelectItem: () => void;
+  onBuyItem: () => void;
 }
 
-export default function ProductItem({ product, onClick }: ProductItemProps) {
+export default function ProductItem({ product, onSelectItem, onBuyItem }: ProductItemProps) {
   return (
     <div
-      onClick={onClick}
+      onClick={onSelectItem}
       className="relative cursor-pointer group"
     >
       {/* 🔹 네온 프레임 (뒤) */}
@@ -44,8 +45,14 @@ export default function ProductItem({ product, onClick }: ProductItemProps) {
         </div>
 
         {/* 가격 / 보유 */}
-        <div className="bg-white text-black flex items-center justify-center gap-2 py-1">
-          🪑 {product.isOwned ? (
+        <div 
+          onClick={(e)=> {
+            e.stopPropagation(); 
+            if (product.isOwned) return;
+            onBuyItem();
+          }}
+          className="bg-white text-black flex items-center justify-center hover:bg-yellow-200 gap-2 py-1">
+          ⭐{product.isOwned ? (
             <span className="text-xs font-bold opacity-40">보유중</span>
           ) : (
             <>

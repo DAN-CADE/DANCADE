@@ -123,8 +123,8 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         left: Phaser.Input.Keyboard.KeyCodes.A,
         down: Phaser.Input.Keyboard.KeyCodes.S,
         right: Phaser.Input.Keyboard.KeyCodes.D,
-        space: Phaser.Input.Keyboard.KeyCodes.SPACE, // 점프 키 추가
-        z: Phaser.Input.Keyboard.KeyCodes.Z,          // 찌르기 키 추가
+        // space: Phaser.Input.Keyboard.KeyCodes.SPACE, // 점프 키 추가
+        // z: Phaser.Input.Keyboard.KeyCodes.Z,          // 찌르기 키 추가
       }) as { [key: string]: Phaser.Input.Keyboard.Key };
     }
   }
@@ -167,8 +167,8 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     if (!body) return;
 
     // 1. 키 존재 여부 확인 후 입력 감지
-    const isSpaceJustDown = this.keys.space && Phaser.Input.Keyboard.JustDown(this.keys.space);
-    const isZJustDown = this.keys.z && Phaser.Input.Keyboard.JustDown(this.keys.z);
+    // const isSpaceJustDown = this.keys.space && Phaser.Input.Keyboard.JustDown(this.keys.space);
+    // const isZJustDown = this.keys.z && Phaser.Input.Keyboard.JustDown(this.keys.z);
 
     let velocityX = 0;
     let velocityY = 0;
@@ -200,16 +200,17 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     }
 
     // 3. 애니메이션 상태 결정 및 재생
-    if (isSpaceJustDown && !this.isJumping) {
-      this.isJumping = true;
-      this.playLayeredAnimations(true);
-    } else if (isZJustDown && !this.isThrusting) {
-      this.isThrusting = true;
-      this.playLayeredAnimations(true);
-    } else if (!this.isJumping && !this.isThrusting) {
-      // 이동 또는 대기 애니메이션
-      this.playLayeredAnimations();
-    }
+    // if (isSpaceJustDown && !this.isJumping) {
+    //   this.isJumping = true;
+    //   this.playLayeredAnimations(true);
+    // } else if (isZJustDown && !this.isThrusting) {
+    //   this.isThrusting = true;
+    //   this.playLayeredAnimations(true);
+    // } else if (!this.isJumping && !this.isThrusting) {
+    //   // 이동 또는 대기 애니메이션
+    //   this.playLayeredAnimations();
+    // }
+    this.playLayeredAnimations();
   } 
 
   /**
@@ -234,24 +235,24 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
       });
 
       // 2. Thrust (찌르기): 0-1-2-3-4-5-6-7 패턴
-      anims.create({
-        key: `${textureKey}-thrust-${dir}`,
-        frames: anims.generateFrameNumbers(textureKey, {
-          frames: [0, 1, 2, 3, 4, 5].map(f => (THRUST_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
-        }),
-        frameRate: LPC_ANIMS.frameRate,
-        repeat: 0
-      });
+      // anims.create({
+      //   key: `${textureKey}-thrust-${dir}`,
+      //   frames: anims.generateFrameNumbers(textureKey, {
+      //     frames: [0, 1, 2, 3, 4, 5].map(f => (THRUST_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
+      //   }),
+      //   frameRate: LPC_ANIMS.frameRate,
+      //   repeat: 0
+      // });
 
       // 3. Jump (점프): 27번째 줄부터 시작, 0-1-2-3-4-1 패턴
-      anims.create({
-        key: `${textureKey}-jump-${dir}`,
-        frames: anims.generateFrameNumbers(textureKey, {
-          frames: [0, 1, 2, 3, 4, 1].map(f => (JUMP_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
-        }),
-        frameRate: LPC_ANIMS.frameRate,
-        repeat: 0
-      });      
+      // anims.create({
+      //   key: `${textureKey}-jump-${dir}`,
+      //   frames: anims.generateFrameNumbers(textureKey, {
+      //     frames: [0, 1, 2, 3, 4, 1].map(f => (JUMP_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
+      //   }),
+      //   frameRate: LPC_ANIMS.frameRate,
+      //   repeat: 0
+      // });      
       
       // 4. Idle (기존 동일)
       anims.create({

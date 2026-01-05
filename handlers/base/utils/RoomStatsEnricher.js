@@ -26,7 +26,7 @@ class RoomStatsEnricher {
 
     if (!rooms || rooms.length === 0) {
       console.log(`[RoomStatsEnricher] 방 목록 비어있음, 그대로 반환`);
-      return rooms || []; // ⭐ undefined 방지
+      return rooms || [];
     }
 
     try {
@@ -39,7 +39,7 @@ class RoomStatsEnricher {
           );
           return host?.uuid;
         })
-        .filter(Boolean); // undefined 제거
+        .filter(Boolean);
 
       if (hostUUIDs.length === 0) {
         console.warn("[RoomStatsEnricher] 호스트 uuid 없음");

@@ -3,21 +3,25 @@
 const RoomStatsEnricher = require("./RoomStatsEnricher");
 const { v4: uuidv4 } = require("uuid");
 
+// =====================================================================
 /**
  * 랜덤 방 ID 생성
  * @returns {string} 생성된 방 ID
  */
 function generateRoomId() {
-  // return "room_" + Math.random().toString(36).substr(2, 9);
   return uuidv4();
 }
+// =====================================================================
 
+// =====================================================================
 /**
- * 특정 게임 타입의 방 목록 반환 (✅ 통계 포함)
+ * 특정 게임 타입의 방 목록 반환 (통계 포함)
  * @param {Map} rooms - 전체 방 목록
  * @param {string} gamePrefix - 게임 타입 (예: "omok")
  * @returns {Promise<Array>} 방 목록 (통계 포함)
  */
+// =====================================================================
+
 async function getRoomList(rooms, gamePrefix) {
   console.log(
     `[getRoomList] 시작 - gamePrefix: ${gamePrefix}, 전체 방: ${rooms.size}개`
@@ -40,6 +44,7 @@ async function getRoomList(rooms, gamePrefix) {
         hostUsername: room.players[0]?.username,
         hostSocketId: room.hostSocketId,
         hostUserId: room.players[0]?.userId,
+        hostUserUUID: room.players[0]?.userUUID,
         playerCount: room.players.length,
         maxPlayers: room.maxPlayers,
         isPrivate: room.isPrivate,
@@ -51,7 +56,7 @@ async function getRoomList(rooms, gamePrefix) {
 
   console.log(`[getRoomList] 필터링 완료 - ${roomList.length}개 방`);
 
-  // ⭐ 통계 정보 추가
+  // 통계 정보 추가
   const enrichedRooms = await RoomStatsEnricher.enrichRoomsWithStats(
     roomList,
     gamePrefix
@@ -66,6 +71,7 @@ async function getRoomList(rooms, gamePrefix) {
   return enrichedRooms;
 }
 
+// =====================================================================
 /**
  * 방 데이터 객체 생성
  * @param {Object} params
@@ -80,12 +86,15 @@ async function getRoomList(rooms, gamePrefix) {
  * @param {number} params.maxPlayers - 최대 인원
  * @returns {Object} 방 데이터
  */
+// =====================================================================
+
 function createRoomData({
   roomId,
   roomName,
   gamePrefix,
   hostSocketId,
   userId,
+  userUUID,
   username,
   isPrivate,
   password,
@@ -101,6 +110,7 @@ function createRoomData({
         socketId: hostSocketId,
         userId,
         username,
+        userUUID,
         isReady: false,
         joinedAt: Date.now(),
       },
@@ -114,6 +124,7 @@ function createRoomData({
   };
 }
 
+// =====================================================================
 /**
  * 새 플레이어 데이터 생성
  * @param {string} socketId - 소켓 ID
@@ -121,11 +132,14 @@ function createRoomData({
  * @param {string} [userId] - 유저 ID
  * @returns {Object} 플레이어 데이터
  */
-function createPlayerData(socketId, username, userId = null) {
+// =====================================================================
+
+function createPlayerData(socketId, username, userId = null, userUUID = null) {
   return {
     socketId,
     userId,
     username,
+    userUUID,
     isReady: false,
     joinedAt: Date.now(),
   };

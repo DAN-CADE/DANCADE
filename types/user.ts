@@ -66,3 +66,17 @@ export interface LoginData {
   userid: string;
   password: string;
 }
+
+// ============================================
+// 유저 통계 데이터 (DB 테이블 user_stats와 일치)
+// ============================================
+export interface UserStats {
+  id: string; // 통계 고유 PK
+  user_id: string; // users 테이블 참조 외래키 (UUID)
+  total_wins: number;
+  total_losses: number;
+  win_rate: number; // 보통 0~100 사이의 소수점 포함 숫자
+  total_games_played: number;
+  favorite_game?: string; // 가장 많이 플레이한 게임 (Nullable)
+  updated_at: string; // ISO 시간 문자열
+}

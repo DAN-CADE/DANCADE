@@ -11,14 +11,15 @@
 // =====================================================================
 export {
   GAME_SETTINGS,
-  FONT_CONFIG,
   COLORS,
   DEPTH,
-  TEXT_STYLE,
-  BUTTON_SIZE,
   DIRECTIONS,
+  GAME_RULES,
+  THREAT_TYPE,
+  THREAT_PRIORITY,
   STAR_POINTS,
   OMOK_CONFIG, // 하위 호환성을 위한 통합 객체
+  type ThreatType,
 } from "./omok.constants";
 
 // =====================================================================
@@ -26,12 +27,15 @@ export {
 // =====================================================================
 export {
   OmokMode,
+  OmokSide,
   type OmokState,
+  type OmokSideType,
   type Threat,
+  type Point,
   type ForbiddenCheckResult,
   type OmokCallbacks,
-  type Position,
   type Direction,
+  type Coordinate,
 } from "./omok.types";
 
 // =====================================================================
@@ -42,6 +46,7 @@ export {
   type OmokUIState,
   type PlayerProfile,
   type PlayerInfoUI,
+  type StoneInfo,
 } from "./omok.ui.types";
 
 // =====================================================================
