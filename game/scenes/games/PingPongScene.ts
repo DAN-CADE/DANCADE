@@ -7,6 +7,8 @@ import {
   PingPongBall,
   PingPongGameState,
   PingPongInputState,
+  PingPongGameResult,
+  PingPongMode,
 } from "@/game/types/pingpong";
 import { PingPongGameManager } from "@/game/managers/games/pingpong/PingPongGameManager";
 import { PingPongUIManager } from "@/game/managers/games/pingpong/PingPongUIManager";
@@ -124,6 +126,12 @@ export class PingPongScene extends BaseGameScene {
       onNetHit: (x, y) => {
         this.effectsManager.createNetHitEffect(x, y);
       },
+      onRallyUpdate: (count) => {
+        this.uiManager.updateRally(count);
+      },
+      onPerfectHit: () => {
+        this.effectsManager.createPerfectHitEffect(this.ball.x, this.ball.y);
+      },
     });
 
     this.inputManager = new PingPongInputManager(
@@ -159,12 +167,27 @@ export class PingPongScene extends BaseGameScene {
 
   protected handleGameEnd(result: string): void {
     const isPlayerWin = result === "win";
+
+    // ✅ 게임 결과 가져오기
+    const gameResult = this.gameManager.getGameResult();
+    const isValid = this.gameManager.isValidGameResult();
+
+    console.log("🏁 게임 종료:", gameResult);
+    console.log("✅ 검증 결과:", isValid);
+
+    // ✅ 나중에 서버로 전송할 데이터
+    if (isValid) {
+      // TODO: API 호출
+      console.log("📤 서버로 전송할 데이터:", gameResult);
+    }
+
     this.uiManager.showGameOverScreen(
       isPlayerWin,
       this.gameState.playerScore,
       this.gameState.aiScore,
       () => this.restartGame(),
-      () => this.goHome()
+      () => this.goHome(),
+      gameResult // ✅ 게임 결과 전달
     );
 
     this.inputManager.registerRestartListener(() => this.restartGame());
@@ -212,6 +235,14 @@ export class PingPongScene extends BaseGameScene {
       servingPlayer: "player",
       gameMode: "menu",
       isPreparingServe: false,
+      // ✅ 게임 기록 초기화
+      elapsedTime: 0,
+      totalRallies: 0,
+      currentRally: 0,
+      longestRally: 0,
+      perfectHits: 0,
+      // ✅ 모드 초기화
+      mode: PingPongMode.SINGLE, // 기본값은 싱글 모드
     };
 
     this.inputState = {

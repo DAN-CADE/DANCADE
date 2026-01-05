@@ -4,6 +4,18 @@
  *
  */
 
+// 핵심 타입
+export * from "@/game/types/pingpong/pingpong.types";
+
+// 상수
+export * from "@/game/types/pingpong/pingpong.constants";
+
+// 네트워크 타입
+export * from "@/game/types/pingpong/pingpong.network.types";
+
+// UI 타입
+export * from "@/game/types/pingpong/pingpong.ui.types";
+
 /**
  * 핑퐁 게임 모드
  */

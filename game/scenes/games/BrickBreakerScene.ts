@@ -257,12 +257,31 @@ export class BrickBreakerScene extends BaseGameScene {
     try {
       console.log("📤 서버로 게임 결과 전송 중...");
 
+      // localStorage에서 사용자 정보 가져오기
+      const userDataStr = localStorage.getItem("user");
+      let userId: string | null = null;
+
+      if (userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr);
+          userId = userData.userId || userData.id;
+        } catch (e) {
+          console.warn("localStorage 파싱 실패:", e);
+        }
+      }
+
+      if (!userId) {
+        console.warn("⚠️ 사용자 ID를 찾을 수 없습니다");
+        return;
+      }
+
       const response = await fetch("/api/games/brick-breaker/score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          sessionId: this.sessionId, // 중복 제출 방지용 sessionId 추가
+          userId, // ✅ userId 추가
+          sessionId: this.sessionId,
         }),
       });
 

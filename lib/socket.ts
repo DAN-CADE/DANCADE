@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 const socketUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 export const socket = io(socketUrl, {
-  autoConnect: true,
+  autoConnect: false, // ✅ 기본은 연결 안 함 (멀티플레이 게임에서만 수동 연결)
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionAttempts: 5,

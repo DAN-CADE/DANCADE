@@ -1,137 +1,71 @@
 /**
- * Ping Pong 네트워크 관련 타입
- * - 온라인 멀티플레이용
- * - Socket.io 이벤트 타입
+ * Ping Pong 게임 핵심 로직 타입
+ * - 게임 상태, 패들, 볼 등
+ * - UI나 네트워크와 무관한 순수 게임 로직 타입
  */
 
 // =====================================================================
-// Socket 이벤트 타입
+// 게임 모드
 // =====================================================================
-
-/** 클라이언트 → 서버 이벤트 */
-export interface PingPongClientToServerEvents {
-  // 방 관련
-  "pingpong:create-room": () => void;
-  "pingpong:join-room": (roomId: string) => void;
-  "pingpong:leave-room": () => void;
-
-  // 게임 시작
-  "pingpong:ready": () => void;
-
-  // 게임플레이
-  "pingpong:paddle-move": (data: PaddleMoveData) => void;
-  "pingpong:serve": () => void;
-}
-
-/** 서버 → 클라이언트 이벤트 */
-export interface PingPongServerToClientEvents {
-  // 방 관련
-  "pingpong:room-created": (data: RoomCreatedData) => void;
-  "pingpong:room-joined": (data: RoomJoinedData) => void;
-  "pingpong:player-joined": (data: PlayerJoinedData) => void;
-  "pingpong:player-left": (data: PlayerLeftData) => void;
-
-  // 게임 시작
-  "pingpong:game-start": (data: GameStartData) => void;
-
-  // 게임플레이
-  "pingpong:paddle-update": (data: PaddleUpdateData) => void;
-  "pingpong:ball-update": (data: BallUpdateData) => void;
-  "pingpong:score-update": (data: ScoreUpdateData) => void;
-  "pingpong:game-end": (data: GameEndData) => void;
-
-  // 에러
-  "pingpong:error": (data: ErrorData) => void;
+export enum PingPongMode {
+  NONE = 0,
+  SINGLE = 1, // AI 대전
+  ONLINE = 2, // 온라인 대전
 }
 
 // =====================================================================
-// 데이터 타입
+// 게임 오브젝트
 // =====================================================================
 
-/** 패들 이동 데이터 */
-export interface PaddleMoveData {
-  y: number;
-  timestamp: number;
-}
-
-/** 패들 업데이트 데이터 */
-export interface PaddleUpdateData {
-  playerId: string;
-  y: number;
-  timestamp: number;
-}
-
-/** 볼 업데이트 데이터 */
-export interface BallUpdateData {
+/** 패들 데이터 */
+export interface PingPongPaddle {
   x: number;
   y: number;
+  width: number;
+  height: number;
+  speed: number;
+  sprite?: Phaser.GameObjects.Image;
+}
+
+/** 볼 데이터 */
+export interface PingPongBall {
+  x: number;
+  y: number;
+  radius: number;
   velocityX: number;
   velocityY: number;
-  timestamp: number;
-}
-
-/** 점수 업데이트 데이터 */
-export interface ScoreUpdateData {
-  player1Score: number;
-  player2Score: number;
-  scorer: "player1" | "player2";
-}
-
-/** 방 생성 데이터 */
-export interface RoomCreatedData {
-  roomId: string;
-  playerId: string;
-}
-
-/** 방 참가 데이터 */
-export interface RoomJoinedData {
-  roomId: string;
-  playerId: string;
-  players: PlayerInfo[];
-}
-
-/** 플레이어 참가 데이터 */
-export interface PlayerJoinedData {
-  player: PlayerInfo;
-}
-
-/** 플레이어 퇴장 데이터 */
-export interface PlayerLeftData {
-  playerId: string;
-}
-
-/** 게임 시작 데이터 */
-export interface GameStartData {
-  player1Id: string;
-  player2Id: string;
-  servingPlayer: "player1" | "player2";
-}
-
-/** 게임 종료 데이터 */
-export interface GameEndData {
-  winnerId: string;
-  gameResult: NetworkGameResult;
-}
-
-/** 플레이어 정보 */
-export interface PlayerInfo {
-  id: string;
-  nickname?: string;
-  isReady: boolean;
-}
-
-/** 에러 데이터 */
-export interface ErrorData {
-  code: string;
-  message: string;
+  speed: number;
+  sprite?: Phaser.GameObjects.Image;
+  motionSprite?: Phaser.GameObjects.Image; // 트레일 효과용
 }
 
 // =====================================================================
-// 네트워크용 게임 결과 타입 (순환 참조 방지)
+// 게임 상태
 // =====================================================================
 
-/** 네트워크용 게임 결과 */
-export interface NetworkGameResult {
+/** 게임 상태 */
+export interface PingPongGameState {
+  playerScore: number;
+  aiScore: number;
+  isPlaying: boolean;
+  isPaused: boolean;
+  servingPlayer: "player" | "ai";
+  gameMode: "menu" | "colorSelect" | "playing";
+  isPreparingServe: boolean;
+
+  // 게임 기록 시스템
+  elapsedTime: number; // 플레이 시간 (초)
+  totalRallies: number; // 총 랠리 횟수
+  currentRally: number; // 현재 랠리 카운트
+  longestRally: number; // 최장 랠리 기록
+  perfectHits: number; // 완벽한 타격 횟수 (패들 중앙)
+
+  // 선택된 게임 모드
+  mode: PingPongMode;
+}
+
+/** 게임 결과 데이터 */
+export interface PingPongGameResult {
   playerScore: number;
   aiScore: number;
   elapsedTime: number;
@@ -142,41 +76,28 @@ export interface NetworkGameResult {
 }
 
 // =====================================================================
-// API 요청/응답 타입
+// 입력 상태
 // =====================================================================
 
-/** 점수 제출 요청 */
-export interface SubmitScoreRequest {
-  playerScore: number;
-  aiScore: number;
-  elapsedTime: number;
-  totalRallies: number;
-  longestRally: number;
-  perfectHits: number;
-  isWin: boolean;
+/** 입력 상태 */
+export interface PingPongInputState {
+  upPressed: boolean;
+  downPressed: boolean;
+  spacePressed: boolean;
 }
 
-/** 점수 제출 응답 */
-export interface SubmitScoreResponse {
-  success: boolean;
-  pointsEarned?: number;
-  rank?: number;
-  message?: string;
-}
+// =====================================================================
+// 콜백 인터페이스
+// =====================================================================
 
-/** 랭킹 조회 응답 */
-export interface RankingEntry {
-  rank: number;
-  userId: string;
-  nickname: string;
-  score: number;
-  totalRallies: number;
-  longestRally: number;
-  perfectHits: number;
-  playedAt: string;
-}
+export type Scorer = "player" | "ai";
 
-export interface RankingResponse {
-  rankings: RankingEntry[];
-  myRank?: RankingEntry;
+export interface PingPongCallbacks {
+  onScoreUpdate?: (playerScore: number, aiScore: number) => void;
+  onGameOver?: (isPlayerWin: boolean) => void;
+  onPointScored?: (scorer: Scorer) => void;
+  onNetHit?: (x: number, y: number) => void;
+  onRallyUpdate?: (count: number) => void;
+  onPerfectHit?: () => void;
+  [key: string]: unknown;
 }

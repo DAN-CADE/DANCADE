@@ -2,7 +2,7 @@
 
 import { BaseUIManager } from "@/game/managers/base";
 import { TEXT_STYLE } from "@/game/types/common/ui.constants";
-import { PINGPONG_CONFIG } from "@/game/types/pingpong";
+import { PINGPONG_CONFIG, PingPongGameResult } from "@/game/types/pingpong";
 
 /**
  * 탁구 게임 UI 관리
@@ -12,6 +12,7 @@ export class PingPongUIManager extends BaseUIManager {
   private playerScoreText?: Phaser.GameObjects.Text;
   private aiScoreText?: Phaser.GameObjects.Text;
   private gameStatusText?: Phaser.GameObjects.Text;
+  private rallyText?: Phaser.GameObjects.Text;
 
   private readonly STATUS_MESSAGES: string[] = [
     "11점을 먼저 따는 사람이 승리!",
@@ -62,13 +63,59 @@ export class PingPongUIManager extends BaseUIManager {
       fontSize: "32px",
       color: "#ffffff",
     },
+    RALLY: {
+      fontFamily: '"Press Start 2P"',
+      fontSize: "20px",
+      color: "#ffffff",
+    },
   };
 
   createGameUI(): void {
     this.createScoreBoard();
     this.createScoreTexts();
+    this.createRallyCounter();
     this.createStatusText();
     this.startStatusTextRotation();
+  }
+
+  private createRallyCounter(): void {
+    const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
+    const y = 120;
+
+    this.rallyText = this.scene.add
+      .text(centerX, y, "Rally: 0", {
+        ...this.PINGPONG_TEXT_STYLE.RALLY,
+        color: "#ffd700", // 골드
+      })
+      .setOrigin(0.5)
+      .setAlpha(0.9);
+
+    this.rallyText.setStroke("#996600", 3);
+    this.rallyText.setShadow(0, 0, "#ffd700", 5);
+  }
+
+  updateRally(count: number): void {
+    if (!this.rallyText) return;
+
+    this.rallyText.setText(`Rally: ${count}`);
+
+    // 펄스 애니메이션
+    this.scene.tweens.add({
+      targets: this.rallyText,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 100,
+      yoyo: true,
+      ease: "Back.easeOut",
+    });
+
+    // 5의 배수마다 색상 변경
+    if (count % 5 === 0 && count > 0) {
+      this.rallyText.setColor("#ff1493"); // 핫핑크
+      this.scene.time.delayedCall(500, () => {
+        this.rallyText?.setColor("#ffd700"); // 골드로 복귀
+      });
+    }
   }
 
   private createScoreBoard(): void {
@@ -191,6 +238,7 @@ export class PingPongUIManager extends BaseUIManager {
     this.aiScoreText?.setVisible(true);
     this.gameStatusText?.setVisible(true);
     this.scoreBar?.setVisible(true);
+    this.rallyText?.setVisible(true);
   }
 
   hideGameUI(): void {
@@ -198,6 +246,7 @@ export class PingPongUIManager extends BaseUIManager {
     this.aiScoreText?.setVisible(false);
     this.gameStatusText?.setVisible(false);
     this.scoreBar?.setVisible(false);
+    this.rallyText?.setVisible(false);
   }
 
   showStartMenu(): void {
@@ -278,7 +327,8 @@ export class PingPongUIManager extends BaseUIManager {
     playerScore: number,
     aiScore: number,
     onRestart: () => void,
-    onHome: () => void
+    onHome: () => void,
+    gameResult?: PingPongGameResult
   ): void {
     const depth = 10;
     const winner = isPlayerWin ? "YOU WIN!" : "GAME OVER";
@@ -303,6 +353,10 @@ export class PingPongUIManager extends BaseUIManager {
     });
 
     this.createFinalScoreDisplay(playerScore, aiScore, depth);
+
+    if (gameResult) {
+      this.createGameStats(gameResult, depth);
+    }
 
     this.createRestartButton(onRestart, 400, 440, depth + 1);
 
@@ -343,8 +397,28 @@ export class PingPongUIManager extends BaseUIManager {
       .setDepth(depth + 1);
   }
 
+  private createGameStats(result: PingPongGameResult, depth: number): void {
+    const stats = [
+      `Rallies: ${result.totalRallies}`,
+      `Longest: ${result.longestRally}`,
+      `Perfect: ${result.perfectHits}`,
+      `Time: ${result.elapsedTime}s`,
+    ];
+
+    const startY = 380;
+    this.scene.add
+      .text(400, startY, stats.join("  |  "), {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "10px",
+        color: "#95a5a6",
+      })
+      .setOrigin(0.5)
+      .setDepth(depth + 1);
+  }
+
   cleanup(): void {
     this.stopStatusTextRotation();
     this.colorPreviewPaddles = [];
+    this.rallyText = undefined;
   }
 }
