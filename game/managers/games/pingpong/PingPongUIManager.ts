@@ -2,7 +2,7 @@
 
 import { BaseUIManager } from "@/game/managers/base";
 import { TEXT_STYLE } from "@/game/types/common/ui.constants";
-import { PINGPONG_CONFIG } from "@/game/types/realPingPong";
+import { PINGPONG_CONFIG } from "@/game/types/pingpong";
 
 /**
  * 탁구 게임 UI 관리

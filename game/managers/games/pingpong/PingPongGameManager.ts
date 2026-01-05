@@ -6,7 +6,7 @@ import {
   PingPongPaddle,
   PingPongBall,
   PingPongGameState,
-} from "@/game/types/realPingPong";
+} from "@/game/types/pingpong";
 
 type Scorer = "player" | "ai";
 

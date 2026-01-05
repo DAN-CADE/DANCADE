@@ -7,7 +7,7 @@ import {
   PingPongBall,
   PingPongGameState,
   PingPongInputState,
-} from "@/game/types/realPingPong";
+} from "@/game/types/pingpong";
 import { PingPongGameManager } from "@/game/managers/games/pingpong/PingPongGameManager";
 import { PingPongUIManager } from "@/game/managers/games/pingpong/PingPongUIManager";
 import { PingPongInputManager } from "@/game/managers/games/pingpong/PingPongInputManager";

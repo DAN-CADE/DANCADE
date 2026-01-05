@@ -1,7 +1,7 @@
 // game/managers/games/pingpong/PingPongEffectsManager.ts
 
 import { BaseEffectsManager } from "@/game/managers/base";
-import { PINGPONG_CONFIG, PingPongPaddle } from "@/game/types/realPingPong";
+import { PINGPONG_CONFIG, PingPongPaddle } from "@/game/types/pingpong";
 
 type Scorer = "player" | "ai";
 
