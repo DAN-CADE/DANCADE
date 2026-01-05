@@ -111,8 +111,27 @@ class BaseMatchmaking {
     const newRoomId = generateRoomId(); // 고유 ID 생성 (예: 'room_12345')
     const hostUUID = payload?.uuid || payload?.userId;
 
-    const roomCount = this.rooms.size + 1;
-    const roomName = `빠른 매칭 #${roomCount}`;
+    let quickMatchCount = 0;
+
+    if (this.supabase) {
+      try {
+        // 빠른 매칭 방만 필터링해서 개수를 가져옴
+        const { count, error } = await this.supabase
+          .from("multi_rooms")
+          .select("*", { count: "exact", head: true })
+          // 조건: 방 이름이 '빠른 매칭'으로 시작하는 것만 카운트
+          .like("room_name", "빠른 매칭 %");
+
+        if (error) {
+          console.error(`[DB에러] 빠른매칭 카운트 실패:`, error.message);
+        } else {
+          quickMatchCount = count || 0;
+        }
+      } catch (err) {
+        console.error(`[서버에러]`, err.message);
+      }
+    }
+    const roomName = `빠른 매칭 #${quickMatchCount + 1}`;
 
     console.log(`[${this.gamePrefix}][빠른매칭] DB 방 생성 시작: ${newRoomId}`);
 
