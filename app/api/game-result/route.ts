@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GameResultService } from "@/lib/services/gameResultService";
 import { SaveGameResultRequest } from "@/game/types/gameSessionData";
+import { getUserStats } from "@/lib/supabase/userStats";
 
 // =====================================================================
 /**
@@ -70,8 +71,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const service = new GameResultService();
-    const stats = await service.getUserStats(userId);
+    // const service = new GameResultService();
+    const stats = await getUserStats(userId);
 
     if (!stats) {
       return NextResponse.json(
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // const history = await service.getGameHistory(userId, gameType, 10);
+    // const history = await service.getRankings(userId, gameType, 10);
 
     return NextResponse.json({
       success: true,

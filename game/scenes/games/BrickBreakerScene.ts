@@ -255,6 +255,10 @@ export class BrickBreakerScene extends BaseGameScene {
     data: ReturnType<typeof this.gameManager.getGameResult>
   ): Promise<void> {
     try {
+      // userId를 localStorage에서 추출
+      const userStr = localStorage.getItem("user");
+      const userId = userStr ? JSON.parse(userStr).id : null;
+
       console.log("📤 서버로 게임 결과 전송 중...");
 
       // localStorage에서 사용자 정보 가져오기

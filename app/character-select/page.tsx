@@ -18,6 +18,8 @@ import { CustomizationPanel } from "@/components/character-select/CustomizationP
 import { LoadingScreen } from "@/components/character-select/Loading";
 import { ErrorScreen } from "@/components/character-select/Error";
 import Window from "@/components/common/Window";
+import { getItemById } from "@/lib/supabase/item";
+import { saveItemToInventory } from "@/lib/supabase/inventory";
 
 // ------------------------------------------------------------
 // SSR 방지
@@ -85,8 +87,24 @@ export default function CharacterSelect() {
       if (!res.ok) {
         alert("캐릭터 저장 실패");
         return;
+      } else {
+        const parts = customization.parts;
+        const partKeys = ['hair', 'torso', 'legs', 'feet'] as const;
+
+        await Promise.all(partKeys.map(async (key) => {
+          const styleId = parts[key]?.styleId;
+          if (!styleId) return;
+
+          const data = await getItemById(styleId);
+          const id = (data as any)?.[0]?.id;
+          if (id) {
+            await saveItemToInventory(memberUser.id, id);
+          }        
+        }));
+
       }
     }
+
 
     // 3️⃣ 게스트면 유저 정보 생성 (기존 로직 유지)
     if (!memberUser) {

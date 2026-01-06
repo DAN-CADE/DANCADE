@@ -204,9 +204,7 @@ export class MainScene extends BaseGameScene {
   // 화면에 무엇을 그릴 것인가
   protected createGameObjects(): void {
     this.mapManager.createMap();
-
     this.uiManager.createGameUI();
-    this.uiManager.createConsonantQuizUI();
 
     const currentData = this.avatarDataManager.customization;
     this.player.createAvatar(

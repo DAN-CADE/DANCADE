@@ -3,7 +3,6 @@ const BaseMatchmaking = require("../../base/BaseMatchmaking");
 /**
  * OmokMatchmaking
  * - BaseMatchmaking을 상속받아 오목 전용으로 사용
- * - 역할 할당(흑돌/백돌)만 구현하면 끝!
  */
 class OmokMatchmaking extends BaseMatchmaking {
   /**
@@ -11,11 +10,11 @@ class OmokMatchmaking extends BaseMatchmaking {
    * @param {Object} socket - 클라이언트 소켓
    * @param {Map} rooms - 방 목록
    */
-  constructor(io, socket, rooms) {
+  constructor(io, socket, rooms, supabase) {
     // Base에 설정 전달
     super(io, socket, rooms, "omok", {
-      maxPlayers: 2, // 오목은 2명
-      quickMatchRoomId: "omok_quick_match", // 선택적
+      maxPlayers: 2,
+      supabase: supabase,
     });
   }
 
@@ -36,13 +35,13 @@ class OmokMatchmaking extends BaseMatchmaking {
       this.io.to(player.socketId).emit("omok:assigned", {
         side: player.side,
         color: player.side,
-        roomId: this.QUICK_MATCH_ROOM,
+        roomId: room.roomId,
       });
 
       console.log(
         `[오목][빠른매칭] ${player.username} → ${
           player.side === 1 ? "흑돌(선공)" : "백돌(후공)"
-        } 할당`
+        } 할당 (방ID: ${room.roomId})`
       );
     });
   }

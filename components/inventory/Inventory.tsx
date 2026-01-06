@@ -19,20 +19,20 @@ const COLOR_CATEGORY_TO_PART = {
   Hair: ["hair"],
   Top: ["torso"],
   Bottom: ["legs"],
-  Shoes: ["feet"],
+  Feet: ["feet"],
 } as const;
 
 const PART_CATEGORY_TO_PART = {
   hair: "hair",
   top: "torso",
   bottom: "legs",
-  shoes: "feet",
+  feet: "feet",
 } as const;
 
 /* =========================
  * 파츠 카테고리 (상단)
  * ========================= */
-const PART_CATEGORIES = ["Hair", "Top", "Bottom", "Shoes"] as const;
+const PART_CATEGORIES = ["Hair", "Top", "Bottom", "Feet"] as const;
 type PartCategory = (typeof PART_CATEGORIES)[number];
 
 /* =========================
@@ -44,7 +44,7 @@ const COLOR_CATEGORIES = [
   "Hair",
   "Top",
   "Bottom",
-  "Shoes",
+  "Feet",
 ] as const;
 type ColorCategory = (typeof COLOR_CATEGORIES)[number];
 
@@ -79,7 +79,7 @@ const COLOR_PALETTES: Record<ColorCategory, string[]> = {
     "blue",
     "purple",
   ],
-  Shoes: [
+  Feet: [
     "white",
     "gray",
     "black",
