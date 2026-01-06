@@ -1,12 +1,14 @@
 // game/managers/games/pingpong/PingPongGameManager.ts
 
 import { BaseGameManager } from "@/game/managers/base";
+import { PingPongAIManager } from "./PingPongAIManager";
 import {
   PINGPONG_CONFIG,
   PingPongPaddle,
   PingPongBall,
   PingPongGameState,
   PingPongGameResult,
+  PingPongMode,
 } from "@/game/types/pingpong";
 
 type Scorer = "player" | "ai";
@@ -35,6 +37,7 @@ export class PingPongGameManager extends BaseGameManager<
 
   private aiReactionTimer: number = 0;
   private scoringInProgress: boolean = false;
+  private aiManager: PingPongAIManager = new PingPongAIManager();
 
   constructor(
     scene: Phaser.Scene,
@@ -94,6 +97,51 @@ export class PingPongGameManager extends BaseGameManager<
   }
 
   private updateAIPaddle(deltaSeconds: number): void {
+    // 싱글 모드: GPT 기반 AI
+    if (this.gameState.mode === PingPongMode.SINGLE) {
+      this.updateAIPaddleWithGPT(deltaSeconds);
+    } else {
+      // 온라인 모드: 기본 AI (폴백)
+      this.updateAIPaddleBasic(deltaSeconds);
+    }
+
+    this.clampPaddlePosition(this.aiPaddle);
+    this.aiPaddle.sprite?.setPosition(this.aiPaddle.x, this.aiPaddle.y);
+  }
+
+  private async updateAIPaddleWithGPT(deltaSeconds: number): Promise<void> {
+    // PingPongAIManager에서 AI 결정 받기 (GPT + 로컬 계산 하이브리드)
+    const decision = await this.aiManager.updateAI({
+      ballX: this.ball.x,
+      ballY: this.ball.y,
+      ballVelocityX: this.ball.velocityX,
+      ballVelocityY: this.ball.velocityY,
+      aiPaddleY: this.aiPaddle.y,
+      aiPaddleHeight: this.aiPaddle.height,
+      gameHeight: PINGPONG_CONFIG.GAME_HEIGHT,
+      gameWidth: PINGPONG_CONFIG.GAME_WIDTH,
+      difficulty: (this.gameState.difficulty || "medium") as
+        | "easy"
+        | "medium"
+        | "hard",
+      playerScore: this.gameState.playerScore,
+      aiScore: this.gameState.aiScore,
+      playerPaddleY: this.playerPaddle.y,
+    });
+
+    if (decision.direction === "up") {
+      this.aiPaddle.y -=
+        this.aiPaddle.speed * decision.intensity * deltaSeconds;
+    } else if (decision.direction === "down") {
+      this.aiPaddle.y +=
+        this.aiPaddle.speed * decision.intensity * deltaSeconds;
+    }
+  }
+
+
+
+  private updateAIPaddleBasic(deltaSeconds: number): void {
+    // 온라인 모드용 기본 AI (폴백)
     this.aiReactionTimer += deltaSeconds;
 
     if (this.aiReactionTimer >= PINGPONG_CONFIG.AI_REACTION_DELAY) {
@@ -108,9 +156,6 @@ export class PingPongGameManager extends BaseGameManager<
 
       this.aiReactionTimer = 0;
     }
-
-    this.clampPaddlePosition(this.aiPaddle);
-    this.aiPaddle.sprite?.setPosition(this.aiPaddle.x, this.aiPaddle.y);
   }
 
   private clampPaddlePosition(paddle: PingPongPaddle): void {
@@ -405,6 +450,7 @@ export class PingPongGameManager extends BaseGameManager<
     this.gameState.servingPlayer = "player";
     this.scoringInProgress = false;
     this.aiReactionTimer = 0;
+    this.aiManager.reset();
 
     // ✅ 게임 기록 리셋
     this.gameState.elapsedTime = 0;

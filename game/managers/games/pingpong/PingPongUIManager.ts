@@ -22,6 +22,7 @@ export class PingPongUIManager extends BaseUIManager {
   ];
   private currentStatusIndex: number = 0;
   private statusTimer?: Phaser.Time.TimerEvent;
+  private playerPaddleColorIndex: number = 0;
 
   private colorPreviewPaddles: Phaser.GameObjects.Image[] = [];
 
@@ -276,40 +277,193 @@ export class PingPongUIManager extends BaseUIManager {
     });
   }
 
-  showColorSelection(currentColorIndex: number): void {
+  showModeSelection(onModeSelect: (mode: number) => void): void {
+    this.hideGameUI();
+
     const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
+
+    // 배경 추가
+    this.createBackgroundOverlay();
+
+    this.scene.add
+      .text(centerX, 60, "PING PONG", this.PINGPONG_TEXT_STYLE.TITLE)
+      .setOrigin(0.5);
 
     this.scene.add
       .text(
         centerX,
-        150,
-        "플레이어를 선택하세요",
+        130,
+        "게임 모드를 선택하세요",
         this.PINGPONG_TEXT_STYLE.SUBTITLE
       )
       .setOrigin(0.5);
 
-    this.createColorOptions();
+    const modes = [
+      { label: "SINGLE (VS AI)", value: 1, color: 0x3498db },
+      { label: "ONLINE (MULTI)", value: 3, color: 0xe74c3c },
+      { label: "EXIT", value: 0, color: 0x95a5a6 },
+    ];
+
+    const buttonWidth = 300;
+    const buttonHeight = 50;
+    const buttonSpacing = 70;
+    const startY = 280;
+
+    modes.forEach((mode, index) => {
+      const y = startY + index * buttonSpacing;
+      this.createButton(
+        centerX,
+        y,
+        buttonWidth,
+        buttonHeight,
+        mode.label,
+        mode.color,
+        () => {
+          onModeSelect(mode.value);
+        }
+      );
+    });
+  }
+
+  private createBackgroundOverlay(): void {
+    const width = PINGPONG_CONFIG.GAME_WIDTH;
+    const height = PINGPONG_CONFIG.GAME_HEIGHT;
+
+    const bg = this.scene.add.rectangle(
+      width / 2,
+      height / 2,
+      width,
+      height,
+      0x1a1a1a,
+      0.95
+    );
+    bg.setDepth(-1);
+  }
+
+  private createButton(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    label: string,
+    color: number,
+    onClick: () => void
+  ): void {
+    // 버튼 배경
+    const button = this.scene.add.rectangle(x, y, width, height, color, 0.85);
+    button.setInteractive({ useHandCursor: true });
+    button.setDepth(1);
+
+    // 버튼 테두리
+    const graphics = this.scene.add.graphics({
+      x: x - width / 2,
+      y: y - height / 2,
+    });
+    graphics.lineStyle(2, 0xffffff, 0.9);
+    graphics.strokeRect(0, 0, width, height);
+    graphics.setDepth(1);
+
+    // 버튼 텍스트
+    this.scene.add
+      .text(x, y, label, {
+        fontFamily:
+          '"Press Start 2P", "Malgun Gothic", "맑은 고딕", sans-serif',
+        fontSize: "16px",
+        color: "#ffffff",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(2);
+
+    // 호버 시 테두리 색상만 변경
+    button.on("pointerover", () => {
+      graphics.clear();
+      graphics.lineStyle(2, 0xffff00, 0.9);
+      graphics.strokeRect(0, 0, width, height);
+    });
+
+    button.on("pointerout", () => {
+      graphics.clear();
+      graphics.lineStyle(2, 0xffffff, 0.9);
+      graphics.strokeRect(0, 0, width, height);
+    });
+
+    button.on("pointerdown", () => {
+      onClick();
+    });
+  }
+
+  showColorSelection(currentColorIndex: number, onConfirm?: () => void): void {
+    const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
+
+    // 배경 추가
+    this.createBackgroundOverlay();
+
+    this.scene.add
+      .text(centerX, 60, "PING PONG", this.PINGPONG_TEXT_STYLE.TITLE)
+      .setOrigin(0.5);
+
+    this.scene.add
+      .text(
+        centerX,
+        140,
+        "플레이어 색상을 선택하세요",
+        this.PINGPONG_TEXT_STYLE.SUBTITLE
+      )
+      .setOrigin(0.5);
+
+    this.createColorOptions(currentColorIndex, (index) => {
+      this.playerPaddleColorIndex = index;
+      this.updateColorPreview(index);
+    });
+
     this.updateColorPreview(currentColorIndex);
 
     this.scene.add
-      .text(centerX, 450, "← → 키로 선택, SPACE로 확인", {
-        fontSize: "18px",
-        color: "#ffffff",
+      .text(centerX, 430, "마우스로 색상을 클릭하세요", {
+        fontSize: "16px",
+        color: "#ffff88",
         fontFamily:
           '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
         fontStyle: "bold",
       })
       .setOrigin(0.5);
+
+    // 확인 버튼
+    this.createButton(centerX, 500, 200, 50, "START", 0x2ecc71, () => {
+      onConfirm?.();
+    });
   }
 
-  private createColorOptions(): void {
+  private createColorOptions(
+    currentColorIndex: number,
+    onSelect?: (index: number) => void
+  ): void {
     const positions = [250, 550];
     this.colorPreviewPaddles = [];
 
     positions.forEach((x, index) => {
-      const paddle = this.scene.add.image(x, 300, "pingpong_player");
+      const paddleColor = PINGPONG_CONFIG.PADDLE_COLORS[index];
+      const paddle = this.scene.add.image(x, 280, "pingpong_player");
       paddle.setScale(0.8);
-      paddle.setTint(PINGPONG_CONFIG.PADDLE_COLORS[index].color);
+      paddle.setTint(paddleColor.color);
+      paddle.setInteractive({ useHandCursor: true });
+      paddle.setDepth(1);
+
+      // 색상 선택 클릭
+      paddle.on("pointerdown", () => {
+        onSelect?.(index);
+      });
+
+      // Hover 효과
+      paddle.on("pointerover", () => {
+        paddle.setScale(0.95);
+      });
+
+      paddle.on("pointerout", () => {
+        paddle.setScale(0.8);
+      });
+
       this.colorPreviewPaddles.push(paddle);
     });
   }
