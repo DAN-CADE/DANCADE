@@ -1,17 +1,24 @@
 require("dotenv").config();
 
+const { createClient } = require("@supabase/supabase-js");
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
+}
+
+// ===================================================================
+// ===================================================================
+
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
-
-// ===================================================================
-// ===================================================================
-
-console.log("환경 변수 확인:", {
-  NEXT_API_URL: process.env.NEXT_API_URL,
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-});
 
 const app = express();
 const server = http.createServer(app);
@@ -28,12 +35,15 @@ app.use(express.json());
 // ===================================================================
 // ===================================================================
 
+// 소켓 연결 유지, 방 만들기/참가/나가기 같은 [방 관리] 세팅
 const baseGameHandler = require("./handlers/base/baseGameHandler");
-const omokHandler = require("./handlers/games/omok/omokHandler");
 
 // 공유 데이터
 const players = new Map();
 const rooms = new Map();
+
+// 게임별 핸들러 추가
+const omokHandler = require("./handlers/games/omok/omokHandler");
 
 // =====================================================================
 // Socket.io 연결
@@ -61,13 +71,15 @@ io.on("connection", (socket) => {
   // 게임별 핸들러 등록
   // =====================================================================
 
-  // 오목
+  // 1. 오목
+  // 공통으로 생성할 매니저 인스턴스가 생성되는 baseGameHandler 등록
   const omokDisconnectHandler = baseGameHandler(io, socket, rooms, "omok", {
     maxPlayers: 2, // 오목은 2명
     minPlayers: 2, // 최소 2명
     autoStart: false, // 수동 시작
   });
-  omokHandler(io, socket, rooms);
+  // 오목용 omokHandler 등록
+  omokHandler(io, socket, rooms, supabase);
 
   // =====================================================================
   // 연결 해제
@@ -146,27 +158,6 @@ app.post("/api/player/save", (req, res) => {
   console.log("💾 플레이어 저장:", userId, x, y);
   res.json({ success: true });
 });
-
-// app.get("/api/rooms/:gameType", (req, res) => {
-//   const { gameType } = req.params;
-
-//   const roomList = Array.from(rooms.values())
-//     .filter(
-//       (room) =>
-//         room.gameType === gameType &&
-//         room.status === "waiting" &&
-//         !room.isPrivate
-//     )
-//     .map((room) => ({
-//       roomId: room.roomId,
-//       roomName: room.roomName,
-//       hostUsername: room.players[0]?.username,
-//       playerCount: room.players.length,
-//       maxPlayers: room.maxPlayers,
-//     }));
-
-//   res.json({ rooms: roomList });
-// });
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

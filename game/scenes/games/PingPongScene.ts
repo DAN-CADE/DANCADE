@@ -7,7 +7,9 @@ import {
   PingPongBall,
   PingPongGameState,
   PingPongInputState,
-} from "@/game/types/realPingPong";
+  PingPongGameResult,
+  PingPongMode,
+} from "@/game/types/pingpong";
 import { PingPongGameManager } from "@/game/managers/games/pingpong/PingPongGameManager";
 import { PingPongUIManager } from "@/game/managers/games/pingpong/PingPongUIManager";
 import { PingPongInputManager } from "@/game/managers/games/pingpong/PingPongInputManager";
@@ -59,6 +61,11 @@ export class PingPongScene extends BaseGameScene {
     );
   }
 
+  // Phaser 생명주기: 에셋 로드
+  preload(): void {
+    this.loadAssets();
+  }
+
   // 매개변수 타입을 'string'으로 지정해야 에러가 나지 않습니다.
   protected centerViewport(backgroundColor: string = "#2c2c2c"): void {
     const { width: screenWidth, height: screenHeight } = this.scale;
@@ -85,6 +92,19 @@ export class PingPongScene extends BaseGameScene {
     this.initGameState();
   }
 
+  // 게임 시작 이벤트 발생
+  create(): void {
+    this.setupScene();
+    this.initManagers();
+    this.createGameObjects();
+
+    // ⭐ 채팅 숨김 (게임 씬이므로)
+    console.log("🎮 [핑퐁] 채팅 숨김 호출");
+    this.hideChat();
+
+    this.onGameReady();
+  }
+
   protected initManagers(): void {
     this.uiManager = new PingPongUIManager(this);
     this.effectsManager = new PingPongEffectsManager(this);
@@ -105,6 +125,12 @@ export class PingPongScene extends BaseGameScene {
       },
       onNetHit: (x, y) => {
         this.effectsManager.createNetHitEffect(x, y);
+      },
+      onRallyUpdate: (count) => {
+        this.uiManager.updateRally(count);
+      },
+      onPerfectHit: () => {
+        this.effectsManager.createPerfectHitEffect(this.ball.x, this.ball.y);
       },
     });
 
@@ -141,12 +167,27 @@ export class PingPongScene extends BaseGameScene {
 
   protected handleGameEnd(result: string): void {
     const isPlayerWin = result === "win";
+
+    // ✅ 게임 결과 가져오기
+    const gameResult = this.gameManager.getGameResult();
+    const isValid = this.gameManager.isValidGameResult();
+
+    console.log("🏁 게임 종료:", gameResult);
+    console.log("✅ 검증 결과:", isValid);
+
+    // ✅ 나중에 서버로 전송할 데이터
+    if (isValid) {
+      // TODO: API 호출
+      console.log("📤 서버로 전송할 데이터:", gameResult);
+    }
+
     this.uiManager.showGameOverScreen(
       isPlayerWin,
       this.gameState.playerScore,
       this.gameState.aiScore,
       () => this.restartGame(),
-      () => this.goHome()
+      () => this.goHome(),
+      gameResult // ✅ 게임 결과 전달
     );
 
     this.inputManager.registerRestartListener(() => this.restartGame());
@@ -194,6 +235,14 @@ export class PingPongScene extends BaseGameScene {
       servingPlayer: "player",
       gameMode: "menu",
       isPreparingServe: false,
+      // ✅ 게임 기록 초기화
+      elapsedTime: 0,
+      totalRallies: 0,
+      currentRally: 0,
+      longestRally: 0,
+      perfectHits: 0,
+      // ✅ 모드 초기화
+      mode: PingPongMode.SINGLE, // 기본값은 싱글 모드
     };
 
     this.inputState = {
@@ -390,5 +439,16 @@ export class PingPongScene extends BaseGameScene {
       sprite: ballSprite,
       motionSprite: undefined,
     };
+  }
+
+  // 게임 종료 이벤트 발생
+  shutdown(): void {
+    const endEvent = new CustomEvent("game:ended", {
+      detail: { sceneName: this.scene.key },
+    });
+    window.dispatchEvent(endEvent);
+    console.log("🛑 [핑퐁] 게임 종료 - 채팅 표시");
+
+    super.shutdown();
   }
 }

@@ -14,6 +14,24 @@ export class StartScene extends BaseGameScene {
     this.gameConfig = data.gameConfig;
   }
 
+  // Phaser 생명주기 메서드 추가
+  preload(): void {
+    this.loadAssets();
+  }
+
+  // Phaser 생명주기 메서드 추가
+  create(): void {
+    this.setupScene();
+    this.initManagers();
+    this.createGameObjects();
+
+    // 채팅 숨김 (게임 메뉴 화면이므로)
+    console.log("🎮 [StartScene] 채팅 숨김 호출");
+    this.hideChat();
+
+    this.onGameReady();
+  }
+
   // 1. 에셋 로드 (BaseGameScene의 preload에서 자동 실행)
   protected loadAssets(): void {
     const basePath = ASSET_PATHS.GAME.KENNEY_PUZZLE;
@@ -59,6 +77,11 @@ export class StartScene extends BaseGameScene {
     this.createPreview();
     this.createStartButton();
     this.createInstructions();
+  }
+
+  // onGameReady 오버라이드 (빈 구현)
+  protected onGameReady(): void {
+    // StartScene은 바로 표시되므로 추가 작업 없음
   }
 
   // --- 기존 UI 생성 로직 (getRelativeX/Y 사용) ---
@@ -174,4 +197,9 @@ export class StartScene extends BaseGameScene {
   // --- BaseGameScene 의무 구현 메서드 (필요 없으면 비워둠) ---
   protected handleGameEnd(): void {}
   protected restartGame(): void {}
+
+  shutdown(): void {
+    console.log("🛑 [StartScene] 종료 - 채팅 표시");
+    super.shutdown();
+  }
 }

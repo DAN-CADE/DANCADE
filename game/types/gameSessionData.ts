@@ -12,7 +12,7 @@ export interface gameSessionData {
  * 게임 결과 저장 요청 데이터
  */
 export interface SaveGameResultRequest {
-  room_id: string;
+  room_id?: string;
   game_type: string;
   winner_user_id: string;
   loser_user_id: string;

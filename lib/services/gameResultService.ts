@@ -3,13 +3,14 @@ import {
   SaveGameResultResponse,
 } from "@/game/types/gameSessionData";
 import { createServerClient } from "@/lib/supabase/client";
-import { UserStats } from "@/types/user";
-import { DB_TABLES } from "@/lib/constants/tables";
 import { getUserStats, upsertUserStats } from "@/lib/supabase/userStats";
+import { insertMultiGameResult } from "../supabase/gameResults";
 
+// =====================================================================
 /**
  * GameResultService - 게임 결과 저장 및 통계 업데이트 전용
  */
+// =====================================================================
 export class GameResultService {
   private supabase = createServerClient();
 
@@ -32,15 +33,15 @@ export class GameResultService {
     });
 
     try {
-      // 게임 결과 상세 기록 (multi_game_results)
-      await this.insertGameResult(data);
+      // 결정된 테이블과 함께 데이터 저장
+      await this.insertMultiGameResult(data);
 
       // 유저별 누적 통계 업데이트
       await this.updateUserStats(winner_user_id, loser_user_id, game_type);
 
       // 최신화된 통계 데이터 가져오기
-      const winnerStats = await this.getUserStats(winner_user_id);
-      const loserStats = await this.getUserStats(loser_user_id);
+      const winnerStats = await getUserStats(winner_user_id);
+      const loserStats = await getUserStats(loser_user_id);
 
       if (!winnerStats || !loserStats) {
         throw new Error("결과 저장 후 통계 데이터를 불러오는 데 실패했습니다.");
@@ -59,20 +60,17 @@ export class GameResultService {
    */
   // =====================================================================
 
-  private async insertGameResult(data: SaveGameResultRequest): Promise<void> {
-    const { error } = await this.supabase
-      .from(DB_TABLES.MULTI_GAME_RESULTS)
-      .insert({
-        room_id: data.room_id,
-        game_type: data.game_type,
-        winner_user_id: data.winner_user_id,
-        loser_user_id: data.loser_user_id,
-        winner_score: data.winner_score || null,
-        loser_score: data.loser_score || null,
-        played_at: new Date().toISOString(),
-      });
-
-    if (error) throw new Error(`게임 기록 삽입 실패: ${error.message}`);
+  private async insertMultiGameResult(
+    data: SaveGameResultRequest
+  ): Promise<void> {
+    await insertMultiGameResult({
+      room_id: data.room_id,
+      game_type: data.game_type,
+      winner_user_id: data.winner_user_id,
+      loser_user_id: data.loser_user_id,
+      winner_score: data.winner_score,
+      loser_score: data.loser_score,
+    });
   }
 
   // =====================================================================
@@ -95,7 +93,7 @@ export class GameResultService {
       const currentStats = await getUserStats(player.id);
 
       if (currentStats) {
-        const wins = currentStats.total_wins + (player.isWinner ? 1 : 0);
+        const wins = currentStats.total_wins + (player.isWinner ? 1 : 0); // 승수 증가
         const games = currentStats.total_games_played + 1;
 
         await upsertUserStats({
@@ -107,6 +105,7 @@ export class GameResultService {
           favorite_game: gameType,
         });
       } else {
+        // 첫 판인 경우
         await upsertUserStats({
           user_id: player.id,
           total_wins: player.isWinner ? 1 : 0,
@@ -117,22 +116,6 @@ export class GameResultService {
         });
       }
     }
-    console.log("[GameResultService] 통계 업데이트 완료");
-  }
-
-  // =====================================================================
-  /**
-   * 특정 유저의 현재 통계 조회
-   */
-  // =====================================================================
-
-  async getUserStats(userId: string): Promise<UserStats | null> {
-    const { data, error } = await this.supabase
-      .from("user_stats")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    return error ? null : data;
+    console.log("[GameResultService] total_wins 업데이트 완료");
   }
 }

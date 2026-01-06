@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { socket } from "@/lib/socket";
-import { isGuestUser } from "@/types/user";
 import styles from "./ChatFrame.module.css";
 
 type MessageType = "chat" | "system" | "game" | "invite";
@@ -27,6 +26,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isHidden, setIsHidden] = useState(false); // 채팅창 숨기기
   const [isGuestUser, setIsGuestUser] = useState(false); // 게스트 여부
+  const [isAnalyzing, setIsAnalyzing] = useState(false); // 분석 중 상태
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +37,33 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // =====================================================
+  // 🎯 게임 씬 이벤트 리스너 추가
+  // =====================================================
+  useEffect(() => {
+    const handleChatShow = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      console.log("📢 [React] 채팅 표시:", customEvent.detail?.sceneName);
+      setIsHidden(false); // 채팅 표시
+    };
+
+    const handleChatHide = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      console.log("📢 [React] 채팅 숨김:", customEvent.detail?.sceneName);
+      setIsHidden(true); // 채팅 숨김
+    };
+
+    // 이벤트 리스너 등록
+    window.addEventListener("chat:show", handleChatShow);
+    window.addEventListener("chat:hide", handleChatHide);
+
+    // 클린업
+    return () => {
+      window.removeEventListener("chat:show", handleChatShow);
+      window.removeEventListener("chat:hide", handleChatHide);
+    };
+  }, []);
 
   // ✅ Socket 로직 추가
   useEffect(() => {
@@ -65,13 +92,51 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
     };
   }, []);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (isGuestUser) {
       alert("채팅은 회원가입 후 사용할 수 있습니다.");
       return;
     }
 
-    if (inputValue.trim()) {
+    if (!inputValue.trim()) {
+      return;
+    }
+
+    // 분석 중 중복 전송 방지
+    if (isAnalyzing) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+
+    try {
+      // Perspective API로 메시지 분석
+      const analyzeResponse = await fetch("/api/chat/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ comment: inputValue }),
+      });
+
+      console.log("📤 분석 응답 상태:", analyzeResponse.status);
+
+      if (!analyzeResponse.ok) {
+        const errorData = await analyzeResponse.json();
+        console.error("❌ 분석 실패 응답:", errorData);
+        throw new Error(errorData.error || "분석 실패");
+      }
+
+      const analysisResult = await analyzeResponse.json();
+      console.log("✅ 분석 결과:", analysisResult);
+
+      if (analysisResult.isBlocked) {
+        // 부적절한 내용 차단
+        alert(analysisResult.reason || "부적절한 내용이 감지되었습니다.");
+        setIsAnalyzing(false);
+        return;
+      }
+
       // ✅ Socket으로 전송
       socket.emit("lobby:chat", {
         username,
@@ -79,6 +144,16 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
       });
 
       setInputValue("");
+    } catch (error) {
+      console.error("메시지 분석 중 오류:", error);
+      // 오류 발생 시에도 메시지 전송 (선택사항)
+      socket.emit("lobby:chat", {
+        username,
+        message: inputValue,
+      });
+      setInputValue("");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -301,6 +376,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
+                  disabled={isAnalyzing}
                 />
 
                 <svg
@@ -309,6 +385,10 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
                   viewBox="0 0 24 24"
                   fill="none"
                   onClick={handleSendMessage}
+                  style={{
+                    cursor: isAnalyzing ? "not-allowed" : "pointer",
+                    opacity: isAnalyzing ? 0.5 : 1,
+                  }}
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path

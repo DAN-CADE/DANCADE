@@ -154,8 +154,19 @@ class OmokGameManager {
   async handleGameOver(data) {
     const { roomId, winner } = data;
 
+    const scoreOptions = {
+      winnerScore: 20,
+      loserScore: -10,
+    };
+
+    console.log(
+      `[오목][게임종료] 방 ID: ${roomId}, 승자: ${
+        winner === 1 ? "흑(방장)" : "백(참가자)"
+      }, 점수: +${scoreOptions.winnerScore} / ${scoreOptions.loserScore}`
+    );
+
     // 공통 핸들러로 위임
-    await this.gameOverHandler.handleGameOver(roomId, winner);
+    await this.gameOverHandler.handleGameOver(roomId, winner, scoreOptions);
   }
 }
 
