@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { socket } from "@/lib/socket";
+import RegisterModal from "@/components/auth/RegisterModal";
+import { useToast } from "@/components/common/ToastProvider";
 import styles from "./ChatFrame.module.css";
 
 type MessageType = "chat" | "system" | "game" | "invite";
@@ -19,6 +21,7 @@ interface ChatFrameProps {
 }
 
 export default function ChatFrame({ onClose }: ChatFrameProps) {
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isFullHeight, setIsFullHeight] = useState(false);
@@ -27,6 +30,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   const [isHidden, setIsHidden] = useState(false); // 채팅창 숨기기
   const [isGuestUser, setIsGuestUser] = useState(false); // 게스트 여부
   const [isAnalyzing, setIsAnalyzing] = useState(false); // 분석 중 상태
+  const [showRegisterModal, setShowRegisterModal] = useState(false); // 회원가입 모달
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +41,21 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const checkUserStatus = useCallback(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setUsername(user.nickname || "익명");
+        // 게스트 사용자 확인
+        setIsGuestUser(user.isGuest === true);
+      } catch (error) {
+        console.error("사용자 데이터 파싱 오류:", error);
+        setUsername("익명");
+      }
+    }
+  }, []);
 
   // =====================================================
   // 🎯 게임 씬 이벤트 리스너 추가
@@ -67,19 +86,8 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
 
   // ✅ Socket 로직 추가
   useEffect(() => {
-    // localStorage에서 유저명 가져오기
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setUsername(user.nickname || "익명");
-        // 게스트 사용자 확인
-        setIsGuestUser(user.isGuest === true);
-      } catch (error) {
-        console.error("사용자 데이터 파싱 오류:", error);
-        setUsername("익명");
-      }
-    }
+    // 초기 유저 상태 확인
+    checkUserStatus();
 
     // 채팅 메시지 수신
     socket.on("lobby:chatMessage", (data: Message) => {
@@ -90,7 +98,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
     return () => {
       socket.off("lobby:chatMessage");
     };
-  }, []);
+  }, [checkUserStatus]);
 
   const handleSendMessage = async () => {
     if (isGuestUser) {
@@ -157,11 +165,16 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation(); // 게임 키 입력 방지
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    e.stopPropagation(); // 게임 키 입력 방지
   };
 
   // ✅ 인사 메시지도 socket으로 전송
@@ -205,6 +218,20 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showEmojiPicker]);
+
+  const handleFocus = () => {
+    // 게임 입력 잠금
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("game:input-locked"));
+    }
+  };
+
+  const handleBlur = () => {
+    // 게임 입력 잠금 해제
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("game:input-unlocked"));
+    }
+  };
 
   return (
     <>
@@ -301,9 +328,12 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
           >
             <div className={styles.guestUpgradePrompt}>
               <span>전체 채팅 기능을 원하시나요?</span>
-              <a href="/auth/login" className={styles.guestPromptBtn}>
+              <button
+                onClick={() => setShowRegisterModal(true)}
+                className={styles.guestPromptBtn}
+              >
                 회원가입
-              </a>
+              </button>
             </div>
             <div className={styles.guestQuickMessagePanel}>
               <div className={styles.quickMessageLabel}>퀵메시지</div>
@@ -381,7 +411,10 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
                 placeholder="바르고 고운말을 씁시다"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
                 disabled={isAnalyzing}
               />
 
@@ -418,6 +451,20 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
           💬
         </button>
       )}
+
+      {/* 회원가입 모달 */}
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSuccess={() => {
+          setShowRegisterModal(false);
+          checkUserStatus();
+          showToast({
+            type: "success",
+            message: "환영합니다! 회원가입이 완료되었습니다.",
+          });
+        }}
+      />
     </>
   );
 }
