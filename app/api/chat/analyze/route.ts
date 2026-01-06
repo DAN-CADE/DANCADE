@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasBadwords } from "@/lib/badwords";
 
 // Perspective API 타입
 interface AnalyzeResponse {
@@ -27,20 +26,6 @@ export async function POST(request: NextRequest) {
         { error: "유효한 메시지가 필요합니다." },
         { status: 400 }
       );
-    }
-
-    // 🚨 먼저 로컬 욕설 필터 체크
-    if (hasBadwords(comment)) {
-      console.log("🚨 욕설 감지:", comment);
-      return NextResponse.json({
-        isBlocked: true,
-        scores: {
-          toxicity: 0,
-          severeToxicity: 0,
-          profanity: 0,
-        },
-        reason: "부적절한 내용이 감지되었습니다.",
-      });
     }
 
     if (!process.env.PERSPECTIVE_API_KEY) {

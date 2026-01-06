@@ -72,6 +72,11 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
   private isMoving: boolean = false;
   private isJumping: boolean = false;
   private isThrusting: boolean = false;
+  private inputEnabled: boolean = true; // 입력 활성화 상태
+
+  // 이벤트 핸들러 참조 저장 (제거 위함)
+  private onInputLock: () => void;
+  private onInputUnlock: () => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -92,6 +97,37 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     body.setSize(32, 32);
     body.setOffset(-16, 16);
     body.setCollideWorldBounds(false);
+
+    // -------------------------------------------------------------
+    // 🔒 입력 잠금 이벤트 리스너 등록
+    // -------------------------------------------------------------
+    this.onInputLock = () => {
+      this.inputEnabled = false;
+      // 잠금 시 즉시 정지
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      if (body) {
+        body.setVelocity(0, 0);
+        this.isMoving = false;
+        this.playLayeredAnimations();
+      }
+    };
+
+    this.onInputUnlock = () => {
+      this.inputEnabled = true;
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("game:input-locked", this.onInputLock);
+      window.addEventListener("game:input-unlocked", this.onInputUnlock);
+    }
+
+    // 객체 파괴 시 리스너 제거
+    this.on("destroy", () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("game:input-locked", this.onInputLock);
+        window.removeEventListener("game:input-unlocked", this.onInputUnlock);
+      }
+    });
 
     // 3. 파츠 스프라이트 초기화
     this.layerOrder.forEach((part) => {
@@ -165,6 +201,9 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
   update() {
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
+
+    // ⛔ 입력이 비활성화된 경우 업데이트 중단
+    if (!this.inputEnabled) return;
 
     // 1. 키 존재 여부 확인 후 입력 감지
     // const isSpaceJustDown = this.keys.space && Phaser.Input.Keyboard.JustDown(this.keys.space);

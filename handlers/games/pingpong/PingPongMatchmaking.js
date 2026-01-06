@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // server/handlers/games/pingpong/PingPongMatchmaking.js
 
 const BaseMatchmaking = require("../../base/BaseMatchmaking");
@@ -21,31 +22,84 @@ class PingPongMatchmaking extends BaseMatchmaking {
     });
   }
 
+  /**
+   * 이벤트 핸들러 등록
+   */
+  registerHandlers() {
+    super.registerHandlers(); // BaseMatchmaking의 핸들러 등록
+
+    // 방장 색상 선택 변경 (대기 중)
+    this.socket.on("pingpong:update_host_preference", (payload) =>
+      this.handleUpdateHostPreference(payload)
+    );
+  }
+
+  /**
+   * 방장 성향(색상) 업데이트
+   * @param {Object} payload - { color: 'red' | 'blue' }
+   */
+  handleUpdateHostPreference(payload) {
+    const { color } = payload;
+    // 현재 소켓이 방장으로 있는 대기 방 찾기
+    const room = Array.from(this.rooms.values()).find(
+      (r) =>
+        r.gameType === "pingpong" &&
+        r.status === "waiting" &&
+        r.hostSocketId === this.socket.id
+    );
+
+    if (room) {
+      room.hostColor = color; // 방 정보에 선호 색상 저장
+      console.log(
+        `[핑퐁][대기방] 방장(${this.socket.id}) 색상 변경 → ${color}`
+      );
+    }
+  }
+
   // =====================================================================
   // 핑퐁 전용: 역할 할당 (left/right)
   // =====================================================================
 
   /**
    * 역할 할당 - left(왼쪽) / right(오른쪽)
+   * 방장이 선택한 색상(hostColor)을 반영
+   * - RED: Left (1P)
+   * - BLUE: Right (2P)
    * @param {Object} room - 방 객체
    */
   assignRoles(room) {
-    room.players.forEach((player, index) => {
-      // 첫 번째 플레이어 = left(선공), 두 번째 = right(후공)
-      player.side = index === 0 ? "left" : "right";
-      player.role = index + 1; // 1 or 2 (클라이언트 호환용)
+    // 방장 기본값: RED(Left)
+    const hostColor = room.hostColor || "red";
+    const hostSide = hostColor === "red" ? "left" : "right";
+
+    console.log(`[핑퐁][게임시작] 방장 선택 색상: ${hostColor} (${hostSide})`);
+
+    room.players.forEach((player) => {
+      const isHost = player.socketId === room.hostSocketId;
+
+      if (isHost) {
+        // 방장에게 선택한 사이드 할당
+        player.side = hostSide;
+        player.role = hostSide === "left" ? 1 : 2;
+      } else {
+        // 도전자에게 반대 사이드 할당
+        player.side = hostSide === "left" ? "right" : "left";
+        player.role = hostSide === "left" ? 2 : 1;
+      }
 
       // 개별 알림
       this.io.to(player.socketId).emit("pingpong:assigned", {
         side: player.side,
         role: player.role,
         roomId: this.QUICK_MATCH_ROOM,
+        myColor: player.side === "left" ? "red" : "blue", // 클라이언트 표시용
+        opponentColor: player.side === "left" ? "blue" : "red",
       });
 
       console.log(
-        `[핑퐁][빠른매칭] ${player.username} → ${
-          player.side === "left" ? "왼쪽(선공)" : "오른쪽(후공)"
-        } 할당`
+        `[핑퐁][역할할당] ${player.username}(${isHost ? "방장" : "도전자"}) → ${
+          player.side
+        } (${player.side === "left" ? "RED" : "BLUE"})`
       );
     });
   }

@@ -12,6 +12,7 @@ interface WindowProps {
   className?: string;
   showMaximize?: boolean;
   variant?: "page" | "modal"; // ✅ 추가
+  onClose?: () => void;
 }
 
 export default function Window({
@@ -20,16 +21,25 @@ export default function Window({
   className = "",
   showMaximize = true,
   variant = "page", // ✅ 기본값
+  onClose,
 }: WindowProps) {
   const router = useRouter();
   const isModal = variant === "modal";
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else if (!isModal) {
+      router.back();
+    }
+  };
 
   return (
     <section
       className={`
         relative font-neo
-        ${isModal ? "" : "min-h-screen py-12 px-5"}
-        drop-shadow-[0_0_14px_rgba(108,173,247,0.55)]
+        ${isModal ? "h-auto" : "min-h-screen py-12 px-5"}
+        ${isModal ? "" : "drop-shadow-[0_0_14px_rgba(108,173,247,0.55)]"}
       `}
     >
       {/* ✅ 페이지에서만 배경 */}
@@ -39,7 +49,7 @@ export default function Window({
 
       <div
         className={`
-          ${isModal ? "w-[420px]" : "max-w-[1400px] w-full"}
+          ${isModal ? "w-full" : "max-w-[1400px] w-full"}
           m-auto
           border border-[var(--color-navy)]
           ${className}
@@ -48,10 +58,7 @@ export default function Window({
         {/* 핑크색 타이틀바 */}
         <div className="window-header bg-[var(--color-pink)] flex items-center justify-between px-4 py-3">
           {/* 좌측 아이콘 */}
-          <button
-            className="window-icon"
-            onClick={isModal ? undefined : () => router.back()}
-          >
+          <button className="window-icon" onClick={handleClose}>
             <Image src={windowClose} alt="" />
           </button>
 
@@ -72,11 +79,9 @@ export default function Window({
         <div
           className={`
             window-content relative 
-            bg-[var(--color-dark-blue)]
-            flex flex-col items-center justify-center gap-8
-            ${isModal
-              ? "p-6"
-              : "py-15 px-8 min-h-[800px] lg:max-h-[800px]"}
+            ${isModal ? "bg-white" : "bg-[var(--color-dark-blue)]"}
+            flex flex-col items-center justify-center
+            ${isModal ? "" : "py-15 px-8 min-h-[800px] lg:max-h-[800px] gap-8"}
           `}
         >
           {/* ✅ 페이지에서만 뒤로가기 */}
