@@ -79,9 +79,9 @@ export default function Window({
         <div
           className={`
             window-content relative 
-            ${isModal ? "bg-white" : "bg-[var(--color-dark-blue)]"}
+            bg-[var(--color-dark-blue)]
             flex flex-col items-center justify-center
-            ${isModal ? "" : "py-15 px-8 min-h-[800px] lg:max-h-[800px] gap-8"}
+            ${isModal ? "p-6" : "py-15 px-8 min-h-[800px] lg:max-h-[800px] gap-8"}
           `}
         >
           {/* ✅ 페이지에서만 뒤로가기 */}
