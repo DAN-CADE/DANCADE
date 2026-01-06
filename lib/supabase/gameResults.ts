@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase/server";
 import { DB_TABLES } from "@/lib/constants/tables";
 import {
   InsertGameResultParams,
-  InsertSingleGameResultParams,
+  InsertMultiGameResultParams,
 } from "@/types/gameResults";
 
 // =====================================================================
@@ -13,15 +13,11 @@ import {
 // =====================================================================
 
 export const insertGameResult = async (
-  params: Partial<InsertSingleGameResultParams>
+  params: Partial<InsertGameResultParams> | Partial<InsertGameResultParams>[]
 ) => {
   const { data, error } = await supabase
     .from(DB_TABLES.GAME_RESULTS)
-    .insert({
-      ...params,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .insert(params)
     .select();
 
   if (error) {
@@ -29,7 +25,7 @@ export const insertGameResult = async (
     throw error;
   }
 
-  return data?.[0];
+  return data;
 };
 
 // =====================================================================
@@ -39,7 +35,7 @@ export const insertGameResult = async (
 // =====================================================================
 
 export const insertMultiGameResult = async (
-  params: Partial<InsertGameResultParams>
+  params: Partial<InsertMultiGameResultParams>
 ) => {
   const { data, error } = await supabase
     .from(DB_TABLES.MULTI_GAME_RESULTS)
@@ -54,5 +50,5 @@ export const insertMultiGameResult = async (
     throw error;
   }
 
-  return data?.[0];
+  return data;
 };

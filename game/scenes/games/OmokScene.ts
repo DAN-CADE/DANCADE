@@ -14,12 +14,16 @@ import { OmokRoomManager } from "@/game/managers/games/omok/network/room/OmokRoo
 import { OmokNetworkManager } from "@/game/managers/games/omok/network/OmokNetworkManager";
 import { OmokGameAbortedDialog } from "@/game/managers/games/omok/ui/OmokGameAbortedDialog";
 import { OmokAIManager } from "@/game/managers/games/omok/core/OmokAIManager";
-// import { BaseRoomUIManager } from "@/game/managers/base/multiplayer/ui/BaseRoomUIManager";
 import { OMOK_CONFIG } from "@/game/types/omok/omok.constants";
-
 import { GameNetworkCallbacks } from "@/game/types/multiplayer/network.types";
 import { gameState, onlineState } from "@/game/types/omok/omok.types";
 import { RoomUIEvent } from "@/game/types/common/common.network.types";
+import { AiGameOverHandler } from "@/handlers/ai/AiGameOverHandler.js";
+
+interface IAiGameOverHandler {
+  handle(winner: OmokSideType): Promise<void>;
+}
+
 export class OmokScene extends BaseGameScene {
   constructor() {
     super({ key: "OmokScene" });
@@ -38,6 +42,7 @@ export class OmokScene extends BaseGameScene {
     isStarted: false,
     currentTurn: OmokSide.BLACK,
     mode: OmokMode.NONE,
+    // userSide: OmokSide.BLACK,
   };
 
   private onlineState: onlineState = {
@@ -55,7 +60,7 @@ export class OmokScene extends BaseGameScene {
     onlineUI: BaseOnlineUIManager;
     abortDialog: OmokGameAbortedDialog;
     ai: OmokAIManager;
-    // roomUI: BaseRoomUIManager;
+    aiHandler: IAiGameOverHandler;
   };
 
   // =====================================================================
@@ -95,7 +100,7 @@ export class OmokScene extends BaseGameScene {
       board: new OmokBoardManager(this, omok),
       room: this.createRoomManager(network),
       abortDialog: new OmokGameAbortedDialog(this),
-      // roomUI: new BaseRoomUIManager(this)
+      aiHandler: new AiGameOverHandler(this, "omok"),
     };
   }
 
@@ -441,8 +446,10 @@ export class OmokScene extends BaseGameScene {
     this.managers.board!.displayMoveSequence();
 
     if (this.gameState.mode === OmokMode.ONLINE) {
-      console.log(`🏆 [OmokScene] 게임 종료 - 승자: ${winner}`);
+      console.log(`[OmokScene] 게임 종료 - 승자: ${winner}`);
       this.managers.network!.notifyGameOver(winner);
+    } else if (this.gameState.mode === OmokMode.SINGLE) {
+      this.managers.aiHandler.handle(winner);
     }
 
     const winnerName = this.getWinnerName(winner);
@@ -692,7 +699,9 @@ export class OmokScene extends BaseGameScene {
       this.onlineState.currentRoomId = null;
     }
 
-    if (mode === OmokMode.SINGLE || mode === OmokMode.LOCAL) {
+    if (mode === OmokMode.SINGLE) {
+      this.startSingleGame(mySide);
+    } else if (mode === OmokMode.LOCAL) {
       this.startLocalGame(mode, mySide);
     } else if (mode === OmokMode.ONLINE) {
       this.showOnlineMenu();

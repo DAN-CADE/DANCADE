@@ -47,6 +47,11 @@ class GameOverHandler {
       return;
     }
 
+    // 시간 계산
+    const gameDuration = room.startTime
+      ? Math.floor((Date.now() - room.startTime) / 1000)
+      : 0;
+
     // 상태 잠금
     room.isProcessingEnd = true;
     room.status = "finished";
@@ -73,7 +78,7 @@ class GameOverHandler {
         roomId,
         winnerPlayer,
         loserPlayer,
-        options
+        { ...options, gameDuration }
       );
 
       // 모든 클라이언트에 알림 (클라이언트는 이 정보를 받아서 UI만 그림)
@@ -82,6 +87,7 @@ class GameOverHandler {
         roomData: room,
         winnerStats,
         loserStats,
+        gameDuration,
       });
 
       console.log(`[${this.gamePrefix}] 결과 저장 및 브로드캐스트 완료`);
@@ -105,15 +111,10 @@ class GameOverHandler {
       (p) => p.side === winner || p.role === winner
     );
 
-    // 패자 찾기 (승자가 아닌 남은 플레이어 한 명)
-    const loserPlayer = room.players.find((p) => {
-      if (winnerPlayer) {
-        // 승자의 ID가 아닌 사람
-        return p.userUUID !== winnerPlayer.userUUID;
-      }
-      // 승자를 못 찾았을 경우를 대비한 방어 코드
-      return p.side !== winner && p.role !== winner;
-    });
+    // 승자를 제외한 다른 플레이어가 있는 경우에만 loserPlayer 할당
+    const loserPlayer = room.players.find((p) =>
+      winnerPlayer ? p.userUUID !== winnerPlayer.userUUID : false
+    );
 
     return { winnerPlayer, loserPlayer };
   }
@@ -153,11 +154,12 @@ class GameOverHandler {
         {
           room_id: roomId,
           game_type: this.gamePrefix,
-          winner_user_id: winnerPlayer.userUUID,
-          loser_user_id: loserPlayer.userUUID,
-          // is_quick_match: options.isQuickMatch,
+          play_mode: loserId ? "multiplayer" : "single",
+          winner_user_id: winnerId,
+          loser_user_id: loserId,
           winner_score: options.winnerScore,
           loser_score: options.loserScore,
+          game_duration: options.gameDuration,
         },
         {
           headers: {
