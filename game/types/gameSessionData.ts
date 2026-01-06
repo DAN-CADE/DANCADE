@@ -14,10 +14,12 @@ export interface gameSessionData {
 export interface SaveGameResultRequest {
   room_id?: string;
   game_type: string;
+  play_mode?: "single" | "multiplayer";
   winner_user_id: string;
-  loser_user_id: string;
+  loser_user_id?: string;
   winner_score?: number;
   loser_score?: number;
+  game_duration?: number;
 }
 
 /**
@@ -26,5 +28,5 @@ export interface SaveGameResultRequest {
 export interface SaveGameResultResponse {
   success: boolean;
   winnerStats: UserStats;
-  loserStats: UserStats;
+  loserStats?: UserStats;
 }
