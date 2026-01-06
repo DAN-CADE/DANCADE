@@ -171,7 +171,6 @@ export class UIManager {
    * 모달 열기 (간단 버전)
    */
   public openModal(title: string, message: string) {
-    console.log(`Modal: [${title}] ${message}`);
     (this.scene as any).openModal?.(title, message);
 
     // 메인 물리 엔진 멈춤
@@ -464,7 +463,6 @@ export class UIManager {
       
     // 닫기 버튼 이벤트
     closeBtn.on('pointerup', (pointer: any) => {
-        console.log("닫기 버튼 클릭됨");
         closeBtn.setAlpha(1);
         this.hideRankingBoardUI();
     });
