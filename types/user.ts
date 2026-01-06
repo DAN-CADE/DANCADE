@@ -102,6 +102,18 @@ export interface ProfileUpdateData {
 
 // 사용자 통계
 export interface UserStats {
+  user_id: string;
+  total_wins: number;
+  total_losses: number;
+  total_games_played: number;
+  win_rate: number;
+  favorite_game: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// 클라이언트용 통계 (화면 표시용)
+export interface UserStatsDisplay {
   totalPlays: number;
   totalPoints: number;
   averageScore: number;

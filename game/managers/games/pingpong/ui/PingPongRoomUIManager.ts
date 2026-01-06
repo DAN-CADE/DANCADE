@@ -2,7 +2,7 @@
 
 import { Socket } from "socket.io-client";
 import { BaseRoomUIManager } from "@/game/managers/base/multiplayer";
-import type { RoomUIConfig } from "@/game/types/multiplayer/room.types";
+import type { RoomUIConfig } from "@/game/types/common/ui.types";
 
 /**
  * 핑퐁 Room UI 설정
@@ -11,7 +11,6 @@ const PINGPONG_ROOM_UI_CONFIG: RoomUIConfig = {
   colors: {
     panel: 0x1e293b, // 다크 블루
     primary: 0x3b82f6, // 파란색 (핑퐁 테마)
-    secondary: 0x8b5cf6, // 보라색
     danger: 0xef4444, // 빨간색
     cardActive: 0x475569,
     cardInactive: 0x334155,
@@ -26,6 +25,7 @@ const PINGPONG_ROOM_UI_CONFIG: RoomUIConfig = {
     roomCardSpacing: 90,
     playerCardHeight: 90,
     playerCardSpacing: 110,
+    buttonGap: 20,
   },
   textStyle: {
     title: {
@@ -36,11 +36,6 @@ const PINGPONG_ROOM_UI_CONFIG: RoomUIConfig = {
     },
     normal: {
       fontSize: "20px",
-      fontFamily: "Press Start 2P, Arial",
-      color: "#ffffff",
-    },
-    small: {
-      fontSize: "14px",
       fontFamily: "Press Start 2P, Arial",
       color: "#ffffff",
     },

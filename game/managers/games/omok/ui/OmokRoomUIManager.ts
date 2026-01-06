@@ -28,6 +28,7 @@ const OMOK_ROOM_UI_CONFIG: RoomUIConfig = {
     roomCardSpacing: 80,
     playerCardHeight: 80,
     playerCardSpacing: 100,
+    buttonGap: 20,
   },
   textStyle: {
     title: TEXT_STYLE.SUBTITLE,

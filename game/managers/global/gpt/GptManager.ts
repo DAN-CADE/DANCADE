@@ -31,7 +31,7 @@ export class GptManager {
       }
 
       const content = result.choices[0].message.content;
-      const jsonMatch = content.match(/\{.*\}/s);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
       return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
     } catch (e) {
       console.error(`${context} GPT 통신 에러:`, e);

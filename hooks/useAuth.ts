@@ -159,7 +159,7 @@ export const useAuth = () => {
       // 2. 비밀번호 검증
       const isPasswordValid = await passwordUtils.verify(
         data.password,
-        dbUser.password
+        dbUser.password_hash
       );
 
       if (!isPasswordValid) {
@@ -174,7 +174,8 @@ export const useAuth = () => {
         total_points: dbUser.total_points,
         created_at: dbUser.created_at,
         updated_at: dbUser.updated_at,
-        isGuest: false, // 로컬 구분용
+        type: "member",
+        isGuest: false,
       };
 
       if (typeof window !== "undefined") {

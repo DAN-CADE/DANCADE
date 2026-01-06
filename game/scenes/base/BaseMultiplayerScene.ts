@@ -2,7 +2,46 @@
 import { BaseGameScene } from "./BaseGameScene";
 import { BaseOnlineUIManager } from "@/game/managers/base/multiplayer/ui/BaseOnlineUIManager";
 import { BaseNetworkManager } from "@/game/managers/base/BaseNetworkManager";
-import { COMMON_COLORS } from "@/game/types/common/ui.constants";
+import { COMMON_COLORS, FONT_CONFIG } from "@/game/types/common/ui.constants";
+import type { RoomUIConfig } from "@/game/types/common/ui.types";
+
+/**
+ * 기본 Room UI 설정
+ */
+const DEFAULT_ROOM_UI_CONFIG: RoomUIConfig = {
+  colors: {
+    panel: COMMON_COLORS.PANEL_DARK,
+    primary: COMMON_COLORS.PRIMARY,
+    danger: COMMON_COLORS.DANGER,
+    cardActive: COMMON_COLORS.PANEL_LIGHT,
+    cardInactive: COMMON_COLORS.NEUTRAL,
+    subText: COMMON_COLORS.TEXT_SECONDARY,
+    gold: COMMON_COLORS.TEXT_GOLD,
+  },
+  layout: {
+    panelWidth: 650,
+    panelHeight: 700,
+    roomCardWidth: 550,
+    roomCardHeight: 80,
+    roomCardSpacing: 90,
+    playerCardHeight: 90,
+    playerCardSpacing: 110,
+    buttonGap: 20,
+  },
+  textStyle: {
+    title: {
+      fontSize: "48px",
+      fontFamily: FONT_CONFIG.FAMILY,
+      color: COMMON_COLORS.TEXT_PRIMARY,
+      fontStyle: "bold",
+    },
+    normal: {
+      fontSize: "20px",
+      fontFamily: FONT_CONFIG.FAMILY,
+      color: COMMON_COLORS.TEXT_PRIMARY,
+    },
+  },
+};
 
 /**
  * 게임 모드
@@ -59,7 +98,7 @@ export abstract class BaseMultiplayerScene extends BaseGameScene {
   // 공통 매니저
   // =====================================================================
   protected onlineUIManager!: BaseOnlineUIManager;
-  protected networkManager!: BaseNetworkManager<any>;
+  protected networkManager!: BaseNetworkManager;
 
   // =====================================================================
   // 추상 메서드 (게임별 구현 필수)
@@ -126,7 +165,7 @@ export abstract class BaseMultiplayerScene extends BaseGameScene {
 
   protected initManagers(): void {
     // 1. 공통 매니저 초기화
-    this.onlineUIManager = new BaseOnlineUIManager(this);
+    this.onlineUIManager = new BaseOnlineUIManager(this, DEFAULT_ROOM_UI_CONFIG);
 
     // 2. 게임별 매니저 초기화 (추상 메서드)
     this.initGameManagers();

@@ -54,7 +54,7 @@ export async function fetchUserInventory(
   return (data ?? [])
     .filter((row) => row.item) // ✅ null 방어만
     .map((row) => {
-      const item = row.item as ItemRow ;
+      const item = row.item as unknown as ItemRow;
 
       return {
         userItemId: row.id,

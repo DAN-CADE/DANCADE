@@ -12,6 +12,7 @@ import { UIManager } from "@/game/managers/global/UIManager";
 import { createEventGame } from "@/lib/supabase/event";
 import { supabase } from "@/lib/supabase/client"
 import { RealtimeChannel } from "@supabase/supabase-js";
+import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -23,7 +24,7 @@ interface OnlinePlayer {
   x: number;
   y: number;
   joinedAt: number;
-  customization?: Record<string, any>; // 아바타 커스텀 정보
+  customization?: CharacterState; // 아바타 커스텀 정보
 }
 
 // 플레이어 이동 데이터 타입

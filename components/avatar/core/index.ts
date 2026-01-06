@@ -1,3 +1,4 @@
-export { LpcCharacter } from "./LpcCharacter";
+export { default as LpcCharacter } from "./LpcCharacter";
 export { LpcLoader } from "./LpcLoader";
-export { LpcNpc } from "./LpcNpc";
+export { NPC_CONFIG } from "./LpcNpc";
+export type { NpcType } from "./LpcNpc";
