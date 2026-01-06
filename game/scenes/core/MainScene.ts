@@ -142,8 +142,7 @@ export class MainScene extends BaseGameScene {
     );
 
     this.socket.on("createEventGame", (data: any) => {
-      createEventGame(data);
-      this.uiManager.showNotice(data.content);
+      this.uiManager.showNotice(data.title);
     });
 
     this.socket.on("createNotice", (data: any) => {
