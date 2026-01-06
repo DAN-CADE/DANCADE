@@ -94,6 +94,22 @@ export abstract class BaseGameNetworkManager<
         this.gameCallbacks.onGameOver?.(data.winner);
       }
     );
+
+    this.safeOnTyped<{ requester: string }>(
+      `${this.gamePrefix}:rematchRequested`,
+      (data) => {
+        console.log(
+          `[${this.gamePrefix}Network] 상대방의 재대결 요청 수신:`,
+          data
+        );
+        this.gameCallbacks.onRematchRequested?.(data.requester);
+      }
+    );
+
+    this.safeOnTyped(`${this.gamePrefix}:rematchStart`, () => {
+      console.log(`[${this.gamePrefix}Network] 재대결 시작!`);
+      this.gameCallbacks.onRematchStart?.();
+    });
   }
 
   public notifyGameOver(winner: TRole): void {
@@ -126,6 +142,8 @@ export abstract class BaseGameNetworkManager<
     this.safeOff(`${this.gamePrefix}:assigned`);
     this.safeOff(`${this.gamePrefix}:gameStart`);
     this.safeOff(`${this.gamePrefix}:gameOver`);
+    this.safeOff(`${this.gamePrefix}:rematchRequested`);
+    this.safeOff(`${this.gamePrefix}:rematchStart`);
 
     console.log(`[${this.gamePrefix}Network] 정리 완료`);
   }

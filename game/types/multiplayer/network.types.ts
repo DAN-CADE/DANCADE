@@ -24,6 +24,12 @@ export interface RoomNetworkCallbacks {
 
   // 에러
   onError?: (message: string) => void;
+
+  // 재대결
+  onRematchRequested?: (requester: string) => void;
+  onRematchAccepted?: (accepter: string) => void;
+  onRematchDeclined?: (decliner: string) => void;
+  onRematchStart?: () => void;
 }
 
 export interface GameNetworkCallbacks<TGameAction, TRole>
