@@ -86,6 +86,11 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
 
   // ✅ Socket 로직 추가
   useEffect(() => {
+    // 소켓 수동 연결 (lib/socket.ts에서 autoConnect: false로 설정되어 있음)
+    if (!socket.connected) {
+      socket.connect();
+    }
+
     // 초기 유저 상태 확인
     checkUserStatus();
 
