@@ -42,7 +42,7 @@ export class OmokScene extends BaseGameScene {
     isStarted: false,
     currentTurn: OmokSide.BLACK,
     mode: OmokMode.NONE,
-    // userSide: OmokSide.BLACK,
+    userSide: OmokSide.BLACK,
   };
 
   private onlineState: onlineState = {
@@ -82,6 +82,23 @@ export class OmokScene extends BaseGameScene {
 
     this.setupEventListeners();
     this.setupInputHandler();
+
+    this.managers.room.setOnRematchRequested((requester) => {
+      this.handleRematchRequest(requester);
+    });
+
+    this.managers.room.setOnRematchAccepted((accepter) => {
+      console.log(`${accepter}님이 재대결을 수락했습니다.`);
+    });
+
+    this.managers.room.setOnRematchDeclined((decliner) => {
+      alert(`${decliner}님이 재대결을 거절했습니다.`);
+      this.showOnlineMenu();
+    });
+
+    this.managers.room.setOnRematchStart(() => {
+      this.handleRematchStart();
+    });
   }
 
   // =====================================================================
@@ -102,6 +119,10 @@ export class OmokScene extends BaseGameScene {
       abortDialog: new OmokGameAbortedDialog(this),
       aiHandler: new AiGameOverHandler(this, "omok"),
     };
+
+    // this.setupNetworkListeners();
+    // this.setupRoomCallbacks();
+    this.setupRematchCallbacks();
   }
 
   // =====================================================================
@@ -190,14 +211,6 @@ export class OmokScene extends BaseGameScene {
     });
 
     return manager;
-  }
-
-  // 클릭된 위치(x, y) 좌표가 pointer 객체에 담기고
-  // 그걸 handlePlayerInput에 넘김
-  private setupInputHandler(): void {
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-      this.handlePlayerInput(pointer);
-    });
   }
 
   // =====================================================================
@@ -346,38 +359,6 @@ export class OmokScene extends BaseGameScene {
     this.setupGame(OmokMode.ONLINE, this.onlineState.mySide, OmokSide.BLACK);
   }
 
-  private setupGame(
-    mode: OmokMode,
-    mySide: OmokSideType,
-    firstTurn: OmokSideType
-  ) {
-    // 방 대기실 UI 정리 (BaseRoomManager의 cleanup 사용)
-    if (mode === OmokMode.ONLINE) {
-      this.managers.room!.cleanup();
-    }
-
-    // 게임 상태 설정
-    this.gameState.mode = mode;
-    this.gameState.currentTurn = firstTurn;
-    this.gameState.isStarted = true;
-
-    this.managers.omok!.resetGame();
-
-    // 보드 초기화
-    this.managers.board!.clear();
-    this.managers.board!.renderBoard();
-
-    // 게임 UI 생성 (OmokUIManager의 메서드들)
-    this.managers.ui!.createPlayerProfiles(mode, mySide);
-    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
-
-    // 금수 마커 표시
-    this.managers.board!.updateForbiddenMarkers(
-      this.gameState.currentTurn,
-      true
-    );
-  }
-
   // =====================================================================
   // =====================================================================
 
@@ -479,6 +460,85 @@ export class OmokScene extends BaseGameScene {
 
   // =====================================================================
   // =====================================================================
+
+  protected setupRematchCallbacks(): void {
+    console.log("[OmokScene] 재대결 콜백 등록");
+
+    // 1. 재대결 요청 받음
+    // 1. 재대결 요청 받음 (상대방 화면)
+    this.managers.room.setOnRematchRequested((requester) => {
+      this.handleRematchRequest(requester);
+    });
+
+    // 2. 상대방이 수락함
+    this.managers.room.setOnRematchAccepted((accepter) => {
+      console.log(`[OmokScene] ${accepter}님이 재대결 수락`);
+      this.managers.ui?.showWaitingMessage("게임을 시작합니다...");
+    });
+
+    // 3. 상대방이 거절함
+    this.managers.room.setOnRematchDeclined((decliner) => {
+      console.log(`[OmokScene] ${decliner}님이 재대결 거절`);
+      alert(`${decliner}님이 재대결을 거절했습니다.`);
+
+      // UI 정리하고 온라인 메뉴로
+      this.managers.ui?.clear();
+      this.showOnlineMenu();
+    });
+
+    // 4. 재대결 시작 (양쪽 모두 수락)
+    this.managers.room.setOnRematchStart(() => {
+      console.log("[OmokScene] 재대결 시작!");
+      this.handleRematchStart();
+    });
+  }
+
+  private handleRematchRequest(requester: string): void {
+    // 1. 렌더링 루프 방해 방지 및 동기적 confirm 호출을 위한 지연
+    setTimeout(() => {
+      const result = window.confirm(
+        `${requester}님이 재대결을 요청했습니다.\n수락하시겠습니까?`
+      );
+
+      // 2. ID 확보 및 타입 변환 (null -> undefined)
+      const rawId =
+        this.onlineState.currentRoomId || this.managers.network?.getRoomId();
+      const roomId = rawId ?? undefined;
+
+      if (result) {
+        console.log("[OmokScene] 재대결 수락");
+        this.managers.room.acceptRematch(roomId);
+      } else {
+        console.log("[OmokScene] 재대결 거절");
+        this.managers.room.declineRematch(roomId);
+      }
+    }, 100);
+  }
+
+  private handleRematchStart(): void {
+    console.log("[OmokScene] 재대결 시작!");
+
+    // 게임 상태 초기화
+    this.resetAllManagers();
+    this.managers.board?.renderBoard();
+
+    this.gameState.isStarted = false;
+    this.gameState.currentTurn = OmokSide.BLACK;
+
+    // UI 정리
+    this.managers.ui?.clear();
+  }
+
+  // =====================================================================
+  // =====================================================================
+
+  // 클릭된 위치(x, y) 좌표가 pointer 객체에 담기고
+  // 그걸 handlePlayerInput에 넘김
+  private setupInputHandler(): void {
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      this.handlePlayerInput(pointer);
+    });
+  }
 
   private handlePlayerInput(pointer: Phaser.Input.Pointer): void {
     if (!this.isInputValid()) return;
@@ -601,15 +661,15 @@ export class OmokScene extends BaseGameScene {
     );
   }
 
+  // =====================================================================
+  // =====================================================================
+
   private shouldExecuteAiTurn(): boolean {
     return (
       this.gameState.mode === OmokMode.SINGLE &&
       this.gameState.currentTurn === OmokSide.WHITE
     );
   }
-
-  // =====================================================================
-  // =====================================================================
 
   private executeAiTurn(): void {
     if (!this.gameState.isStarted || this.managers.ai!.isAiThinking()) {
@@ -683,31 +743,92 @@ export class OmokScene extends BaseGameScene {
   // =====================================================================
   // =====================================================================
 
+  // protected restartGame(): void {
+  //   const mode = this.gameState.mode;
+  //   const mySide = this.onlineState.mySide || OmokSide.BLACK;
+
+  //   this.resetAllManagers();
+  //   this.managers.board?.renderBoard();
+
+  //   this.gameState.isStarted = false;
+  //   this.gameState.currentTurn = 1;
+
+  //   if (mode === OmokMode.ONLINE) {
+  //     this.onlineState.mySide = 0;
+  //     this.onlineState.isSideAssigned = false;
+  //     // this.onlineState.currentRoomId = null;
+
+  //     this.restartOnlineGame();
+  //   }
+
+  //   if (mode === OmokMode.SINGLE) {
+  //     this.startSingleGame(mySide);
+  //   } else if (mode === OmokMode.LOCAL) {
+  //     this.startLocalGame(mode, mySide);
+  //   } else if (mode === OmokMode.ONLINE) {
+  //     // this.showOnlineMenu();
+  //     this.startOnlineGame();
+  //   } else {
+  //     this.scene.restart();
+  //   }
+  // }
   protected restartGame(): void {
     const mode = this.gameState.mode;
-    const mySide = this.onlineState.mySide || OmokSide.BLACK;
-
-    this.resetAllManagers();
-    this.managers.board?.renderBoard();
-
-    this.gameState.isStarted = false;
-    this.gameState.currentTurn = 1;
 
     if (mode === OmokMode.ONLINE) {
-      this.onlineState.mySide = 0;
-      this.onlineState.isSideAssigned = false;
-      this.onlineState.currentRoomId = null;
-    }
+      // 온라인 모드: 재대결 요청
+      console.log("[OmokScene] 재대결 요청 전송");
+      // this.managers.room.requestRematch();
 
-    if (mode === OmokMode.SINGLE) {
+      this.restartOnlineGame();
+
+      // 대기 메시지 표시
+      this.managers.ui!.showWaitingMessage("상대방의 응답을 기다리는 중...");
+    } else if (mode === OmokMode.SINGLE) {
+      // 싱글 모드
+      const mySide = this.gameState.userSide || OmokSide.BLACK;
+      this.resetAllManagers();
+      this.managers.board?.renderBoard();
+      this.gameState.isStarted = false;
+      this.gameState.currentTurn = 1;
       this.startSingleGame(mySide);
     } else if (mode === OmokMode.LOCAL) {
+      // 로컬 모드
+      const mySide = this.gameState.userSide || OmokSide.BLACK;
+      this.resetAllManagers();
+      this.managers.board?.renderBoard();
+      this.gameState.isStarted = false;
+      this.gameState.currentTurn = 1;
       this.startLocalGame(mode, mySide);
-    } else if (mode === OmokMode.ONLINE) {
-      this.showOnlineMenu();
-    } else {
-      this.scene.restart();
     }
+  }
+
+  protected restartOnlineGame(): void {
+    console.log("DEBUG: currentRoomId =", this.onlineState.currentRoomId);
+    console.log(
+      "DEBUG: NetworkManager Id =",
+      this.managers.network?.getRoomId()
+    );
+
+    const roomId =
+      this.onlineState.currentRoomId || this.managers.network?.getRoomId();
+
+    if (!roomId) {
+      console.warn("[OmokScene] 방 ID 없음 - 온라인 메뉴로");
+      this.showOnlineMenu();
+      return;
+    }
+
+    console.log(`[OmokScene] 재대결 요청: ${roomId}`);
+
+    // ✅ UI 먼저 정리
+    this.managers.ui?.clear();
+
+    // 재대결 요청
+    this.managers.room?.requestRematch(roomId);
+
+    // 대기 메시지 표시 (온라인 메뉴 대신)
+    this.managers.ui?.showWaitingMessage("상대방의 응답을 기다리는 중...");
   }
 
   private resetAllManagers(): void {
@@ -716,6 +837,41 @@ export class OmokScene extends BaseGameScene {
     this.managers.omok?.resetGame();
     this.managers.room?.cleanup();
     this.managers.ai?.cleanup();
+  }
+
+  // =====================================================================
+  // =====================================================================
+
+  private setupGame(
+    mode: OmokMode,
+    mySide: OmokSideType,
+    firstTurn: OmokSideType
+  ) {
+    // 방 대기실 UI 정리 (BaseRoomManager의 cleanup 사용)
+    if (mode === OmokMode.ONLINE) {
+      this.managers.room!.cleanup();
+    }
+
+    // 게임 상태 설정
+    this.gameState.mode = mode;
+    this.gameState.currentTurn = firstTurn;
+    this.gameState.isStarted = true;
+
+    this.managers.omok!.resetGame();
+
+    // 보드 초기화
+    this.managers.board!.clear();
+    this.managers.board!.renderBoard();
+
+    // 게임 UI 생성 (OmokUIManager의 메서드들)
+    this.managers.ui!.createPlayerProfiles(mode, mySide);
+    this.managers.ui!.updateTurnUI(this.gameState.currentTurn);
+
+    // 금수 마커 표시
+    this.managers.board!.updateForbiddenMarkers(
+      this.gameState.currentTurn,
+      true
+    );
   }
 
   private setupEventListeners(): void {

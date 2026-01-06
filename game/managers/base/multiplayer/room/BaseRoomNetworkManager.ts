@@ -105,6 +105,24 @@ export abstract class BaseRoomNetworkManager {
     this.on("error", (data: { message: string }) => {
       this.callbacks.onError?.(data.message);
     });
+
+    // 재대결 관련
+
+    this.on("rematchRequested", (data: { requester: string }) => {
+      this.callbacks.onRematchRequested?.(data.requester);
+    });
+
+    this.on("rematchAccepted", (data: { accepter: string }) => {
+      this.callbacks.onRematchAccepted?.(data.accepter);
+    });
+
+    this.on("rematchDeclined", (data: { decliner: string }) => {
+      this.callbacks.onRematchDeclined?.(data.decliner);
+    });
+
+    this.on("rematchStart", () => {
+      this.callbacks.onRematchStart?.();
+    });
   }
 
   // =====================================================================
@@ -232,6 +250,70 @@ export abstract class BaseRoomNetworkManager {
 
   public setOnError(callback: (message: string) => void): void {
     this.callbacks.onError = callback;
+  }
+
+  public requestRematch(manualRoomId?: string): void {
+    const targetId = manualRoomId || this.currentRoomId;
+
+    if (!targetId) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] 방 ID 없음 - 재대결 요청 실패`
+      );
+      return;
+    }
+
+    console.log(`[${this.gamePrefix}RoomNetwork] 재대결 요청 전송`);
+    this.socket.emit(`${this.gamePrefix}:requestRematch`, {
+      // roomId: this.currentRoomId,
+      roomId: targetId,
+    });
+  }
+
+  public setOnRematchRequested(callback: (requester: string) => void): void {
+    this.callbacks.onRematchRequested = callback;
+  }
+
+  public setOnRematchAccepted(callback: (accepter: string) => void): void {
+    this.callbacks.onRematchAccepted = callback;
+  }
+
+  public setOnRematchDeclined(callback: (decliner: string) => void): void {
+    this.callbacks.onRematchDeclined = callback;
+  }
+
+  public setOnRematchStart(callback: () => void): void {
+    this.callbacks.onRematchStart = callback;
+  }
+
+  // =====================================================================
+  // =====================================================================
+
+  public acceptRematch(manualRoomId?: string): void {
+    const targetId = manualRoomId || this.currentRoomId;
+    if (!targetId) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] 방 ID 없음 - 재대결 수락 실패`
+      );
+      return;
+    }
+    this.socket.emit(`${this.gamePrefix}:acceptRematch`, { roomId: targetId });
+  }
+
+  public declineRematch(manualRoomId?: string): void {
+    const targetId = manualRoomId || this.currentRoomId;
+
+    if (!this.currentRoomId) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] 방 ID 없음 - 재대결 거절 실패`
+      );
+      return;
+    }
+
+    console.log(`[${this.gamePrefix}RoomNetwork] 재대결 거절: ${targetId}`);
+    this.socket.emit(`${this.gamePrefix}:declineRematch`, {
+      // roomId: this.currentRoomId,
+      roomId: targetId,
+    });
   }
 
   // =====================================================================

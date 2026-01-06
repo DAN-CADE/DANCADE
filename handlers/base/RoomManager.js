@@ -57,6 +57,15 @@ class RoomManager {
     this.socket.on(`${this.gamePrefix}:getRoomList`, () =>
       this.handleGetRoomList()
     );
+    this.socket.on(`${this.gamePrefix}:requestRematch`, (data) =>
+      this.handleRequestRematch(data)
+    );
+    this.socket.on(`${this.gamePrefix}:acceptRematch`, (data) =>
+      this.handleAcceptRematch(data)
+    );
+    this.socket.on(`${this.gamePrefix}:declineRematch`, (data) =>
+      this.handleDeclineRematch(data)
+    );
   }
 
   // ----------------------------- 방 생성
@@ -321,6 +330,147 @@ class RoomManager {
         message: "방 목록을 불러올 수 없습니다.",
       });
     }
+  }
+
+  // ----------------------------- 재대결
+
+  handleRequestRematch(data) {
+    const { roomId } = data;
+    const room = this.rooms.get(roomId);
+
+    if (!room) {
+      this.socket.emit(`${this.gamePrefix}:error`, {
+        message: "방을 찾을 수 없습니다.",
+      });
+      return;
+    }
+
+    const requester = room.players.find((p) => p.socketId === this.socket.id);
+    if (!requester) {
+      this.socket.emit(`${this.gamePrefix}:error`, {
+        message: "방에 참가하지 않은 사용자입니다.",
+      });
+      return;
+    }
+
+    console.log(`[${this.gamePrefix}] 재대결 요청: ${requester.username}`);
+
+    // 재대결 요청 상태 초기화
+    room.rematchRequests = room.rematchRequests || {};
+    room.rematchRequests[this.socket.id] = true;
+
+    // 상대방에게 재대결 요청 알림
+    this.io.to(roomId).emit(`${this.gamePrefix}:rematchRequested`, {
+      requester: requester.username,
+      socketId: this.socket.id, // 누가 요청했는지 구분하기 위함
+    });
+
+    console.log(`[${this.gamePrefix}] 재대결 요청 전송 완료`);
+  }
+
+  handleAcceptRematch(data) {
+    const { roomId } = data;
+    const room = this.rooms.get(roomId);
+
+    if (!room) {
+      this.socket.emit(`${this.gamePrefix}:error`, {
+        message: "방을 찾을 수 없습니다.",
+      });
+      return;
+    }
+
+    const accepter = room.players.find((p) => p.socketId === this.socket.id);
+    if (!accepter) {
+      return;
+    }
+
+    console.log(`[${this.gamePrefix}] 재대결 수락: ${accepter.username}`);
+
+    // 수락 상태 추가
+    room.rematchRequests = room.rematchRequests || {};
+    room.rematchRequests[this.socket.id] = true;
+
+    // 상대방에게 수락 알림
+    this.socket.to(roomId).emit(`${this.gamePrefix}:rematchAccepted`, {
+      accepter: accepter.username,
+    });
+
+    // 양쪽 모두 수락했는지 확인
+    const allAccepted = room.players.every(
+      (p) => room.rematchRequests[p.socketId] === true
+    );
+
+    if (allAccepted) {
+      console.log(`[${this.gamePrefix}] 양쪽 모두 수락 - 재대결 시작`);
+      this.startRematch(room);
+    }
+  }
+
+  handleDeclineRematch(data) {
+    const { roomId } = data;
+    const room = this.rooms.get(roomId);
+
+    if (!room) return;
+
+    const decliner = room.players.find((p) => p.socketId === this.socket.id);
+    if (!decliner) return;
+
+    console.log(`[${this.gamePrefix}] 재대결 거절: ${decliner.username}`);
+
+    // 재대결 요청 초기화
+    room.rematchRequests = {};
+
+    // 상대방에게 거절 알림
+    this.socket.to(roomId).emit(`${this.gamePrefix}:rematchDeclined`, {
+      decliner: decliner.username,
+    });
+  }
+
+  startRematch(room) {
+    // 게임 상태 초기화
+    room.status = "waiting";
+    room.rematchRequests = {};
+
+    // 플레이어 상태 초기화
+    room.players.forEach((player) => {
+      player.isReady = false;
+      player.side = null;
+    });
+
+    console.log(`[${this.gamePrefix}] 재대결 시작: ${room.roomId}`);
+
+    // 양쪽에 재대결 시작 알림
+    this.io.to(room.roomId).emit(`${this.gamePrefix}:rematchStart`);
+
+    // 약간의 딜레이 후 게임 자동 시작
+    setTimeout(() => {
+      this.autoStartRematch(room);
+    }, 1000);
+  }
+
+  autoStartRematch(room) {
+    if (room.players.length < 2) {
+      console.warn(
+        `[${this.gamePrefix}] 재대결 자동 시작 실패 - 플레이어 부족`
+      );
+      return;
+    }
+
+    // 모든 플레이어를 준비 상태로 변경
+    room.players.forEach((player) => {
+      player.isReady = true;
+    });
+
+    room.status = "playing";
+    room.startTime = Date.now();
+
+    console.log(`[${this.gamePrefix}] 재대결 게임 자동 시작: ${room.roomId}`);
+
+    // 게임 시작 이벤트 발송
+    this.io.to(room.roomId).emit(`${this.gamePrefix}:gameStart`, {
+      roomData: room,
+      roomId: room.roomId,
+    });
   }
 
   // ----------------------------- 연결 해제 처리

@@ -34,6 +34,7 @@ export interface gameState {
   isStarted: boolean;
   currentTurn: OmokSideType;
   mode: OmokMode;
+  userSide?: OmokSideType;
 }
 
 export interface onlineState {

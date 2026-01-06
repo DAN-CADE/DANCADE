@@ -35,6 +35,13 @@ class OmokGameManager {
     this.socket.on("omok:startGame", (data) => this.handleStartGame(data));
     this.socket.on("omok:move", (data) => this.handleMove(data));
     this.socket.on("omok:gameOver", (data) => this.handleGameOver(data));
+    this.socket.on("omok:rematchStart", (data) => {
+      const { roomId } = data;
+      const room = this.rooms.get(roomId);
+      if (room) {
+        this.assignsides(room);
+      }
+    });
   }
 
   // =====================================================================

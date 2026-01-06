@@ -28,6 +28,7 @@ export class OmokUIManager {
     this.modeSelectionRenderer.cleanup();
     this.profileRenderer.clear();
     this.messageRenderer.clear();
+    this.endGameRenderer.cleanup?.();
   }
 
   // =====================================================================
@@ -68,5 +69,10 @@ export class OmokUIManager {
     onExit: () => void
   ): void {
     this.endGameRenderer.show(winner, onRestart, onExit);
+  }
+
+  public hideButtons(): void {
+    this.endGameRenderer.cleanup?.();
+    this.messageRenderer.clear();
   }
 }
