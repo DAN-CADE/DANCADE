@@ -1,5 +1,5 @@
 // lib/inventory.ts (아무 파일에 만들어도 됨)
-import { supabase } from "@/lib/supabase/server"; 
+import { supabase } from "@/lib/supabase/client"; 
 
 
 /**
@@ -67,4 +67,18 @@ export async function fetchUserInventory(
         purchasedAt: row.purchased_at,
       };
     });
+}
+
+export async function saveItemToInventory(userId: string, itemId: string) {
+  const insertEventGame = {
+      user_id: userId,
+      item_id: itemId,
+      is_equipped: true,
+  };
+
+  // 쿼리 실행 [이벤트 게임 생성]
+  const { data: newEventGame, error: postError } = await supabase
+  .from("user_inventory")
+  .insert([insertEventGame])
+  .select();
 }
