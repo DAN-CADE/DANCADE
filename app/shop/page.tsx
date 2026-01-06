@@ -84,8 +84,8 @@ export default function ShopPage(){
 
 
   const handleSelectProduct = (product: Product) => {
-    const user = requireUser();
-    if (!user) return;
+    // const user = requireUser();
+    // if (!user) return;
 
     handlePreviewItem(product)
     // setSelectedProduct(product);

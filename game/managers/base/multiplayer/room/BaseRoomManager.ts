@@ -19,6 +19,10 @@ export abstract class BaseRoomManager {
     leavingPlayer: string
   ) => void;
   private onErrorCallback?: (message: string) => void;
+  private onRematchRequestedCallback?: (requester: string) => void;
+  private onRematchAcceptedCallback?: (accepter: string) => void;
+  private onRematchDeclinedCallback?: (decliner: string) => void;
+  private onRematchStartCallback?: () => void;
 
   constructor(scene: Phaser.Scene, socket: Socket) {
     this.scene = scene;
@@ -109,6 +113,23 @@ export abstract class BaseRoomManager {
       this.onGameAbortedCallback?.(reason, player)
     );
     this.networkManager.setOnError((msg) => this.onErrorCallback?.(msg));
+
+    // 재대결
+    this.networkManager.setOnRematchRequested((requester) => {
+      this.onRematchRequestedCallback?.(requester);
+    });
+
+    this.networkManager.setOnRematchAccepted((accepter) => {
+      this.onRematchAcceptedCallback?.(accepter);
+    });
+
+    this.networkManager.setOnRematchDeclined((decliner) => {
+      this.onRematchDeclinedCallback?.(decliner);
+    });
+
+    this.networkManager.setOnRematchStart(() => {
+      this.onRematchStartCallback?.();
+    });
   }
 
   // =====================================================================
@@ -196,16 +217,6 @@ export abstract class BaseRoomManager {
     this.networkManager.leaveRoom();
   }
 
-  public cleanup(): void {
-    this.networkManager.clear?.();
-    this.uiManager.cleanup?.();
-
-    // [중요] RoomUIEvent에 정의된 모든 상수를 순회하며 리스너 자동 해제
-    Object.values(RoomUIEvent).forEach((event) => {
-      this.scene.events.off(event);
-    });
-  }
-
   public setOnGameStart(cb: () => void) {
     this.onGameStartCallback = cb;
   }
@@ -214,5 +225,43 @@ export abstract class BaseRoomManager {
   }
   public setOnError(cb: (m: string) => void) {
     this.onErrorCallback = cb;
+  }
+
+  public requestRematch(roomId?: string): void {
+    this.networkManager.requestRematch(roomId);
+  }
+
+  public acceptRematch(roomId?: string): void {
+    this.networkManager.acceptRematch(roomId);
+  }
+
+  public declineRematch(roomId?: string): void {
+    this.networkManager.declineRematch(roomId);
+  }
+
+  public setOnRematchRequested(cb: (requester: string) => void): void {
+    this.onRematchRequestedCallback = cb;
+  }
+
+  public setOnRematchAccepted(cb: (accepter: string) => void): void {
+    this.onRematchAcceptedCallback = cb;
+  }
+
+  public setOnRematchDeclined(cb: (decliner: string) => void): void {
+    this.onRematchDeclinedCallback = cb;
+  }
+
+  public setOnRematchStart(cb: () => void): void {
+    this.onRematchStartCallback = cb;
+  }
+
+  public cleanup(): void {
+    this.networkManager.clear?.();
+    this.uiManager.cleanup?.();
+
+    // [중요] RoomUIEvent에 정의된 모든 상수를 순회하며 리스너 자동 해제
+    Object.values(RoomUIEvent).forEach((event) => {
+      this.scene.events.off(event);
+    });
   }
 }

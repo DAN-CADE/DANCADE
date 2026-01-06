@@ -2,6 +2,7 @@
 import { AvatarManager } from "@/game/managers/global/AvatarManager";
 import { MainScene } from "@/game/scenes/core/MainScene";
 import { getEventGame } from "@/lib/supabase/event"
+import { getRankings } from "@/lib/supabase/ranking";
 
 export type NpcType = 'MERCHANT' | 'VILLAGER' | 'EVENT';
 
@@ -28,10 +29,10 @@ export const NPC_CONFIG: Record<NpcType, NpcData> = {
     }
   },
   VILLAGER: {
-    name: "주민",
+    name: "랭킹 NPC",
     defaultSprite: "female",
-    interaction: (scene, npc) => {
-      scene.uiManager.showSpeechBubble(npc, "오늘 날씨가 참 좋네요.", 2000);
+    interaction: async (scene, npc) => {
+      scene.uiManager.showRankingBoardUI()
     }
   },
   EVENT: {

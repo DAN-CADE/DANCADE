@@ -4,7 +4,7 @@
  */
 // =====================================================================
 
-export interface InsertSingleGameResultParams {
+export interface InsertGameResultParams {
   game_type: string;
   play_mode: "single" | "multiplayer";
   user_id: string;
@@ -25,7 +25,7 @@ export interface InsertSingleGameResultParams {
  */
 // =====================================================================
 
-export interface InsertGameResultParams {
+export interface InsertMultiGameResultParams {
   room_id: string;
   game_type: string;
   winner_user_id: string;
