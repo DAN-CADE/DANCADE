@@ -9,8 +9,9 @@
 // =====================================================================
 export enum PingPongMode {
   NONE = 0,
-  SINGLE = 1, // AI 대전
-  ONLINE = 2, // 온라인 대전
+  SINGLE = 1, // vs AI
+  LOCAL = 2, // 로컬 2인 대전
+  ONLINE = 3, // 온라인 대전
 }
 
 // =====================================================================
@@ -62,6 +63,7 @@ export interface PingPongGameState {
 
   // 선택된 게임 모드
   mode: PingPongMode;
+  difficulty?: "easy" | "medium" | "hard";
 }
 
 /** 게임 결과 데이터 */

@@ -7,7 +7,6 @@ import {
   PingPongBall,
   PingPongGameState,
   PingPongInputState,
-  PingPongGameResult,
   PingPongMode,
 } from "@/game/types/pingpong";
 import { PingPongGameManager } from "@/game/managers/games/pingpong/PingPongGameManager";
@@ -139,9 +138,9 @@ export class PingPongScene extends BaseGameScene {
       this.gameState,
       this.inputState,
       {
-        onSpacePress: () => this.handleSpacePress(),
         onColorSelect: (direction) => this.handleColorSelect(direction),
         onServeAdjust: (direction) => this.handleServeAdjust(direction),
+        onServe: () => this.handleServe(),
       }
     );
   }
@@ -162,7 +161,7 @@ export class PingPongScene extends BaseGameScene {
   }
 
   protected onGameReady(): void {
-    this.uiManager.showStartMenu();
+    this.showModeSelection();
   }
 
   protected handleGameEnd(result: string): void {
@@ -252,23 +251,52 @@ export class PingPongScene extends BaseGameScene {
     };
   }
 
-  private handleSpacePress(): void {
-    switch (this.gameState.gameMode) {
-      case "menu":
-        this.showColorSelection();
-        break;
-      case "colorSelect":
-        this.startGame();
-        break;
-      case "playing":
-        if (
-          this.gameState.isPreparingServe ||
-          (!this.gameState.isPlaying &&
-            this.gameState.servingPlayer === "player")
-        ) {
-          this.gameManager.serve();
-        }
-        break;
+  // ============================================================
+  // 모드 선택 및 게임 시작
+  // ============================================================
+
+  private showModeSelection(): void {
+    this.gameState.gameMode = "menu";
+    this.children.removeAll();
+    this.uiManager.showModeSelection((mode) => {
+      switch (mode) {
+        case PingPongMode.SINGLE:
+          this.startSingleGame();
+          break;
+        case PingPongMode.ONLINE:
+          this.showOnlineMenu();
+          break;
+        default:
+          this.exitToMainScene();
+      }
+    });
+  }
+
+  private startSingleGame(): void {
+    this.gameState.mode = PingPongMode.SINGLE;
+    this.showColorSelection();
+  }
+
+  private showOnlineMenu(): void {
+    // TODO: 온라인 매칭 UI 추가
+    console.log("온라인 모드는 준비 중입니다.");
+    this.showModeSelection();
+  }
+
+  private exitToMainScene(): void {
+    this.scene.start("MainScene");
+  }
+
+  // ============================================================
+  // 게임 UI 및 입력
+  // ============================================================
+
+  private handleServe(): void {
+    if (
+      this.gameState.isPreparingServe &&
+      this.gameState.servingPlayer === "player"
+    ) {
+      this.gameManager.serve();
     }
   }
 
@@ -287,12 +315,21 @@ export class PingPongScene extends BaseGameScene {
     this.gameState.gameMode = "colorSelect";
     this.children.removeAll();
     this.createBoard();
-    this.uiManager.showColorSelection(this.playerPaddleColorIndex);
+    this.uiManager.showColorSelection(this.playerPaddleColorIndex, () => {
+      this.startGame();
+    });
   }
 
   private startGame(): void {
     this.gameState.gameMode = "playing";
     this.aiPaddleColorIndex = this.playerPaddleColorIndex === 0 ? 1 : 0;
+
+    console.log("🎮 [PingPong] 게임 시작!");
+    console.log(
+      "📊 모드:",
+      this.gameState.mode === 1 ? "SINGLE (AI)" : "ONLINE"
+    );
+    console.log("🎨 플레이어 색상:", this.playerPaddleColorIndex);
 
     this.children.removeAll();
     this.createGameObjects();

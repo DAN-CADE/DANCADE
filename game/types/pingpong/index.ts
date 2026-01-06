@@ -17,16 +17,6 @@ export * from "@/game/types/pingpong/pingpong.network.types";
 export * from "@/game/types/pingpong/pingpong.ui.types";
 
 /**
- * 핑퐁 게임 모드
- */
-export enum PingPongMode {
-  NONE = 0,
-  SINGLE = 1, // vs AI
-  LOCAL = 2, // 로컬 2인 대전
-  ONLINE = 3, // 온라인 대전
-}
-
-/**
  * 핑퐁 역할 (패들 위치)
  */
 export type PingPongRole = "left" | "right";
