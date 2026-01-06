@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // handlers/base/BaseMatchmaking.js
 
 const { generateRoomId } = require("./utils/RoomUtils");
@@ -254,7 +256,7 @@ class BaseMatchmaking {
    *   room.players[1].side = "right";
    * }
    */
-  assignRoles(room) {
+  assignRoles(_room) {
     throw new Error(
       `${this.gamePrefix}Matchmaking must implement assignRoles(room) method`
     );
