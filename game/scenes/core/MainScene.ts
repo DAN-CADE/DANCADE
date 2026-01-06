@@ -10,6 +10,8 @@ import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 import { UIManager } from "@/game/managers/global/UIManager";
 import { createEventGame } from "@/lib/supabase/event";
+import { supabase } from "@/lib/supabase/client"
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -58,6 +60,9 @@ export class MainScene extends BaseGameScene {
     direction: "up" | "down" | "left" | "right";
     isMoving: boolean;
   } | null = null;
+
+  // 실시간 랭킹
+  private rankingSubscription: RealtimeChannel | null = null;
 
   constructor() {
     super({ key: "MainScene" });
@@ -205,6 +210,8 @@ export class MainScene extends BaseGameScene {
   protected createGameObjects(): void {
     this.mapManager.createMap();
     this.uiManager.createGameUI();
+    this.uiManager.createConsonantQuizUI();
+    this.uiManager.createRankingBoardUI();
 
     const currentData = this.avatarDataManager.customization;
     this.player.createAvatar(
@@ -274,6 +281,17 @@ export class MainScene extends BaseGameScene {
     this.events.on("destroy", () => {
       this.cleanupSocket();
     });
+
+    this.rankingSubscription = supabase
+      .channel('realtime_rankings')
+      .on(
+          'postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'leaderboards' },
+          (payload) => {
+            this.uiManager.showNotice("랭킹 게시판이 갱신되었습니다.")
+          }
+      )
+      .subscribe();
   }
 
   update(): void {
@@ -482,6 +500,11 @@ export class MainScene extends BaseGameScene {
     this.playerNameTags.clear();
 
     this.onlinePlayers.clear();
+
+    if (this.rankingSubscription) {
+      supabase.removeChannel(this.rankingSubscription);
+      this.rankingSubscription = null;
+    }
   }
 
   private cleanupSocket(): void {

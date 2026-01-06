@@ -1,6 +1,7 @@
 // src/game/managers/UIManager.ts
 import { MainScene } from "@/game/scenes/core/MainScene";
 import { AvatarManager } from "./AvatarManager";
+import { getRankings } from "@/lib/supabase/ranking";
 
 export type Choice = 'rock' | 'paper' | 'scissors';
 
@@ -11,6 +12,7 @@ export class UIManager {
   private isPlaying: boolean = false;
   private currentNpc: AvatarManager | null = null;
 
+  // 초성 게임
   private choseongUIContainer!: Phaser.GameObjects.Container;
   private choseongQuizText!: Phaser.GameObjects.Text;
   private choseongInputDisplay!: Phaser.GameObjects.Text;
@@ -20,6 +22,11 @@ export class UIManager {
   private hiddenInput!: HTMLInputElement; // 한글 입력을 위한 실제 입력창
   private currentChoseongAnswer: string = "";
   private currentChoseongInput: string = "";
+
+  // 랭킹보드 
+  private rankingContainer!: Phaser.GameObjects.Container;
+  private rankingListGroup!: Phaser.GameObjects.Group; // 랭킹 줄 항목들을 담을 그룹
+  private currentRankingType: string = 'omok'; // 현재 보고 있는 게임 타입
 
   constructor(scene: MainScene) {
     this.scene = scene;
@@ -164,7 +171,6 @@ export class UIManager {
    * 모달 열기 (간단 버전)
    */
   public openModal(title: string, message: string) {
-    console.log(`Modal: [${title}] ${message}`);
     (this.scene as any).openModal?.(title, message);
 
     // 메인 물리 엔진 멈춤
@@ -371,6 +377,167 @@ export class UIManager {
       // 커서 위치를 다시 중앙(0)으로 리셋
       this.cursorDisplay.setX(0); 
       this.hiddenInput.focus();
+    }
+  }
+
+  //랭킹보드
+ public createRankingBoardUI() {
+    const { width, height } = this.scene.scale;
+
+    // 1. 리스트 그룹 초기화 확인
+    if (!this.rankingListGroup) {
+        this.rankingListGroup = this.scene.add.group();
+    }
+
+    // 2. 컨테이너 생성
+    this.rankingContainer = this.scene.add.container(width / 2, height / 2)
+        .setDepth(20000)
+        .setVisible(false)
+        .setScrollFactor(0);
+
+    const panelWidth = 400;
+    const panelHeight = 500;
+
+    // 3. 배경 패널 (뒤로 클릭이 전달되지 않도록 설정)
+    const panelBg = this.scene.add.rectangle(0, 0, panelWidth, panelHeight, 0x2c3e50, 0.95)
+        .setStrokeStyle(3, 0xffffff)
+        .setInteractive(); // 영역만 확보하고 콜백은 없음
+
+    // 4. 타이틀
+    const title = this.scene.add.text(0, -panelHeight / 2 + 30, "🏆 HALL OF FAME", {
+        fontSize: '28px', fontStyle: 'bold', color: '#f1c40f'
+    }).setOrigin(0.5);
+
+    // 5. 탭 생성 (클릭 문제 해결의 핵심)
+    const tabY = -panelHeight / 2 + 80;
+    const tabW = 110;
+    const tabH = 40;
+    const tabGap = 125;
+    const tabStyle = { fontSize: '16px', color: '#ffffff' };
+
+    // 탭 생성 헬퍼 함수
+    const createTab = (x: number, label: string, gameType: string) => {
+        const tabBg = this.scene.add.rectangle(x, tabY, tabW, tabH, 0x34495e)
+            // 히트 영역을 명시적으로 지정 (0, 0 좌표 기준)
+            .setInteractive(new Phaser.Geom.Rectangle(0, 0, tabW, tabH), Phaser.Geom.Rectangle.Contains)
+            .setScrollFactor(0);
+
+        const tabText = this.scene.add.text(x, tabY, label, tabStyle).setOrigin(0.5);
+
+        // 'pointerdown' 대신 'pointerup'이 UI 버튼 클릭에 더 안정적입니다.
+        tabBg.on('pointerdown', () => {
+            tabBg.setAlpha(0.7); // 클릭 시 시각적 피드백
+        });
+
+        tabBg.on('pointerup', (pointer: any) => {
+            tabBg.setAlpha(1);
+            this.showRankingBoardUI(gameType);
+        });
+
+        // 마우스 오버 효과
+        tabBg.on('pointerover', () => tabBg.setFillStyle(0x546e7a));
+        tabBg.on('pointerout', () => tabBg.setFillStyle(0x34495e));
+
+        return { tabBg, tabText };
+    };
+
+    const tabOmok = createTab(-tabGap, "오목", 'omok');
+    const tabBrick = createTab(0, "블록깨기", 'brick-breaker');
+    const tabPing = createTab(tabGap, "핑퐁", 'ping-pong');
+
+    // 6. 닫기 버튼
+     const closeBtn = this.scene.add.text(panelWidth / 2 - 25, -panelHeight / 2 + 25, "✕", { 
+        fontSize: '28px', 
+        color: '#ffffff',
+        backgroundColor: '#e74c3c', // 디버깅용으로 색상 추가, 작동 확인 후 제거 가능
+        padding: { x: 10, y: 10 } 
+    })
+    .setOrigin(0.5)
+    .setInteractive(new Phaser.Geom.Rectangle(0, 0, tabW, tabH), Phaser.Geom.Rectangle.Contains)
+    .setScrollFactor(0);
+
+    // 'pointerdown' 대신 'pointerup'이 UI 버튼 클릭에 더 안정적입니다.
+      closeBtn.on('pointerdown', () => {
+          closeBtn.setAlpha(0.7); // 클릭 시 시각적 피드백
+      });
+      
+    // 닫기 버튼 이벤트
+    closeBtn.on('pointerup', (pointer: any) => {
+        closeBtn.setAlpha(1);
+        this.hideRankingBoardUI();
+    });
+
+    // 7. 컨테이너에 추가 (순서가 중요: 배경이 0번 인덱스)
+    this.rankingContainer.add([
+        panelBg, 
+        title, 
+        tabOmok.tabBg, tabOmok.tabText, 
+        tabBrick.tabBg, tabBrick.tabText, 
+        tabPing.tabBg, tabPing.tabText, 
+        closeBtn
+    ]);
+}
+
+public async showRankingBoardUI(gameType: string = 'omok') {
+    const { width, height } = this.scene.scale;
+    this.rankingContainer.setPosition(width / 2, height / 2);
+    this.rankingContainer.setVisible(true);
+    
+    // 탭 강조 로직 (선택된 탭 색상 변경)
+    this.updateTabVisuals(gameType);
+    
+    await this.refreshRankingList(gameType);
+}
+
+private updateTabVisuals(gameType: string) {
+    // 컨테이너 내부의 탭 사각형들 색상 변경 로직 (생략 가능하나 시각적으로 필요)
+    // tabOmok.setFillStyle(...) 등
+}
+
+private async refreshRankingList(gameType: string) {
+    // 1. 기존 리스트 아이템들을 그룹에서 제거 및 파괴(Destroy)
+    this.rankingListGroup.clear(true, true);
+
+    try {
+        const data = await getRankings(gameType);
+
+        if (!data || data.length === 0) {
+            const noData = this.scene.add.text(0, 0, "데이터가 없습니다.", { fontSize: '18px' }).setOrigin(0.5);
+            this.rankingContainer.add(noData);
+            this.rankingListGroup.add(noData);
+            return;
+        }
+
+        data.forEach((item: any, index: number) => {
+            const yPos = -80 + (index * 40); 
+            const rankColor = index === 0 ? '#f1c40f' : (index === 1 ? '#bdc3c7' : (index === 2 ? '#e67e22' : '#ffffff'));
+
+            const rankTxt = this.scene.add.text(-150, yPos, `${index + 1}`, { 
+                fontSize: '20px', color: rankColor, fontStyle: 'bold' 
+            }).setOrigin(0.5);
+            
+            const nameTxt = this.scene.add.text(-20, yPos, item.users.nickname, { 
+                fontSize: '18px', color: '#ffffff' 
+            }).setOrigin(0.5);
+            
+            const scoreTxt = this.scene.add.text(130, yPos, `${item.score}`, { 
+                fontSize: '18px', color: '#2ecc71', fontStyle: 'bold' 
+            }).setOrigin(0.5);
+
+            // 중요: 컨테이너와 그룹에 모두 추가
+            this.rankingContainer.add([rankTxt, nameTxt, scoreTxt]);
+            this.rankingListGroup.addMultiple([rankTxt, nameTxt, scoreTxt]);
+        });
+    } catch (err) {
+        console.error("랭킹 로드 에러:", err);
+    }
+}
+
+public hideRankingBoardUI() {
+    this.rankingContainer.setVisible(false);
+    // 게임 캔버스로 포커스 복구 (캐릭터 이동 가능하게)
+    if (this.scene.game.canvas) {
+        this.scene.game.canvas.focus();
     }
   }
 }
