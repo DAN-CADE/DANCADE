@@ -4,10 +4,8 @@
 import { useCallback } from "react";
 import { GuestUser, isGuestUser, LocalUser } from "@/types/user";
 import { STORAGE_KEYS } from "@/constants/auth";
-import {
-  generateGuestId,
-  generateGuestNickname,
-} from "@/lib/utils/guestNickname";
+import { generateGuestNickname } from "@/lib/utils/guestNickname";
+import { generateGuestId } from "@/lib/utils/auth";
 
 export const useGuestAuth = () => {
   // 저장된 사용자 정보 가져오기
@@ -30,11 +28,12 @@ export const useGuestAuth = () => {
   // 새 게스트 사용자 생성 (AUTH-001, AUTH-002)
   const createNewGuest = useCallback((): GuestUser => {
     const newGuest: GuestUser = {
-      userId: generateGuestId(),
+      id: generateGuestId(),
       nickname: generateGuestNickname(),
+      type: "guest",
       isGuest: true,
       points: 0,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     if (typeof window !== "undefined") {
@@ -42,7 +41,7 @@ export const useGuestAuth = () => {
     }
 
     console.log(
-      `새 게스트 생성 - ID: ${newGuest.userId}, 닉네임: ${newGuest.nickname}`
+      `새 게스트 생성 - ID: ${newGuest.id}, 닉네임: ${newGuest.nickname}`
     );
     return newGuest;
   }, []);

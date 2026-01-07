@@ -99,53 +99,63 @@ export class PingPongAIManager {
     // 벽 반사 시뮬레이션
     // 위/아래 벽을 넘어가면 반사 처리
     const totalHeight = gameHeight;
-    
+
     // 단순화된 반사 계산 (정확한 물리보다는 빠른 반응성)
     while (predictedY < 0 || predictedY > totalHeight) {
-        if (predictedY < 0) {
-            predictedY = -predictedY;
-        } else if (predictedY > totalHeight) {
-            predictedY = 2 * totalHeight - predictedY;
-        }
+      if (predictedY < 0) {
+        predictedY = -predictedY;
+      } else if (predictedY > totalHeight) {
+        predictedY = 2 * totalHeight - predictedY;
+      }
     }
 
     // 3. 목표 지점 계산 (상대방 위치에 따른 전략적 오프셋 적용)
     // - 상대가 위에 있으면 공을 아래로, 아래에 있으면 위로 보내기 위해 패들 타격 위치 조절
     const centerY = gameHeight / 2;
     let strategicOffset = 0;
-    
+
     // 패들 높이의 30% 정도를 오프셋으로 사용
     const maxOffset = gameState.aiPaddleHeight * 0.3;
 
     if (gameState.playerPaddleY < centerY) {
-        // 상대가 위쪽 -> 공을 아래로 보내야 함 (Vy > 0)
-        // 공이 패들 중심보다 아래에 맞아야 함 (Ball Y > Paddle Y) -> Paddle Y < Ball Y
-        // 패들을 공보다 위로 올려야 함
-        strategicOffset = -maxOffset;
+      // 상대가 위쪽 -> 공을 아래로 보내야 함 (Vy > 0)
+      // 공이 패들 중심보다 아래에 맞아야 함 (Ball Y > Paddle Y) -> Paddle Y < Ball Y
+      // 패들을 공보다 위로 올려야 함
+      strategicOffset = -maxOffset;
     } else {
-        // 상대가 아래쪽 -> 공을 위로 보내야 함 (Vy < 0)
-        // 공이 패들 중심보다 위에 맞아야 함 (Ball Y < Paddle Y) -> Paddle Y > Ball Y
-        // 패들을 공보다 아래로 내려야 함
-        strategicOffset = maxOffset;
+      // 상대가 아래쪽 -> 공을 위로 보내야 함 (Vy < 0)
+      // 공이 패들 중심보다 위에 맞아야 함 (Ball Y < Paddle Y) -> Paddle Y > Ball Y
+      // 패들을 공보다 아래로 내려야 함
+      strategicOffset = maxOffset;
     }
 
     // 예측 지점에 전략적 오프셋 반영
     const targetY = predictedY + strategicOffset;
 
-    // 4. 목표 지점과 현재 패들 위치 차이
-    const targetdiff = targetY - aiPaddleY;
+    // 4. 난이도별 예측 오차 추가 (AI 정확도 감소)
+    const errorRange = {
+      easy: 180, // ±180px 오차 (매우 자주 실수)
+      medium: 130, // ±130px 오차 (적당히 실수)
+      hard: 60, // ±60px 오차
+    };
+    const randomError =
+      (Math.random() - 0.5) * 2 * errorRange[gameState.difficulty];
+    const noisyTargetY = targetY + randomError;
 
-    // 4. 난이도별 오차 적용
+    // 5. 목표 지점과 현재 패들 위치 차이
+    const targetdiff = noisyTargetY - aiPaddleY;
+
+    // 6. 거리에 따른 속도 조절
     const absDiff = Math.abs(targetdiff);
     let intensity = 0;
 
     // 거리에 따라 속도 조절
     if (absDiff < 10) {
-        return { direction: "stay", intensity: 0 };
+      return { direction: "stay", intensity: 0 };
     } else if (absDiff < 50) {
-        intensity = 0.5;
+      intensity = 0.5;
     } else {
-        intensity = 1.0;
+      intensity = 1.0;
     }
 
     // 방향 결정
@@ -169,9 +179,10 @@ export class PingPongAIManager {
 
       if (response && response.direction) {
         // intensity를 0.0~1.0 범위로 정규화
-        const intensity = typeof response.intensity === 'number' 
-          ? Math.max(0, Math.min(1.0, response.intensity)) 
-          : 0.5;
+        const intensity =
+          typeof response.intensity === "number"
+            ? Math.max(0, Math.min(1.0, response.intensity))
+            : 0.5;
 
         this.currentDecision = {
           direction: response.direction,
@@ -180,7 +191,11 @@ export class PingPongAIManager {
         };
 
         console.log(
-          `[AI] ${gameState.difficulty.toUpperCase()} - ${this.currentDecision.direction} (강도: ${this.currentDecision.intensity.toFixed(2)}) | 거리: ${(response.reasoning || '?')} | 점수: AI${gameState.aiScore}:${gameState.playerScore}`
+          `[AI] ${gameState.difficulty.toUpperCase()} - ${
+            this.currentDecision.direction
+          } (강도: ${this.currentDecision.intensity.toFixed(2)}) | 거리: ${
+            response.reasoning || "?"
+          } | 점수: AI${gameState.aiScore}:${gameState.playerScore}`
         );
       } else {
         console.warn("[AI] GPT 응답 형식 오류:", response);
@@ -190,7 +205,9 @@ export class PingPongAIManager {
       console.error("[AI] GPT 호출 실패:", {
         error: error instanceof Error ? error.message : String(error),
         difficulty: gameState.difficulty,
-        ballPosition: `(${gameState.ballX.toFixed(0)}, ${gameState.ballY.toFixed(0)})`,
+        ballPosition: `(${gameState.ballX.toFixed(
+          0
+        )}, ${gameState.ballY.toFixed(0)})`,
         timestamp: new Date().toISOString(),
       });
       this.currentDecision = { direction: "stay", intensity: 0 };

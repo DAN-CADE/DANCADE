@@ -13,11 +13,15 @@ import type {
  * - 핑퐁 전용 액션(공 치기, 패들 이동)만 구현
  */
 export class PingPongNetworkManager extends BaseGameNetworkManager<
-  {},
-  PingPongHitData
+  PingPongHitData,
+  number
 > {
   private lastPaddleSyncTime: number = 0;
   private readonly PADDLE_SYNC_INTERVAL = 50; // 50ms마다 패들 위치 전송
+  private onRoleAssignedCallback?: (
+    role: "left" | "right",
+    roomId?: string
+  ) => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -30,7 +34,7 @@ export class PingPongNetworkManager extends BaseGameNetworkManager<
     }
   ) {
     // Base에 전달 (역할 배정 콜백 이름 변경)
-    super(scene, {}, "pingpong", {
+    super("pingpong", {
       onWaiting: callbacks.onWaiting,
       onRoleAssigned: (role: number, roomId?: string) => {
         // role: 1 = left, 2 = right
@@ -111,6 +115,11 @@ export class PingPongNetworkManager extends BaseGameNetworkManager<
       return;
     }
 
+    if (!this.socket.id) {
+      console.error("[PingPongNetwork] socket.id 없음");
+      return;
+    }
+
     const payload: PingPongHitData = {
       roomId: this.roomId,
       socketId: this.socket.id,
@@ -140,6 +149,11 @@ export class PingPongNetworkManager extends BaseGameNetworkManager<
 
     if (!this.roomId) {
       console.error("[PingPongNetwork] roomId 없음");
+      return;
+    }
+
+    if (!this.socket.id) {
+      console.error("[PingPongNetwork] socket.id 없음");
       return;
     }
 

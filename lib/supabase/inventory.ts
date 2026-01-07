@@ -1,6 +1,5 @@
 // lib/inventory.ts (아무 파일에 만들어도 됨)
-import { supabase } from "@/lib/supabase/client"; 
-
+import { supabase } from "@/lib/supabase/client";
 
 /**
  * items 테이블 타입
@@ -32,7 +31,8 @@ export async function fetchUserInventory(
 ): Promise<InventoryItem[]> {
   const { data, error } = await supabase
     .from("user_inventory")
-    .select(`
+    .select(
+      `
       id,
       is_equipped,
       purchased_at,
@@ -43,7 +43,8 @@ export async function fetchUserInventory(
         image_url,
         style_key
       )
-    `)
+    `
+    )
     .eq("user_id", userId)
     .order("purchased_at", { ascending: false });
 
@@ -54,7 +55,7 @@ export async function fetchUserInventory(
   return (data ?? [])
     .filter((row) => row.item) // ✅ null 방어만
     .map((row) => {
-      const item = row.item as ItemRow ;
+      const item = row.item as unknown as ItemRow;
 
       return {
         userItemId: row.id,
@@ -71,14 +72,14 @@ export async function fetchUserInventory(
 
 export async function saveItemToInventory(userId: string, itemId: string) {
   const insertEventGame = {
-      user_id: userId,
-      item_id: itemId,
-      is_equipped: true,
+    user_id: userId,
+    item_id: itemId,
+    is_equipped: true,
   };
 
   // 쿼리 실행 [이벤트 게임 생성]
   const { data: newEventGame, error: postError } = await supabase
-  .from("user_inventory")
-  .insert([insertEventGame])
-  .select();
+    .from("user_inventory")
+    .insert([insertEventGame])
+    .select();
 }

@@ -5,14 +5,13 @@ import dynamic from "next/dynamic";
 import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
-import {
-  generateGuestId,
-  generateGuestNickname,
-} from "@/lib/utils/guestNickname";
+import { generateGuestNickname } from "@/lib/utils/guestNickname";
+import { generateGuestId } from "@/lib/utils/auth";
 import { useLPCData } from "@/hooks/useLPCData";
 import { useCharacterCustomization } from "@/hooks/useCharacterCustomization";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { useCharacterSave } from "@/hooks/character/useCharacterSave";
 import { ActionButton } from "@/components/character-select/Button";
 import { CustomizationPanel } from "@/components/character-select/CustomizationPanel";
 import { LoadingScreen } from "@/components/character-select/Loading";
@@ -38,6 +37,7 @@ export default function CharacterSelect() {
   const [isAssetLoading, setIsAssetLoading] = useState(true);
   const { getCurrentUser } = useAuth();
   const { getStoredUser } = useGuestAuth();
+  const { saveCharacter } = useCharacterSave();
 
   // 1. 상태 관리
   const { lpcData, isLoading, error } = useLPCData();
@@ -64,8 +64,8 @@ export default function CharacterSelect() {
     setIsAssetLoading(false);
   }, []);
 
-    // 3. 이벤트 핸들러
-    const handleStartGame = useCallback(async () => {
+  // 3. 이벤트 핸들러
+  const handleStartGame = useCallback(async () => {
     if (!customization) return;
 
     // 1️⃣ localStorage는 무조건 저장
@@ -75,36 +75,29 @@ export default function CharacterSelect() {
 
     // 2️⃣ 회원일 경우만 DB 저장
     if (memberUser) {
-      const res = await fetch("/api/users/saveCharacter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: memberUser.id,
-          characterSkin: customization,
-        }),
-      });
+      const result = await saveCharacter(memberUser.id, customization);
 
-      if (!res.ok) {
+      if (!result) {
         alert("캐릭터 저장 실패");
         return;
       } else {
         const parts = customization.parts;
-        const partKeys = ['hair', 'torso', 'legs', 'feet'] as const;
+        const partKeys = ["hair", "torso", "legs", "feet"] as const;
 
-        await Promise.all(partKeys.map(async (key) => {
-          const styleId = parts[key]?.styleId;
-          if (!styleId) return;
+        await Promise.all(
+          partKeys.map(async (key) => {
+            const styleId = parts[key]?.styleId;
+            if (!styleId) return;
 
-          const data = await getItemById(styleId);
-          const id = (data as any)?.[0]?.id;
-          if (id) {
-            await saveItemToInventory(memberUser.id, id);
-          }        
-        }));
-
+            const data = await getItemById(styleId);
+            const id = (data as { id: string }[] | null)?.[0]?.id;
+            if (id) {
+              await saveItemToInventory(memberUser.id, id);
+            }
+          })
+        );
       }
     }
-
 
     // 3️⃣ 게스트면 유저 정보 생성 (기존 로직 유지)
     if (!memberUser) {
@@ -124,8 +117,7 @@ export default function CharacterSelect() {
 
     // 4️⃣ 게임 시작
     router.push("/game");
-  }, [customization, getCurrentUser, router]);
-
+  }, [customization, getCurrentUser, router, saveCharacter]);
 
   // 4. 조건부 렌더링
   if (isLoading || !customization) {
@@ -141,10 +133,10 @@ export default function CharacterSelect() {
   // 4. UI 구성
   return (
     <Window title="character">
-    <div className="w-full">
-      <div className="flex w-full  text-white font-neo">
+      <div className="w-full">
+        <div className="flex w-full  text-white font-neo">
           {/* 왼쪽: 미리보기 영역 */}
-          <div  className="w-1/2 flex flex-col items-center justify-center p-10">
+          <div className="w-1/2 flex flex-col items-center justify-center p-10">
             <div className="w-[400px] h-[400px] border-[3px] border-[#555] rounded-[10px] bg-[#2d2d2d] overflow-hidden relative">
               {isAssetLoading && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

@@ -1,7 +1,7 @@
 // game/managers/games/pingpong/ui/PingPongGameAbortedDialog.ts
 
 import { BaseGameAbortedDialog } from "@/game/managers/base/multiplayer/ui/BaseGameAbortedDialog";
-import type { GameAbortedDialogConfig } from "@/game/managers/base/multiplayer/ui/BaseGameAbortedDialog";
+import type { GameAbortedDialogConfig } from "@/game/types/common/ui.types";
 
 /**
  * 핑퐁 게임 중단 다이얼로그 설정
@@ -25,7 +25,6 @@ const PINGPONG_ABORT_CONFIG: GameAbortedDialogConfig = {
       fontFamily: "Press Start 2P, Arial",
     },
   },
-  depth: 10000,
 };
 
 /**

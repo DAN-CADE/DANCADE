@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/server";
 import { UserStats } from "@/types/user";
-import { DB_TABLES } from "@/lib/constants/tables";
+import { DB_TABLES } from "@/constants/tables";
 
 // =====================================================================
 /**
