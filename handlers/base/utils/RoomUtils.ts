@@ -1,33 +1,37 @@
-// handlers/base/utils/RoomUtils.js
+import { v4 as uuidv4 } from "uuid";
 
-const RoomStatsEnricher = require("./RoomStatsEnricher");
-const { v4: uuidv4 } = require("uuid");
+import { RoomStatsEnricher } from "../../base/utils/RoomStatsEnricher";
+import {
+  RoomListItem,
+  RoomListItemWithStats,
+  ServerRoom,
+} from "../../../game/types/multiplayer/room.types";
+import { ServerPlayer } from "../../../types/server/server.types";
 
 // =====================================================================
 /**
  * 랜덤 방 ID 생성
- * @returns {string} 생성된 방 ID
  */
-function generateRoomId() {
+// =====================================================================
+export function generateRoomId(): string {
   return uuidv4();
 }
-// =====================================================================
 
 // =====================================================================
 /**
  * 특정 게임 타입의 방 목록 반환 (통계 포함)
- * @param {Map} rooms - 전체 방 목록
- * @param {string} gamePrefix - 게임 타입 (예: "omok")
- * @returns {Promise<Array>} 방 목록 (통계 포함)
  */
 // =====================================================================
-
-async function getRoomList(rooms, gamePrefix) {
+export async function getRoomList(
+  rooms: Map<string, ServerRoom>,
+  gamePrefix: string
+): Promise<RoomListItemWithStats[]> {
   console.log(
     `[getRoomList] 시작 - gamePrefix: ${gamePrefix}, 전체 방: ${rooms.size}개`
   );
 
-  const roomList = [];
+  const roomList: RoomListItem[] = [];
+
   rooms.forEach((room) => {
     console.log(`[getRoomList] 방 체크:`, {
       roomId: room.roomId,
@@ -41,7 +45,7 @@ async function getRoomList(rooms, gamePrefix) {
       roomList.push({
         roomId: room.roomId,
         roomName: room.roomName,
-        hostUsername: room.players[0]?.username,
+        hostUsername: room.players[0]?.username || "Unknown",
         hostSocketId: room.hostSocketId,
         hostUserId: room.players[0]?.userId,
         hostUserUUID: room.players[0]?.userUUID,
@@ -50,6 +54,7 @@ async function getRoomList(rooms, gamePrefix) {
         isPrivate: room.isPrivate,
         status: room.status,
         players: room.players,
+        gameType: room.gameType,
       });
     }
   });
@@ -74,50 +79,38 @@ async function getRoomList(rooms, gamePrefix) {
 // =====================================================================
 /**
  * 방 데이터 객체 생성
- * @param {Object} params
- * @param {string} params.roomId - 방 ID
- * @param {string} params.roomName - 방 이름
- * @param {string} params.gamePrefix - 게임 타입
- * @param {string} params.hostSocketId - 방장 소켓 ID
- * @param {string} params.userId - 방장 유저 ID
- * @param {string} params.username - 방장 이름
- * @param {boolean} params.isPrivate - 비공개 여부
- * @param {string} params.password - 방 비밀번호
- * @param {number} params.maxPlayers - 최대 인원
- * @returns {Object} 방 데이터
  */
 // =====================================================================
-
-function createRoomData({
-  roomId,
-  roomName,
-  gamePrefix,
-  hostSocketId,
-  userId,
-  userUUID,
-  username,
-  isPrivate,
-  password,
-  maxPlayers,
-}) {
+export function createRoomData(params: {
+  roomId: string;
+  roomName: string;
+  gamePrefix: string;
+  hostSocketId: string;
+  userId?: string | null;
+  userUUID?: string | null;
+  username: string;
+  isPrivate: boolean;
+  password?: string;
+  maxPlayers: number;
+}): ServerRoom {
   return {
-    roomId,
-    roomName: roomName || `${username}의 방`,
-    gameType: gamePrefix,
-    hostSocketId,
+    roomId: params.roomId,
+    roomName: params.roomName || `${params.username}의 방`,
+    gameType: params.gamePrefix,
+    hostSocketId: params.hostSocketId,
     players: [
       {
-        socketId: hostSocketId,
-        userId,
-        username,
-        userUUID,
+        socketId: params.hostSocketId,
+        userId: params.userId,
+        username: params.username,
+        userUUID: params.userUUID,
         isReady: false,
         joinedAt: Date.now(),
       },
     ],
-    isPrivate: isPrivate || false,
-    password: password || "",
-    maxPlayers,
+    isPrivate: params.isPrivate || false,
+    password: params.password || "",
+    maxPlayers: params.maxPlayers,
     playerCount: 1,
     status: "waiting",
     createdAt: Date.now(),
@@ -127,14 +120,14 @@ function createRoomData({
 // =====================================================================
 /**
  * 새 플레이어 데이터 생성
- * @param {string} socketId - 소켓 ID
- * @param {string} username - 사용자 이름
- * @param {string} [userId] - 유저 ID
- * @returns {Object} 플레이어 데이터
  */
 // =====================================================================
-
-function createPlayerData(socketId, username, userId = null, userUUID = null) {
+export function createPlayerData(
+  socketId: string,
+  username: string,
+  userId: string | null = null,
+  userUUID: string | null = null
+): ServerPlayer {
   return {
     socketId,
     userId,
@@ -144,10 +137,3 @@ function createPlayerData(socketId, username, userId = null, userUUID = null) {
     joinedAt: Date.now(),
   };
 }
-
-module.exports = {
-  generateRoomId,
-  getRoomList,
-  createRoomData,
-  createPlayerData,
-};

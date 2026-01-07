@@ -1,5 +1,7 @@
 import { GameNetworkCallbacks } from "@/game/types/multiplayer/network.types";
 import { OmokMoveData, ThreatType } from "@/game/types/omok";
+import { RoomData, ServerRoom } from "../multiplayer/room.types";
+import { ServerPlayer } from "@/types/server/server.types";
 
 export enum OmokMode {
   NONE = 0,
@@ -82,3 +84,12 @@ export interface OmokCallbacks
 }
 
 export type Direction = [number, number];
+
+export interface OmokRoomData extends RoomData {
+  gameType: "omok";
+}
+
+export interface OmokServerRoom extends ServerRoom {
+  gameType: "omok";
+  players: Array<ServerPlayer & { side?: 1 | 2 }>;
+}

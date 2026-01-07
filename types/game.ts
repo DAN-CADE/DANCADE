@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /**
  * 게임 관련 타입 정의
  */
@@ -112,4 +114,28 @@ export type GameSortField =
 export interface GameSortOption {
   field: GameSortField;
   direction: "asc" | "desc";
+}
+
+// AI전 지원하는 게임 scene 공통 인터페이스
+export interface GameSceneWithState<TSide = never> {
+  gameState: {
+    userSide: TSide;
+  };
+  startTime?: number;
+  currentUser?: {
+    uuid: string;
+  };
+}
+
+// 게임 config
+export interface GameConfig {
+  maxPlayers: number;
+  minPlayers: number;
+  autoStart: boolean;
+}
+
+export interface MatchmakingConfig {
+  maxPlayers: number;
+  quickMatchRoomId?: string;
+  supabase?: SupabaseClient;
 }

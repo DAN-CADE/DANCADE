@@ -1,57 +1,65 @@
-import { supabase } from "@/lib/supabase/server";
+import { getActiveEventGame, createEventGame } from "@/lib/supabase/eventGames";
+import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
-    // 쿼리 실행 [이벤트 게임 조회]
-    let query = supabase.from("event_games")
-    .select("*")
-    .gt("end_at", new Date().toISOString())
-    .order("end_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+// =====================================================================
+/**
+ * GET - 활성 이벤트 게임 조회
+ */
+// =====================================================================
 
-    const { data: eventGames, error: getError } = await query;
+export async function GET() {
+  const eventGame = await getActiveEventGame();
 
-    if (getError) {
-        console.error("Error fetching event games:", getError);
-        return Response.json({ error: getError.message }, { status: 500 });
-    }
-    const result = {
-        data: eventGames
-    };
+  if (eventGame === null) {
+    // 에러가 발생했거나 결과가 없음
+    return NextResponse.json(
+      { error: "이벤트 게임을 찾을 수 없습니다." },
+      { status: 404 }
+    );
+  }
 
-    // 결과 반환
-    return Response.json(result);
+  return NextResponse.json({ data: eventGame });
 }
 
+// =====================================================================
+/**
+ * POST - 이벤트 게임 생성
+ */
+// =====================================================================
+
 export async function POST(request: Request) {
+  try {
     const body = await request.json();
-    const {
-        gameType,
-        content,
-        details
-    } = body;
+    const { gameType, content, details } = body;
 
-    const insertEventGame = {
-        game_type: gameType,
-        title: content,
-        details: details
-    };
-
-    // 쿼리 실행 [이벤트 게임 생성]
-    const { data: newEventGame, error: postError } = await supabase
-    .from("event_games")
-    .insert([insertEventGame])
-    .select();
-
-    if (postError) {
-        console.error("Error adding event game:", postError);
-        return Response.json({ error: postError.message }, { status: 500 });
+    // 유효성 검사
+    if (!gameType || !content) {
+      return NextResponse.json(
+        { error: "gameType과 content는 필수입니다." },
+        { status: 400 }
+      );
     }
 
-    const result = {
-        data: newEventGame
-    };
+    // 이벤트 게임 생성
+    const newEventGame = await createEventGame({
+      game_type: gameType,
+      title: content,
+      details: details,
+    });
 
-    // 결과 반환
-    return Response.json(result);
+    if (!newEventGame) {
+      return NextResponse.json(
+        { error: "이벤트 게임 생성에 실패했습니다." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ data: newEventGame }, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/event-games 에러:", error);
+    return NextResponse.json(
+      { error: "서버 에러가 발생했습니다." },
+      { status: 500 }
+    );
+  }
 }

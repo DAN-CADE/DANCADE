@@ -1,40 +1,62 @@
-// handlers/base/RoomManager.js
+import axios from "axios";
 
-const axios = require("axios");
+import type { GameConfig } from "@/types/game";
 
 const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
 
-const {
+import {
   generateRoomId,
   getRoomList,
   createRoomData,
   createPlayerData,
-} = require("./utils/RoomUtils");
+} from "./utils/RoomUtils";
 
-const {
+import {
   validateRoomExists,
   validateRoomNotFull,
   validateRoomPassword,
   validateNotAlreadyInRoom,
   validateUsername,
-} = require("./utils/Validation");
+} from "./utils/Validation";
 
-const {
+import {
   broadcastRoomListUpdate,
   notifyPlayerJoined,
   notifyPlayerLeft,
   notifyHostChanged,
   notifyGameAborted,
   notifyAutoStart,
-} = require("./utils/EventEmitters");
+} from "./utils/EventEmitters";
+import {
+  CreateRoomData,
+  GameIO,
+  GameSocket,
+  JoinRoomData,
+  LeaveRoomData,
+  RematchData,
+  ServerPlayer,
+} from "../../types/server/server.types";
+import { ServerRoom } from "../../game/types/multiplayer/room.types";
 
 // =====================================================================
 /**
  * 방 관리 클래스
  */
 // =====================================================================
-class RoomManager {
-  constructor(io, socket, rooms, gamePrefix, config) {
+export class RoomManager {
+  private io: GameIO;
+  private socket: GameSocket;
+  private rooms: Map<string, ServerRoom>;
+  private gamePrefix: string;
+  private config: GameConfig;
+
+  constructor(
+    io: GameIO,
+    socket: GameSocket,
+    rooms: Map<string, ServerRoom>,
+    gamePrefix: string,
+    config: GameConfig
+  ) {
     this.io = io;
     this.socket = socket;
     this.rooms = rooms;
@@ -44,33 +66,33 @@ class RoomManager {
 
   // ----------------------------- 이벤트 등록
 
-  registerHandlers() {
-    this.socket.on(`${this.gamePrefix}:createRoom`, (data) =>
+  registerHandlers(): void {
+    this.socket.on(`${this.gamePrefix}:createRoom`, (data: CreateRoomData) =>
       this.handleCreateRoom(data)
     );
-    this.socket.on(`${this.gamePrefix}:joinRoom`, (data) =>
+    this.socket.on(`${this.gamePrefix}:joinRoom`, (data: JoinRoomData) =>
       this.handleJoinRoom(data)
     );
-    this.socket.on(`${this.gamePrefix}:leaveRoom`, (data) =>
+    this.socket.on(`${this.gamePrefix}:leaveRoom`, (data: LeaveRoomData) =>
       this.handleLeaveRoom(data)
     );
     this.socket.on(`${this.gamePrefix}:getRoomList`, () =>
       this.handleGetRoomList()
     );
-    this.socket.on(`${this.gamePrefix}:requestRematch`, (data) =>
+    this.socket.on(`${this.gamePrefix}:requestRematch`, (data: RematchData) =>
       this.handleRequestRematch(data)
     );
-    this.socket.on(`${this.gamePrefix}:acceptRematch`, (data) =>
+    this.socket.on(`${this.gamePrefix}:acceptRematch`, (data: RematchData) =>
       this.handleAcceptRematch(data)
     );
-    this.socket.on(`${this.gamePrefix}:declineRematch`, (data) =>
+    this.socket.on(`${this.gamePrefix}:declineRematch`, (data: RematchData) =>
       this.handleDeclineRematch(data)
     );
   }
 
   // ----------------------------- 방 생성
 
-  async handleCreateRoom(data) {
+  private async handleCreateRoom(data: CreateRoomData): Promise<void> {
     const { roomName, isPrivate, password, userId, username, userUUID } = data;
 
     console.log(`[${this.gamePrefix}] 방 생성 요청:`, { roomName, username });
@@ -115,7 +137,13 @@ class RoomManager {
     console.log(`[${this.gamePrefix}] 방 생성 완료: ${roomId}`);
   }
 
-  async saveRoomToDatabase(roomId, roomName, userUUID, isPrivate, password) {
+  private async saveRoomToDatabase(
+    roomId: string,
+    roomName: string,
+    userUUID: string | undefined,
+    isPrivate: boolean,
+    password: string | undefined
+  ): Promise<void> {
     try {
       await axios.post(`${NEXT_API_URL}/api/rooms`, {
         id: roomId,
@@ -128,35 +156,36 @@ class RoomManager {
         max_players: this.config.maxPlayers,
       });
     } catch (error) {
-      console.error(`[${this.gamePrefix}] DB 저장 실패:`, error.message);
+      if (axios.isAxiosError(error)) {
+        console.error(`[${this.gamePrefix}] DB 저장 실패:`, error.message);
+      }
     }
   }
 
   // ----------------------------- 방 입장
 
-  async handleJoinRoom(data) {
+  private async handleJoinRoom(data: JoinRoomData): Promise<void> {
     const { roomId, password, userId, username, userUUID } = data;
 
-    // 필수 데이터 확인
     if (!this.validateJoinData(roomId, username)) {
       return;
     }
 
-    const room = this.rooms.get(roomId);
+    const room = this.rooms.get(roomId) ?? null;
 
-    // 방 입장 가능 여부 검증
     if (!this.canJoinRoom(room, password)) {
       return;
     }
 
-    // 플레이어 추가
-    this.addPlayerToRoom(room, roomId, username, userId, userUUID);
-
-    // 자동 시작 확인
+    // 이제 room은 ServerRoom 타입!
+    await this.addPlayerToRoom(room, roomId, username, userId, userUUID);
     this.checkAutoStart(room);
   }
 
-  validateJoinData(roomId, username) {
+  private validateJoinData(
+    roomId: string | undefined,
+    username: string | undefined
+  ): boolean {
     if (!roomId || !username) {
       this.socket.emit(`${this.gamePrefix}:joinError`, {
         message: "방 ID와 사용자 이름이 필요합니다.",
@@ -166,7 +195,10 @@ class RoomManager {
     return true;
   }
 
-  canJoinRoom(room, password) {
+  private canJoinRoom(
+    room: ServerRoom | null,
+    password: string | undefined
+  ): room is ServerRoom {
     return (
       validateRoomExists(room, this.socket, this.gamePrefix) &&
       validateRoomNotFull(room, this.socket, this.gamePrefix) &&
@@ -180,12 +212,18 @@ class RoomManager {
     );
   }
 
-  async addPlayerToRoom(room, roomId, username, userId, userUUID) {
+  private async addPlayerToRoom(
+    room: ServerRoom,
+    roomId: string,
+    username: string,
+    userId: string | undefined,
+    userUUID: string | undefined
+  ): Promise<void> {
     const newPlayer = createPlayerData(
       this.socket.id,
       username,
-      userId,
-      userUUID
+      userId ?? null,
+      userUUID ?? null
     );
 
     room.players.push(newPlayer);
@@ -202,7 +240,7 @@ class RoomManager {
     await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
   }
 
-  checkAutoStart(room) {
+  private checkAutoStart(room: ServerRoom): void {
     if (this.config.autoStart && room.players.length === room.maxPlayers) {
       console.log(`[${this.gamePrefix}] 자동 시작: ${room.roomId}`);
 
@@ -216,12 +254,12 @@ class RoomManager {
 
   // ----------------------------- 방 퇴장
 
-  handleLeaveRoom(data) {
+  private handleLeaveRoom(data: LeaveRoomData): void {
     const { roomId } = data;
     this.leaveRoom(roomId);
   }
 
-  async leaveRoom(roomId) {
+  private async leaveRoom(roomId: string): Promise<void> {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
@@ -252,7 +290,11 @@ class RoomManager {
     await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
   }
 
-  removePlayerFromRoom(room, roomId, playerIndex) {
+  private removePlayerFromRoom(
+    room: ServerRoom,
+    roomId: string,
+    playerIndex: number
+  ): void {
     room.players.splice(playerIndex, 1);
     room.playerCount = room.players.length;
     this.socket.leave(roomId);
@@ -262,13 +304,13 @@ class RoomManager {
     this.socket.emit(`${this.gamePrefix}:leftRoom`, { roomId });
   }
 
-  async deleteEmptyRoom(roomId) {
+  private async deleteEmptyRoom(roomId: string): Promise<void> {
     this.rooms.delete(roomId);
     console.log(`[${this.gamePrefix}] 방 삭제: ${roomId}`);
     await broadcastRoomListUpdate(this.io, this.rooms, this.gamePrefix);
   }
 
-  changeHost(room, roomId) {
+  private changeHost(room: ServerRoom, roomId: string): void {
     room.hostSocketId = room.players[0].socketId;
     notifyHostChanged(
       this.io,
@@ -280,7 +322,10 @@ class RoomManager {
     console.log(`[${this.gamePrefix}] 방장 변경: ${room.hostSocketId}`);
   }
 
-  handleLeaveByGameStatus(room, leavingPlayer) {
+  private handleLeaveByGameStatus(
+    room: ServerRoom,
+    leavingPlayer: ServerPlayer
+  ): void {
     if (room.status === "playing") {
       this.abortGame(room, leavingPlayer);
     } else {
@@ -295,7 +340,7 @@ class RoomManager {
     }
   }
 
-  abortGame(room, leavingPlayer) {
+  private abortGame(room: ServerRoom, leavingPlayer: ServerPlayer): void {
     console.log(`[${this.gamePrefix}] 게임 중단: ${room.roomId}`);
 
     room.status = "finished";
@@ -312,7 +357,7 @@ class RoomManager {
 
   // ----------------------------- 방 목록 조회
 
-  async handleGetRoomList() {
+  private async handleGetRoomList(): Promise<void> {
     try {
       console.log(`[${this.gamePrefix}] 방 목록 요청`);
 
@@ -334,7 +379,7 @@ class RoomManager {
 
   // ----------------------------- 재대결
 
-  handleRequestRematch(data) {
+  private handleRequestRematch(data: RematchData): void {
     const { roomId } = data;
     const room = this.rooms.get(roomId);
 
@@ -362,13 +407,13 @@ class RoomManager {
     // 상대방에게 재대결 요청 알림
     this.io.to(roomId).emit(`${this.gamePrefix}:rematchRequested`, {
       requester: requester.username,
-      socketId: this.socket.id, // 누가 요청했는지 구분하기 위함
+      socketId: this.socket.id,
     });
 
     console.log(`[${this.gamePrefix}] 재대결 요청 전송 완료`);
   }
 
-  handleAcceptRematch(data) {
+  private handleAcceptRematch(data: RematchData): void {
     const { roomId } = data;
     const room = this.rooms.get(roomId);
 
@@ -397,7 +442,7 @@ class RoomManager {
 
     // 양쪽 모두 수락했는지 확인
     const allAccepted = room.players.every(
-      (p) => room.rematchRequests[p.socketId] === true
+      (p) => room.rematchRequests![p.socketId] === true
     );
 
     if (allAccepted) {
@@ -406,7 +451,7 @@ class RoomManager {
     }
   }
 
-  handleDeclineRematch(data) {
+  private handleDeclineRematch(data: RematchData): void {
     const { roomId } = data;
     const room = this.rooms.get(roomId);
 
@@ -426,7 +471,7 @@ class RoomManager {
     });
   }
 
-  startRematch(room) {
+  private startRematch(room: ServerRoom): void {
     // 게임 상태 초기화
     room.status = "waiting";
     room.rematchRequests = {};
@@ -434,7 +479,7 @@ class RoomManager {
     // 플레이어 상태 초기화
     room.players.forEach((player) => {
       player.isReady = false;
-      player.side = null;
+      player.side = undefined;
     });
 
     console.log(`[${this.gamePrefix}] 재대결 시작: ${room.roomId}`);
@@ -448,7 +493,7 @@ class RoomManager {
     }, 1000);
   }
 
-  autoStartRematch(room) {
+  private autoStartRematch(room: ServerRoom): void {
     if (room.players.length < 2) {
       console.warn(
         `[${this.gamePrefix}] 재대결 자동 시작 실패 - 플레이어 부족`
@@ -475,7 +520,7 @@ class RoomManager {
 
   // ----------------------------- 연결 해제 처리
 
-  handleDisconnect() {
+  handleDisconnect(): void {
     console.log(`[${this.gamePrefix}] 연결 해제: ${this.socket.id}`);
 
     this.rooms.forEach((room, roomId) => {
@@ -490,5 +535,3 @@ class RoomManager {
     });
   }
 }
-
-module.exports = RoomManager;

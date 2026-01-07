@@ -1,6 +1,10 @@
-// handlers/base/utils/RoomStatsEnricher.js
-
-const axios = require("axios");
+import {
+  ApiUserStats,
+  RoomListItem,
+  RoomListItemWithStats,
+  StatsApiResponse,
+} from "../../../types/server/server.types";
+import axios from "axios";
 
 // 환경변수로 Next.js API URL 설정
 const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
@@ -10,14 +14,14 @@ const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
  * - 방 목록에 유저 통계 정보 추가
  * - API 호출 실패 시 기본값 반환
  */
-class RoomStatsEnricher {
+export class RoomStatsEnricher {
   /**
    * 방 목록에 호스트 통계 추가
-   * @param {Array} rooms - 방 목록
-   * @param {string} gameType - 게임 타입
-   * @returns {Promise<Array>} 통계가 추가된 방 목록
    */
-  static async enrichRoomsWithStats(rooms, gameType) {
+  static async enrichRoomsWithStats(
+    rooms: RoomListItem[],
+    gameType: string
+  ): Promise<RoomListItemWithStats[]> {
     console.log(`[RoomStatsEnricher] 시작:`, {
       roomsType: typeof rooms,
       isArray: Array.isArray(rooms),
@@ -35,11 +39,11 @@ class RoomStatsEnricher {
         .map((room) => {
           // players 배열에서 호스트 찾기
           const host = room.players?.find(
-            (p) => p.socketId === room.hostSocketId
+            (p: any) => p.socketId === room.hostSocketId
           );
-          return host?.uuid;
+          return host?.userUUID || host?.uuid;
         })
-        .filter(Boolean);
+        .filter(Boolean) as string[];
 
       if (hostUUIDs.length === 0) {
         console.warn("[RoomStatsEnricher] 호스트 uuid 없음");
@@ -52,12 +56,12 @@ class RoomStatsEnricher {
       // 방 목록에 통계 추가
       return rooms.map((room) => {
         const host = room.players?.find(
-          (p) => p.socketId === room.hostSocketId
+          (p: any) => p.socketId === room.hostSocketId
         );
-        const hostUUID = host?.uuid;
+        const hostUUID = host?.userUUID || host?.uuid;
 
         if (hostUUID && statsMap.has(hostUUID)) {
-          const stats = statsMap.get(hostUUID);
+          const stats = statsMap.get(hostUUID)!;
           return {
             ...room,
             hostStats: {
@@ -81,7 +85,7 @@ class RoomStatsEnricher {
         };
       });
     } catch (error) {
-      console.error("[RoomStatsEnricher] 통계 조회 실패:", error.message);
+      console.error("[RoomStatsEnricher] 통계 조회 실패:", error);
       console.error("[RoomStatsEnricher] 원본 rooms:", rooms);
 
       // 에러 시 기본값 반환
@@ -108,41 +112,44 @@ class RoomStatsEnricher {
 
   /**
    * 유저 통계 일괄 조회
-   * @param {Array<string>} userUUIDs - 유저 UUID 배열
-   * @param {string} gameType - 게임 타입
-   * @returns {Promise<Map>} userUUID → 통계 Map
    */
-  static async fetchStats(userUUIDs, gameType) {
-    const statsMap = new Map();
+  private static async fetchStats(
+    userUUIDs: string[],
+    gameType: string
+  ): Promise<Map<string, ApiUserStats>> {
+    const statsMap = new Map<string, ApiUserStats>();
 
     try {
       // 병렬로 모든 유저 통계 조회
       const promises = userUUIDs.map(async (userUUID) => {
         try {
-          const response = await axios.get(`${NEXT_API_URL}/api/game-result`, {
-            params: { userId: userUUID, gameType },
-            timeout: 3000,
-          });
+          const response = await axios.get<StatsApiResponse>(
+            `${NEXT_API_URL}/api/game-result`,
+            {
+              params: { userId: userUUID, gameType },
+              timeout: 3000,
+            }
+          );
 
           if (response.data.success && response.data.stats) {
             statsMap.set(userUUID, response.data.stats);
           }
         } catch (error) {
           // 개별 조회 실패는 무시 (기본값 사용)
-          console.warn(
-            `[RoomStatsEnricher] ${userUUID} 통계 조회 실패:`,
-            error.message
-          );
+          if (axios.isAxiosError(error)) {
+            console.warn(
+              `[RoomStatsEnricher] ${userUUID} 통계 조회 실패:`,
+              error.message
+            );
+          }
         }
       });
 
       await Promise.all(promises);
     } catch (error) {
-      console.error("[RoomStatsEnricher] 일괄 조회 실패:", error.message);
+      console.error("[RoomStatsEnricher] 일괄 조회 실패:", error);
     }
 
     return statsMap;
   }
 }
-
-module.exports = RoomStatsEnricher;
