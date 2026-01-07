@@ -3,7 +3,7 @@ import {
   SaveGameResultResponse,
 } from "@/game/types/gameSessionData";
 import { createServerClient } from "@/lib/supabase/client";
-import { getUserStats, upsertUserStats } from "@/lib/supabase/userStats";
+import { getUserStats, updateStatsAfterGame } from "@/lib/supabase/userStats";
 import {
   insertGameResult,
   insertMultiGameResult,
@@ -158,38 +158,17 @@ export class GameResultService {
     loserId: string,
     gameType: string
   ): Promise<void> {
-    const players = [
-      { id: winnerId, isWinner: true },
-      { id: loserId, isWinner: false },
-    ];
+    try {
+      // 병렬로 두 플레이어 통계 업데이트
+      await Promise.all([
+        updateStatsAfterGame(winnerId, true, gameType),
+        updateStatsAfterGame(loserId, false, gameType),
+      ]);
 
-    for (const player of players) {
-      const currentStats = await getUserStats(player.id);
-
-      if (currentStats) {
-        const wins = currentStats.total_wins + (player.isWinner ? 1 : 0); // 승수 증가
-        const games = currentStats.total_games_played + 1;
-
-        await upsertUserStats({
-          user_id: player.id,
-          total_wins: wins,
-          total_losses: currentStats.total_losses + (player.isWinner ? 0 : 1),
-          total_games_played: games,
-          win_rate: Math.round((wins / games) * 100),
-          favorite_game: gameType,
-        });
-      } else {
-        // 첫 판인 경우
-        await upsertUserStats({
-          user_id: player.id,
-          total_wins: player.isWinner ? 1 : 0,
-          total_losses: player.isWinner ? 0 : 1,
-          total_games_played: 1,
-          win_rate: player.isWinner ? 100 : 0,
-          favorite_game: gameType,
-        });
-      }
+      console.log("[GameResultService] 유저 통계 업데이트 완료");
+    } catch (error) {
+      console.error("[GameResultService] 통계 업데이트 실패:", error);
+      throw error;
     }
-    console.log("[GameResultService] total_wins 업데이트 완료");
   }
 }
