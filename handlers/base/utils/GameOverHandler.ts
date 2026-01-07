@@ -1,6 +1,13 @@
-// handlers/base/utils/GameOverHandler.js
+import axios from "axios";
 
-const axios = require("axios");
+import type { UserStats } from "../../../types/user";
+import {
+  GameIO,
+  GameOverOptions,
+  GameResultResponse,
+  ServerPlayer,
+} from "../../../types/server/server.types";
+import { ServerRoom } from "../../../game/types/multiplayer/room.types";
 
 // 환경변수로 Next.js API URL 설정
 const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
@@ -12,16 +19,19 @@ const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
  * - DB 저장, 통계 조회, 방 정리
  */
 // =====================================================================
-class GameOverHandler {
+export class GameOverHandler {
+  private io: GameIO;
+  private rooms: Map<string, ServerRoom>;
+  private gamePrefix: string;
+
   // =====================================================================
   /**
-   * @param {Object} io - Socket.IO 서버 인스턴스
-   * @param {Map} rooms - 방 목록
-   * @param {string} gamePrefix - 게임 타입 (예: "omok", "pingpong")
+   * @param io - Socket.IO 서버 인스턴스
+   * @param rooms - 방 목록
+   * @param gamePrefix - 게임 타입 (예: "omok", "pingpong")
    */
   // =====================================================================
-
-  constructor(io, rooms, gamePrefix) {
+  constructor(io: GameIO, rooms: Map<string, ServerRoom>, gamePrefix: string) {
     this.io = io;
     this.rooms = rooms;
     this.gamePrefix = gamePrefix;
@@ -30,16 +40,13 @@ class GameOverHandler {
   // =====================================================================
   /**
    * 게임 종료 처리 (공통)
-   * @param {string} roomId - 방 ID
-   * @param {number} winner - 승자 역할 (1, 2 등)
-   * @param {Object} options - 추가 옵션
-   * @param {number} [options.winnerScore] - 승자 점수
-   * @param {number} [options.loserScore] - 패자 점수
-   * @returns {Promise<void>}
    */
   // =====================================================================
-
-  async handleGameOver(roomId, winner, options = {}) {
+  async handleGameOver(
+    roomId: string,
+    winner: number | string,
+    options: GameOverOptions = {}
+  ): Promise<void> {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
@@ -71,9 +78,6 @@ class GameOverHandler {
     }
 
     try {
-      // 방 정보를 확인해서 빠른 매칭인지 판단
-      // const isQuickMatch = room.isQuickMatch || false;
-
       const { winnerStats, loserStats } = await this.saveGameResult(
         roomId,
         winnerPlayer,
@@ -81,7 +85,7 @@ class GameOverHandler {
         { ...options, gameDuration }
       );
 
-      // 모든 클라이언트에 알림 (클라이언트는 이 정보를 받아서 UI만 그림)
+      // 모든 클라이언트에 알림
       this.io.to(roomId).emit(`${this.gamePrefix}:gameOver`, {
         winner,
         roomData: room,
@@ -99,19 +103,21 @@ class GameOverHandler {
   // =====================================================================
   /**
    * 승자/패자 찾기
-   * @param {Object} room - 방 객체
-   * @param {number} winner - 승자 역할
-   * @returns {{winnerPlayer: Object, loserPlayer: Object}}
    */
   // =====================================================================
-
-  findWinnerAndLoser(room, winner) {
-    // 승자 찾기 (입력받은 winner 값과 일치하는 플레이어)
+  private findWinnerAndLoser(
+    room: ServerRoom,
+    winner: number | string
+  ): {
+    winnerPlayer: ServerPlayer | undefined;
+    loserPlayer: ServerPlayer | undefined;
+  } {
+    // 승자 찾기
     const winnerPlayer = room.players.find(
       (p) => p.side === winner || p.role === winner
     );
 
-    // 승자를 제외한 다른 플레이어가 있는 경우에만 loserPlayer 할당
+    // 패자 찾기
     const loserPlayer = room.players.find((p) =>
       winnerPlayer ? p.userUUID !== winnerPlayer.userUUID : false
     );
@@ -122,19 +128,17 @@ class GameOverHandler {
   // =====================================================================
   /**
    * 게임 결과 DB 저장
-   * @param {string} roomId - 방 ID
-   * @param {Object} winnerPlayer - 승자 정보
-   * @param {Object} loserPlayer - 패자 정보
-   * @param {Object} options - 추가 옵션
-   * @returns {Promise<{winnerStats: Object|null, loserStats: Object|null}>}
    */
   // =====================================================================
-
-  async saveGameResult(roomId, winnerPlayer, loserPlayer, options = {}) {
+  private async saveGameResult(
+    roomId: string,
+    winnerPlayer: ServerPlayer,
+    loserPlayer: ServerPlayer,
+    options: GameOverOptions = {}
+  ): Promise<{ winnerStats: UserStats | null; loserStats: UserStats | null }> {
     const winnerId = winnerPlayer.userUUID || winnerPlayer.userId;
     const loserId = loserPlayer.userUUID || loserPlayer.userId;
 
-    // if (!winnerPlayer.userId || !loserPlayer.userId) {
     if (!winnerId || !loserId) {
       console.warn(`[${this.gamePrefix}][게임종료] userId 없음, DB 저장 생략`);
       console.warn(`[${this.gamePrefix}][디버그] winnerPlayer:`, winnerPlayer);
@@ -149,7 +153,7 @@ class GameOverHandler {
     });
 
     try {
-      const response = await axios.post(
+      const response = await axios.post<GameResultResponse>(
         `${NEXT_API_URL}/api/game-result`,
         {
           room_id: roomId,
@@ -165,7 +169,7 @@ class GameOverHandler {
           headers: {
             "Content-Type": "application/json",
           },
-          timeout: 5000, // 5초 타임아웃
+          timeout: 5000,
         }
       );
 
@@ -179,22 +183,23 @@ class GameOverHandler {
         loserStats: response.data.loserStats,
       };
     } catch (error) {
-      console.error(
-        `[${this.gamePrefix}][API실패] 게임 결과 저장 실패:`,
-        error.message
-      );
-
-      if (error.response) {
+      if (axios.isAxiosError(error)) {
         console.error(
-          `[${this.gamePrefix}][API실패] 응답:`,
-          error.response.data
+          `[${this.gamePrefix}][API실패] 게임 결과 저장 실패:`,
+          error.message
         );
+
+        if (error.response) {
+          console.error(
+            `[${this.gamePrefix}][API실패] 응답:`,
+            error.response.data
+          );
+        }
+      } else {
+        console.error(`[${this.gamePrefix}][API실패] 알 수 없는 에러:`, error);
       }
 
-      // API 실패해도 게임은 종료 (통계만 없음)
       return { winnerStats: null, loserStats: null };
     }
   }
 }
-
-module.exports = GameOverHandler;

@@ -1,11 +1,12 @@
-// handlers/base/PlayerManager.js
-
-const {
-  validateRoomExists,
-  validatePlayerInRoom,
-} = require("./utils/Validation");
-
-const { notifyPlayerReady, notifyAllReady } = require("./utils/EventEmitters");
+import type { GameConfig } from "../../types/game";
+import { validateRoomExists, validatePlayerInRoom } from "./utils/Validation";
+import { notifyPlayerReady, notifyAllReady } from "./utils/EventEmitters";
+import {
+  GameIO,
+  GameSocket,
+  ToggleReadyData,
+} from "../../types/server/server.types";
+import { ServerRoom } from "../../game/types/multiplayer/room.types";
 
 // =====================================================================
 /**
@@ -13,15 +14,27 @@ const { notifyPlayerReady, notifyAllReady } = require("./utils/EventEmitters");
  * - 플레이어 준비 상태, 게임 준비 체크 등
  */
 // =====================================================================
-class PlayerManager {
+export class PlayerManager {
+  private io: GameIO;
+  private socket: GameSocket;
+  private rooms: Map<string, ServerRoom>;
+  private gamePrefix: string;
+  private config: GameConfig;
+
   /**
-   * @param {Object} io - Socket.IO 서버 인스턴스
-   * @param {Object} socket - 클라이언트 소켓
-   * @param {Map} rooms - 방 목록
-   * @param {string} gamePrefix - 게임 타입
-   * @param {Object} config - 게임 설정
+   * @param io - Socket.IO 서버 인스턴스
+   * @param socket - 클라이언트 소켓
+   * @param rooms - 방 목록
+   * @param gamePrefix - 게임 타입
+   * @param config - 게임 설정
    */
-  constructor(io, socket, rooms, gamePrefix, config) {
+  constructor(
+    io: GameIO,
+    socket: GameSocket,
+    rooms: Map<string, ServerRoom>,
+    gamePrefix: string,
+    config: GameConfig
+  ) {
     this.io = io;
     this.socket = socket;
     this.rooms = rooms;
@@ -34,9 +47,8 @@ class PlayerManager {
    * 이벤트 핸들러 등록
    */
   // =====================================================================
-
-  registerHandlers() {
-    this.socket.on(`${this.gamePrefix}:toggleReady`, (data) =>
+  registerHandlers(): void {
+    this.socket.on(`${this.gamePrefix}:toggleReady`, (data: ToggleReadyData) =>
       this.handleToggleReady(data)
     );
   }
@@ -44,12 +56,9 @@ class PlayerManager {
   // =====================================================================
   /**
    * 준비 상태 토글 핸들러
-   * @param {Object} data
-   * @param {string} data.roomId - 방 ID
    */
   // =====================================================================
-
-  handleToggleReady(data) {
+  private handleToggleReady(data: ToggleReadyData): void {
     const { roomId } = data;
     const room = this.rooms.get(roomId);
 
@@ -99,11 +108,9 @@ class PlayerManager {
   // =====================================================================
   /**
    * 모든 플레이어 준비 상태 체크
-   * @param {Object} room - 방 객체
    */
   // =====================================================================
-
-  checkAllReady(room) {
+  private checkAllReady(room: ServerRoom): void {
     // 최소 인원 미달
     if (room.players.length < this.config.minPlayers) {
       return;
@@ -119,5 +126,3 @@ class PlayerManager {
     }
   }
 }
-
-module.exports = PlayerManager;

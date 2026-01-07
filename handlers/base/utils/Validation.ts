@@ -1,3 +1,6 @@
+import { ServerRoom } from "@/game/types/multiplayer/room.types";
+import { GameSocket } from "@/types/server/server.types";
+
 // =====================================================================
 /**
  * 검증 관련 유틸리티 함수 모음
@@ -7,14 +10,13 @@
 // =====================================================================
 /**
  * 방 존재 여부 검증
- * @param {Object|null} room - 방 객체
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateRoomExists(room, socket, gamePrefix) {
+export function validateRoomExists(
+  room: ServerRoom | null | undefined,
+  socket: GameSocket,
+  gamePrefix: string
+): room is ServerRoom {
   if (!room) {
     socket.emit(`${gamePrefix}:joinError`, {
       message: "존재하지 않는 방입니다.",
@@ -27,14 +29,13 @@ function validateRoomExists(room, socket, gamePrefix) {
 // =====================================================================
 /**
  * 방 인원 체크
- * @param {Object} room - 방 객체
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateRoomNotFull(room, socket, gamePrefix) {
+export function validateRoomNotFull(
+  room: ServerRoom,
+  socket: GameSocket,
+  gamePrefix: string
+): boolean {
   if (room.players.length >= room.maxPlayers) {
     socket.emit(`${gamePrefix}:joinError`, {
       message: "방이 가득 찼습니다.",
@@ -47,15 +48,14 @@ function validateRoomNotFull(room, socket, gamePrefix) {
 // =====================================================================
 /**
  * 방 비밀번호 체크
- * @param {Object} room - 방 객체
- * @param {string} password - 입력된 비밀번호
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateRoomPassword(room, password, socket, gamePrefix) {
+export function validateRoomPassword(
+  room: ServerRoom,
+  password: string | undefined,
+  socket: GameSocket,
+  gamePrefix: string
+): boolean {
   if (room.isPrivate && room.password !== password) {
     socket.emit(`${gamePrefix}:joinError`, {
       message: "비밀번호가 틀렸습니다.",
@@ -68,15 +68,14 @@ function validateRoomPassword(room, password, socket, gamePrefix) {
 // =====================================================================
 /**
  * 중복 입장 체크
- * @param {Object} room - 방 객체
- * @param {string} socketId - 소켓 ID
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateNotAlreadyInRoom(room, socketId, socket, gamePrefix) {
+export function validateNotAlreadyInRoom(
+  room: ServerRoom,
+  socketId: string,
+  socket: GameSocket,
+  gamePrefix: string
+): boolean {
   const alreadyInRoom = room.players.some((p) => p.socketId === socketId);
   if (alreadyInRoom) {
     socket.emit(`${gamePrefix}:joinError`, {
@@ -90,15 +89,14 @@ function validateNotAlreadyInRoom(room, socketId, socket, gamePrefix) {
 // =====================================================================
 /**
  * 방장 권한 체크
- * @param {Object} room - 방 객체
- * @param {string} socketId - 소켓 ID
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateIsHost(room, socketId, socket, gamePrefix) {
+export function validateIsHost(
+  room: ServerRoom,
+  socketId: string,
+  socket: GameSocket,
+  gamePrefix: string
+): boolean {
   if (socketId !== room.hostSocketId) {
     socket.emit(`${gamePrefix}:error`, {
       message: "방장만 실행할 수 있습니다.",
@@ -111,15 +109,14 @@ function validateIsHost(room, socketId, socket, gamePrefix) {
 // =====================================================================
 /**
  * 플레이어가 방에 있는지 체크
- * @param {Object} room - 방 객체
- * @param {string} socketId - 소켓 ID
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {Object|null} 플레이어 객체 또는 null
  */
 // =====================================================================
-
-function validatePlayerInRoom(room, socketId, socket, gamePrefix) {
+export function validatePlayerInRoom(
+  room: ServerRoom,
+  socketId: string,
+  socket: GameSocket,
+  gamePrefix: string
+) {
   const player = room.players.find((p) => p.socketId === socketId);
   if (!player) {
     socket.emit(`${gamePrefix}:error`, {
@@ -133,14 +130,13 @@ function validatePlayerInRoom(room, socketId, socket, gamePrefix) {
 // =====================================================================
 /**
  * 사용자 이름 체크
- * @param {string} username - 사용자 이름
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateUsername(username, socket, gamePrefix) {
+export function validateUsername(
+  username: string | undefined,
+  socket: GameSocket,
+  gamePrefix: string
+): boolean {
   if (!username) {
     socket.emit(`${gamePrefix}:joinError`, {
       message: "사용자 이름이 필요합니다.",
@@ -153,15 +149,14 @@ function validateUsername(username, socket, gamePrefix) {
 // =====================================================================
 /**
  * 필수 데이터 체크
- * @param {Object} data - 데이터 객체
- * @param {Array<string>} requiredFields - 필수 필드 배열
- * @param {Object} socket - 소켓 객체
- * @param {string} gamePrefix - 게임 타입
- * @returns {boolean} 검증 성공 여부
  */
 // =====================================================================
-
-function validateRequiredFields(data, requiredFields, socket, gamePrefix) {
+export function validateRequiredFields(
+  data: Record<string, unknown>,
+  requiredFields: string[],
+  socket: GameSocket,
+  gamePrefix: string
+): boolean {
   for (const field of requiredFields) {
     if (data[field] === undefined || data[field] === null) {
       socket.emit(`${gamePrefix}:error`, {
@@ -172,14 +167,3 @@ function validateRequiredFields(data, requiredFields, socket, gamePrefix) {
   }
   return true;
 }
-
-module.exports = {
-  validateRoomExists,
-  validateRoomNotFull,
-  validateRoomPassword,
-  validateNotAlreadyInRoom,
-  validateIsHost,
-  validatePlayerInRoom,
-  validateUsername,
-  validateRequiredFields,
-};

@@ -28,7 +28,7 @@ const io = socketIo(server, {
     // origin: ["http://3.25.232.135:3000","http://localhost:3000"],
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
-    credentials: true
+    credentials: true,
   },
   transports: ["websocket"],
   pingTimeout: 60000,
@@ -42,14 +42,14 @@ app.use(express.json());
 // ===================================================================
 
 // 소켓 연결 유지, 방 만들기/참가/나가기 같은 [방 관리] 세팅
-const baseGameHandler = require("./handlers/base/BaseGameHandler");
+// const baseGameHandler = require("./dist/handlers/base/BaseGameHandler").default;
 
 // 공유 데이터
 const players = new Map();
 const rooms = new Map();
 
 // 게임별 핸들러 추가
-const omokHandler = require("./handlers/games/omok/OmokHandler");
+const { registerAllHandlers } = require("./dist/handlers/registry");
 
 // =====================================================================
 // Socket.io 연결
@@ -79,13 +79,15 @@ io.on("connection", (socket) => {
 
   // 1. 오목
   // 공통으로 생성할 매니저 인스턴스가 생성되는 baseGameHandler 등록
-  const omokDisconnectHandler = baseGameHandler(io, socket, rooms, "omok", {
-    maxPlayers: 2, // 오목은 2명
-    minPlayers: 2, // 최소 2명
-    autoStart: false, // 수동 시작
-  });
-  // 오목용 omokHandler 등록
-  omokHandler(io, socket, rooms, supabase);
+  // const omokDisconnectHandler = baseGameHandler(io, socket, rooms, "omok", {
+  //   maxPlayers: 2, // 오목은 2명
+  //   minPlayers: 2, // 최소 2명
+  //   autoStart: false, // 수동 시작
+  // });
+  // // 오목용 omokHandler 등록
+  // omokHandler(io, socket, rooms, supabase);
+
+  const gameHandlers = registerAllHandlers(io, socket, rooms, supabase);
 
   // =====================================================================
   // 연결 해제
@@ -101,8 +103,9 @@ io.on("connection", (socket) => {
     }
 
     // ------------------------------- 게임별 방 정리
-    omokDisconnectHandler.handleDisconnect();
+    // omokDisconnectHandler.handleDisconnect();
     // pingPongDisconnectHandler.handleDisconnect();
+    gameHandlers.handleDisconnect();
   });
 
   // =====================================================================
@@ -168,20 +171,25 @@ app.post("/api/player/save", (req, res) => {
 app.get("/api/rooms/:gameType", async (req, res) => {
   try {
     const { gameType } = req.params;
-    
+
     // Map의 Array.from(rooms.values()) 대신 await rooms.values() 사용
     const allRooms = await rooms.values();
 
     const roomList = allRooms
-      .filter(room => room.gameType === gameType && room.status === "waiting" && !room.isPrivate)
-      .map(room => ({
+      .filter(
+        (room) =>
+          room.gameType === gameType &&
+          room.status === "waiting" &&
+          !room.isPrivate
+      )
+      .map((room) => ({
         roomId: room.roomId,
         roomName: room.roomName,
         hostUsername: room.players[0]?.username,
         playerCount: room.players.length,
         maxPlayers: room.maxPlayers,
       }));
-      
+
     res.json({ rooms: roomList });
   } catch (err) {
     console.error("방 목록 조회 에러:", err);
