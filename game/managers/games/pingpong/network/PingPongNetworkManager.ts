@@ -18,7 +18,10 @@ export class PingPongNetworkManager extends BaseGameNetworkManager<
 > {
   private lastPaddleSyncTime: number = 0;
   private readonly PADDLE_SYNC_INTERVAL = 50; // 50ms마다 패들 위치 전송
-  private onRoleAssignedCallback?: (role: "left" | "right", roomId?: string) => void;
+  private onRoleAssignedCallback?: (
+    role: "left" | "right",
+    roomId?: string
+  ) => void;
 
   constructor(
     scene: Phaser.Scene,

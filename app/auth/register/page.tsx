@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import signupLogo from "@/public/assets/logos/signup-logo.svg";
 import Window from "@/components/common/Window";
 import { registerSchema, RegisterInput } from "@/lib/validations/auth";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { generateGuestNickname } from "@/lib/utils/guestNickname";

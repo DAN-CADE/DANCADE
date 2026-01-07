@@ -6,8 +6,9 @@ import { useProducts } from "@/hooks/shop/useProducts";
 import { Product } from "@/game/types/product";
 import ProductDetailModal from "@/components/shop/ProductDetailModal";
 import { useShopOwnedItems } from "@/hooks/shop/useShopOwnedItems";
+import { usePurchase } from "@/hooks/shop/usePurchase";
 import { UserPointBar } from "@/components/common/UserPointBar";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { STORAGE_KEY } from "@/constants/character";
 import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 import { useEffect, useState } from "react";
@@ -16,43 +17,43 @@ import { ITEMS_PER_PAGE } from "@/constants/shopPageNation";
 import { useToast } from "@/components/common/ToastProvider";
 import Header from "@/components/shop/ShopHeader";
 
-
-
-export default function ShopPage(){
-
-  const [previewCharacter, setPreviewCharacter] =useState<CharacterState | null>(null);
+export default function ShopPage() {
+  const [previewCharacter, setPreviewCharacter] =
+    useState<CharacterState | null>(null);
   const gender = previewCharacter?.gender as "male" | "female" | undefined;
-  const [activeCategory, setActiveCategory] =useState<ShopCategory>("all");
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<ShopCategory>("all");
   const { showToast } = useToast();
 
   const { products, isLoading } = useProducts(gender);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { ownedItemIds, isLoading: ownedLoading,refetch  } = useShopOwnedItems();
+  const {
+    ownedItemIds,
+    isLoading: ownedLoading,
+    refetch,
+  } = useShopOwnedItems();
+  const { purchase, isLoading: isPurchasing } = usePurchase();
   const { getCurrentUser } = useAuth();
   const user = getCurrentUser();
-
 
   const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory]);
 
-
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
 
-
-
-  const SHOP_CATEGORY_TO_LPC_PART: Record< ShopCategory, keyof CharacterState["parts"] | null > = {
-  all: null,
-  hair: "hair",
-  top: "torso",
-  bottom: "legs",
-  feet: "feet",
+  const SHOP_CATEGORY_TO_LPC_PART: Record<
+    ShopCategory,
+    keyof CharacterState["parts"] | null
+  > = {
+    all: null,
+    hair: "hair",
+    top: "torso",
+    bottom: "legs",
+    feet: "feet",
   };
-
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -61,9 +62,7 @@ export default function ShopPage(){
     setPreviewCharacter(JSON.parse(stored));
   }, []);
 
-
-  if(isLoading || ownedLoading) return <div>로딩중...</div>
-
+  if (isLoading || ownedLoading) return <div>로딩중...</div>;
 
   const productsWithOwnership = products.map((product) => ({
     ...product,
@@ -73,21 +72,20 @@ export default function ShopPage(){
   const requireUser = () => {
     const user = getCurrentUser();
     if (!user) {
-        showToast({
-          type: "info",
-          message:"회원 가입 후 진행해주세요.",
-        });
+      showToast({
+        type: "info",
+        message: "회원 가입 후 진행해주세요.",
+      });
       return null;
     }
     return user;
   };
 
-
   const handleSelectProduct = (product: Product) => {
     // const user = requireUser();
     // if (!user) return;
 
-    handlePreviewItem(product)
+    handlePreviewItem(product);
     // setSelectedProduct(product);
     // setIsModalOpen(true);
   };
@@ -103,120 +101,101 @@ export default function ShopPage(){
   const handleModal = () => {
     setIsModalOpen(false);
     setSelectedProduct(null);
-  }
+  };
 
-
- const filteredProducts = activeCategory === "all" ? productsWithOwnership
-    : productsWithOwnership.filter( (product) => product.category === activeCategory);
+  const filteredProducts =
+    activeCategory === "all"
+      ? productsWithOwnership
+      : productsWithOwnership.filter(
+          (product) => product.category === activeCategory
+        );
 
   const pagedProducts = filteredProducts.slice(startIndex, endIndex);
-      const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
   const handlePurchase = async (product: Product) => {
-
     if (isPurchasing) return;
-      setIsPurchasing(true);
 
+    const result = await purchase(user!.id, product.id);
 
-    try {
-      const res = await fetch("/api/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: product.id, userId: user!.id,    }),
+    if (!result) {
+      // ❌ 포인트 부족, 이미 보유 등
+      showToast({
+        type: "info",
+        message: "구매에 실패했습니다 포인트부족",
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        // ❌ 포인트 부족, 이미 보유 등
-        showToast({
-          type: "info",
-          message:"구매에 실패했습니다 포인트부족",
-        });
-        return;
-      }
-
+    } else {
       // ⭕ 구매 성공
       showToast({
-          type: "success",
-          message: "구매가 완료되었습니다!",
-        });
+        type: "success",
+        message: "구매가 완료되었습니다!",
+      });
       await refetch();
-    } catch (error) {
-      console.error("purchase error:", error);
-      showToast({
-          type: "error",
-          message:"구매에 실패했습니다",
-        });
-    } finally {
-      // ✅ 구매 버튼이 눌렸고, 로직이 끝난 뒤에만 실행됨
-       setIsPurchasing(false);
-      setIsModalOpen(false);
-      setSelectedProduct(null);
     }
+
+    setIsModalOpen(false);
+    setSelectedProduct(null);
   };
 
   const handlePreviewItem = (product: Product) => {
-  if (!product.style_key) return;
-  if (!previewCharacter) return;
+    if (!product.style_key) return;
+    if (!previewCharacter) return;
 
-  const partKey = SHOP_CATEGORY_TO_LPC_PART[product.category as ShopCategory];
-  if (!partKey) return;
+    const partKey = SHOP_CATEGORY_TO_LPC_PART[product.category as ShopCategory];
+    if (!partKey) return;
 
-  setPreviewCharacter((prev) => {
-    if (!prev) return prev;
+    setPreviewCharacter((prev) => {
+      if (!prev) return prev;
 
-    return {
-      ...prev,
-      parts: {
-        ...prev.parts,
-        [partKey]: {
-          ...prev.parts[partKey],
-          styleId: product.style_key, // ✅ style만 교체
-          // ❗ color / palette 그대로 유지
+      return {
+        ...prev,
+        parts: {
+          ...prev.parts,
+          [partKey]: {
+            ...prev.parts[partKey],
+            styleId: product.style_key, // ✅ style만 교체
+            // ❗ color / palette 그대로 유지
+          },
         },
-      },
-    };
-  });
-};
+      };
+    });
+  };
 
-
-
-
-
- return (
+  return (
     <main className="shopPage relative min-h-screen">
       <div className="absolute top-4 right-6 z-50">
         <UserPointBar />
       </div>
 
       <TransparentFrame>
-      <Header />
-        <div  className="flex w-full h-full gap-6">
-        <div className="flex gap-6 pr-20">
-          <aside className="w-[280px] h-full flex items-center justify-center">
-            {previewCharacter && (
-              <ShopCharacterPreview character={previewCharacter} />
-            )}
-          </aside>
+        <Header />
+        <div className="flex w-full h-full gap-6">
+          <div className="flex gap-6 pr-20">
+            <aside className="w-[280px] h-full flex items-center justify-center">
+              {previewCharacter && (
+                <ShopCharacterPreview character={previewCharacter} />
+              )}
+            </aside>
 
-          <aside className="side-content w-[160px] h-full flex">
-            <CategoryTabs
-              activeCategory={activeCategory}
-              onChange={setActiveCategory}
-            />
-          </aside>
-        </div>
+            <aside className="side-content w-[160px] h-full flex">
+              <CategoryTabs
+                activeCategory={activeCategory}
+                onChange={setActiveCategory}
+              />
+            </aside>
+          </div>
 
           {/* 카드 리스트 영역 */}
           <section className="shop-content flex-1 relative min-h-[720px]">
-            <ProductList products={pagedProducts} 
+            <ProductList
+              products={pagedProducts}
               onSelect={handleSelectProduct}
               onBuy={handleBuyProduct}
-              />
+            />
 
             {/* 페이지네이션 */}
-            { <div className="absolute -bottom-7 left-0 right-0 flex justify-center gap-4">
+            {
+              <div className="absolute -bottom-7 left-0 right-0 flex justify-center gap-4">
                 {Array.from({ length: totalPages }).map((_, i) => {
                   const page = i + 1;
                   const isActive = page === currentPage;
@@ -239,14 +218,15 @@ export default function ShopPage(){
                     </button>
                   );
                 })}
-              </div>}
+              </div>
+            }
 
             {isModalOpen && selectedProduct && (
               <ProductDetailModal
                 product={selectedProduct}
                 onClose={handleModal}
-                 onPurchase={handlePurchase}
-                   isPurchasing={isPurchasing}
+                onPurchase={handlePurchase}
+                isPurchasing={isPurchasing}
               />
             )}
           </section>
@@ -254,5 +234,4 @@ export default function ShopPage(){
       </TransparentFrame>
     </main>
   );
-
 }

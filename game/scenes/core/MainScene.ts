@@ -10,7 +10,7 @@ import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 import { UIManager } from "@/game/managers/global/UIManager";
 import { createEventGame } from "@/lib/supabase/event";
-import { supabase } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
 
@@ -283,13 +283,13 @@ export class MainScene extends BaseGameScene {
     });
 
     this.rankingSubscription = supabase
-      .channel('realtime_rankings')
+      .channel("realtime_rankings")
       .on(
-          'postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'leaderboards' },
-          (payload) => {
-            this.uiManager.showNotice("랭킹 게시판이 갱신되었습니다.")
-          }
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "leaderboards" },
+        (payload) => {
+          this.uiManager.showNotice("랭킹 게시판이 갱신되었습니다.");
+        }
       )
       .subscribe();
   }

@@ -165,7 +165,10 @@ export abstract class BaseMultiplayerScene extends BaseGameScene {
 
   protected initManagers(): void {
     // 1. 공통 매니저 초기화
-    this.onlineUIManager = new BaseOnlineUIManager(this, DEFAULT_ROOM_UI_CONFIG);
+    this.onlineUIManager = new BaseOnlineUIManager(
+      this,
+      DEFAULT_ROOM_UI_CONFIG
+    );
 
     // 2. 게임별 매니저 초기화 (추상 메서드)
     this.initGameManagers();
