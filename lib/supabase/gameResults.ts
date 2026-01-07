@@ -1,6 +1,6 @@
 // lib/supabase/gameResults.ts
 import { supabase } from "@/lib/supabase/server";
-import { DB_TABLES } from "@/lib/constants/tables";
+import { DB_TABLES } from "@/constants/tables";
 import {
   InsertGameResultParams,
   InsertMultiGameResultParams,
