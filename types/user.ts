@@ -119,3 +119,10 @@ export interface UserStatsDisplay {
   averageScore: number;
   favoriteGame: string | null;
 }
+export type UpsertUserStats = Omit<UserStats, "id" | "updated_at">;
+
+// localStorage의 user 데이터 타입
+export interface UserData {
+  uuid?: string;
+  id?: string;
+}

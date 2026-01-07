@@ -42,3 +42,39 @@ export async function upsertUserStats(stats: Partial<UserStats>) {
 
   return data?.[0];
 }
+
+// =====================================================================
+// =====================================================================
+
+export async function updateStatsAfterGame(
+  userId: string,
+  isWinner: boolean,
+  gameType: string
+): Promise<UserStats | null> {
+  // 기존 통계 조회
+  const currentStats = await getUserStats(userId);
+
+  if (currentStats) {
+    const wins = currentStats.total_wins + (isWinner ? 1 : 0);
+    const games = currentStats.total_games_played + 1;
+
+    return await upsertUserStats({
+      user_id: userId,
+      total_wins: wins,
+      total_losses: currentStats.total_losses + (isWinner ? 0 : 1),
+      total_games_played: games,
+      win_rate: Math.round((wins / games) * 100),
+      favorite_game: gameType,
+    });
+  } else {
+    // 첫 게임
+    return await upsertUserStats({
+      user_id: userId,
+      total_wins: isWinner ? 1 : 0,
+      total_losses: isWinner ? 0 : 1,
+      total_games_played: 1,
+      win_rate: isWinner ? 100 : 0,
+      favorite_game: gameType,
+    });
+  }
+}

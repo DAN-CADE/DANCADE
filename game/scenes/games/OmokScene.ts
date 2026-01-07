@@ -18,10 +18,11 @@ import { OmokGameFlowManager } from "@/game/managers/games/omok/flow/OmokGameFlo
 import { OMOK_CONFIG } from "@/game/types/omok/omok.constants";
 import { GameNetworkCallbacks } from "@/game/types/multiplayer/network.types";
 import { RoomUIEvent } from "@/game/types/common/common.network.types";
-import { AiGameOverHandler } from "@/handlers/ai/AiGameOverHandler.js";
+import { AiGameOverHandler } from "@/game/managers/global/AiGameOverManager";
+import { GameSceneWithState } from "@/types/game";
 
-interface IAiGameOverHandler {
-  handle(winner: OmokSideType): Promise<void>;
+interface IAiGameOverHandler<TSide = never> {
+  handle(winner: TSide): Promise<void>;
 }
 
 export class OmokScene extends BaseGameScene {
@@ -49,7 +50,7 @@ export class OmokScene extends BaseGameScene {
     onlineUI: BaseOnlineUIManager;
     abortDialog: OmokGameAbortedDialog;
     ai: OmokAIManager;
-    aiHandler: IAiGameOverHandler;
+    aiHandler: IAiGameOverHandler<OmokSideType>;
   };
 
   // =====================================================================
@@ -88,7 +89,10 @@ export class OmokScene extends BaseGameScene {
       board: new OmokBoardManager(this, omok),
       room: this.createRoomManager(network),
       abortDialog: new OmokGameAbortedDialog(this),
-      aiHandler: new AiGameOverHandler(this, "omok"),
+      aiHandler: new AiGameOverHandler<OmokSideType>(
+        this as unknown as GameSceneWithState<OmokSideType>,
+        "omok"
+      ),
     };
   }
 

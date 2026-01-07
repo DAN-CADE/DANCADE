@@ -1,20 +1,24 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { socket } from "@/lib/socket";
+// =================================================================
+// ChatFrame.tsx - 채팅 프레임 컴포넌트 (리팩토링 버전)
+// =================================================================
+// 기존 475줄 → 리팩토링 후 약 175줄
+// 추출된 모듈:
+// - hooks/chat/useChatSocket.ts (소켓 연결 및 메시지 관리)
+// - components/chat/MessageList.tsx (메시지 목록 렌더링)
+// - components/chat/ChatInput.tsx (채팅 입력 영역)
+// - components/chat/GuestQuickPanel.tsx (게스트 퀵메시지 패널)
+// =================================================================
+
+import { useState, useEffect } from "react";
 import RegisterModal from "@/components/auth/RegisterModal";
 import { useToast } from "@/components/common/ToastProvider";
+import { useChatSocket } from "@/hooks/chat/useChatSocket";
+import { MessageList } from "./MessageList";
+import { ChatInput } from "./ChatInput";
+import { GuestQuickPanel } from "./GuestQuickPanel";
 import styles from "./ChatFrame.module.css";
-
-type MessageType = "chat" | "system" | "game" | "invite";
-
-interface Message {
-  id?: string;
-  username: string; // author → username으로 변경
-  message: string; // content → message로 변경
-  timestamp: number; // Date → number로 변경
-  messageType?: MessageType; // 메시지 타입 추가
-}
 
 interface ChatFrameProps {
   onClose?: () => void;
@@ -22,220 +26,59 @@ interface ChatFrameProps {
 
 export default function ChatFrame({ onClose }: ChatFrameProps) {
   const { showToast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState("");
+
+  // 소켓 및 메시지 관리 훅
+  const {
+    messages,
+    username,
+    isGuestUser,
+    isAnalyzing,
+    sendMessage,
+    sendQuickMessage,
+    checkUserStatus,
+  } = useChatSocket();
+
+  // UI 상태
   const [isFullHeight, setIsFullHeight] = useState(false);
-  const [username, setUsername] = useState("익명"); // 추가
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isHidden, setIsHidden] = useState(false); // 채팅창 숨기기
-  const [isGuestUser, setIsGuestUser] = useState(false); // 게스트 여부
-  const [isAnalyzing, setIsAnalyzing] = useState(false); // 분석 중 상태
-  const [showRegisterModal, setShowRegisterModal] = useState(false); // 회원가입 모달
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [isHidden, setIsHidden] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // 게임 씬 이벤트 리스너 (채팅창 표시/숨김)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const handleChatShow = () => setIsHidden(false);
+    const handleChatHide = () => setIsHidden(true);
 
-  const checkUserStatus = useCallback(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setUsername(user.nickname || "익명");
-        // 게스트 사용자 확인
-        setIsGuestUser(user.isGuest === true);
-      } catch (error) {
-        console.error("사용자 데이터 파싱 오류:", error);
-        setUsername("익명");
-      }
-    }
-  }, []);
-
-  // =====================================================
-  // 🎯 게임 씬 이벤트 리스너 추가
-  // =====================================================
-  useEffect(() => {
-    const handleChatShow = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      console.log("📢 [React] 채팅 표시:", customEvent.detail?.sceneName);
-      setIsHidden(false); // 채팅 표시
-    };
-
-    const handleChatHide = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      console.log("📢 [React] 채팅 숨김:", customEvent.detail?.sceneName);
-      setIsHidden(true); // 채팅 숨김
-    };
-
-    // 이벤트 리스너 등록
     window.addEventListener("chat:show", handleChatShow);
     window.addEventListener("chat:hide", handleChatHide);
 
-    // 클린업
     return () => {
       window.removeEventListener("chat:show", handleChatShow);
       window.removeEventListener("chat:hide", handleChatHide);
     };
   }, []);
 
-  // ✅ Socket 로직 추가
-  useEffect(() => {
-    // 소켓 수동 연결 (lib/socket.ts에서 autoConnect: false로 설정되어 있음)
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    // 초기 유저 상태 확인
-    checkUserStatus();
-
-    // 채팅 메시지 수신
-    socket.on("lobby:chatMessage", (data: Message) => {
-      setMessages((prev) => [...prev, data]);
-    });
-
-    // 클린업
-    return () => {
-      socket.off("lobby:chatMessage");
-    };
-  }, [checkUserStatus]);
-
-  const handleSendMessage = async () => {
+  // 메시지 전송 핸들러
+  const handleSendMessage = async (message: string) => {
     if (isGuestUser) {
       alert("채팅은 회원가입 후 사용할 수 있습니다.");
       return;
     }
-
-    if (!inputValue.trim()) {
-      return;
-    }
-
-    // 분석 중 중복 전송 방지
-    if (isAnalyzing) {
-      return;
-    }
-
-    setIsAnalyzing(true);
-
-    try {
-      // Perspective API로 메시지 분석
-      const analyzeResponse = await fetch("/api/chat/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ comment: inputValue }),
-      });
-
-      console.log("📤 분석 응답 상태:", analyzeResponse.status);
-
-      if (!analyzeResponse.ok) {
-        const errorData = await analyzeResponse.json();
-        console.error("❌ 분석 실패 응답:", errorData);
-        throw new Error(errorData.error || "분석 실패");
-      }
-
-      const analysisResult = await analyzeResponse.json();
-      console.log("✅ 분석 결과:", analysisResult);
-
-      if (analysisResult.isBlocked) {
-        // 부적절한 내용 차단
-        alert(analysisResult.reason || "부적절한 내용이 감지되었습니다.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      // ✅ Socket으로 전송
-      socket.emit("lobby:chat", {
-        username,
-        message: inputValue,
-      });
-
-      setInputValue("");
-    } catch (error) {
-      console.error("메시지 분석 중 오류:", error);
-      // 오류 발생 시에도 메시지 전송 (선택사항)
-      socket.emit("lobby:chat", {
-        username,
-        message: inputValue,
-      });
-      setInputValue("");
-    } finally {
-      setIsAnalyzing(false);
-    }
+    await sendMessage(message);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    e.stopPropagation(); // 게임 키 입력 방지
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const handleKeyUp = (e: React.KeyboardEvent) => {
-    e.stopPropagation(); // 게임 키 입력 방지
-  };
-
-  // ✅ 인사 메시지도 socket으로 전송
+  // 인사 클릭 핸들러
   const handleWaveClick = () => {
-    socket.emit("lobby:chat", {
-      username,
-      message: "👋",
+    sendQuickMessage("👋");
+  };
+
+  // 회원가입 성공 핸들러
+  const handleRegisterSuccess = () => {
+    setShowRegisterModal(false);
+    checkUserStatus();
+    showToast({
+      type: "success",
+      message: "환영합니다! 회원가입이 완료되었습니다.",
     });
-  };
-
-  // ✅ 퀵메시지 전송
-  const sendQuickMessage = (emoji: string) => {
-    socket.emit("lobby:chat", {
-      username,
-      message: emoji,
-    });
-  };
-
-  // ✅ 이모지 추가
-  const handleEmojiClick = (emoji: string) => {
-    setInputValue((prev) => prev + emoji);
-    setShowEmojiPicker(false);
-  };
-
-  // ✅ 외부 클릭 시 이모지 피커 닫기
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
-      ) {
-        setShowEmojiPicker(false);
-      }
-    };
-
-    if (showEmojiPicker) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showEmojiPicker]);
-
-  const handleFocus = () => {
-    // 게임 입력 잠금
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("game:input-locked"));
-    }
-  };
-
-  const handleBlur = () => {
-    // 게임 입력 잠금 해제
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("game:input-unlocked"));
-    }
   };
 
   return (
@@ -247,202 +90,29 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
           display: isHidden ? "none" : "flex",
         }}
       >
-        {/* Header */}
-        <div className={styles.header}>
-          <span className={styles.title}>채팅</span>
-          <div className={styles.headerButtons}>
-            <button
-              onClick={() => setIsFullHeight(!isFullHeight)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-              }}
-              title={isFullHeight ? "원래 크기" : "전체 확대"}
-            >
-              <img src="/assets/ui/chevrons-vertical.png" alt="expand" />
-            </button>
-            <button
-              onClick={() => setIsHidden(true)}
-              className={styles.hideBtn}
-              title="채팅창 숨기기"
-            >
-              −
-            </button>
-          </div>
-          {onClose && (
-            <button className={styles.closeBtn} onClick={onClose}>
-              ✕
-            </button>
-          )}
-        </div>
-        {/* Messages Container */}
+        {/* 헤더 */}
+        <ChatHeader
+          isFullHeight={isFullHeight}
+          onToggleHeight={() => setIsFullHeight(!isFullHeight)}
+          onHide={() => setIsHidden(true)}
+          onClose={onClose}
+        />
 
-        <div className={styles.messagesContainer}>
-          {messages.length === 0 ? (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIcon} onClick={handleWaveClick}>
-                👋
-              </div>
-              <div className={styles.emptyText}>
-                손을 눌러서 사람들에게 인사하세요!
-              </div>
-              <div className={styles.emojiContainer}></div>
-            </div>
-          ) : (
-            messages.map((msg, idx) => {
-              // 메시지 타입에 따른 className 결정
-              let messageClass = styles.message; // 기본: 상대방 메시지
+        {/* 메시지 목록 */}
+        <MessageList
+          messages={messages}
+          currentUsername={username}
+          onWaveClick={handleWaveClick}
+        />
 
-              if (msg.messageType === "system") {
-                messageClass = styles.messageSystem;
-              } else if (msg.messageType === "game") {
-                messageClass = styles.messageGame;
-              } else if (msg.username === username) {
-                messageClass = styles.messageOwn; // 내 메시지
-              }
-
-              return (
-                <div key={msg.id || idx} className={messageClass}>
-                  {msg.messageType !== "system" && (
-                    <span className={styles.author}>{msg.username}</span>
-                  )}
-                  <span className={styles.content}>{msg.message}</span>
-                  <span className={styles.timestamp}>
-                    {new Date(msg.timestamp).toLocaleTimeString("ko-KR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-        {/* Input Area */}
+        {/* 입력 영역 */}
         {isGuestUser ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              padding: "10px",
-            }}
-          >
-            <div className={styles.guestUpgradePrompt}>
-              <span>전체 채팅 기능을 원하시나요?</span>
-              <button
-                onClick={() => setShowRegisterModal(true)}
-                className={styles.guestPromptBtn}
-              >
-                회원가입
-              </button>
-            </div>
-            <div className={styles.guestQuickMessagePanel}>
-              <div className={styles.quickMessageLabel}>퀵메시지</div>
-              <div className={styles.guestQuickMessageContent}>
-                <button
-                  className={styles.quickMessageBtn}
-                  onClick={() => sendQuickMessage("👋")}
-                  title="인사"
-                >
-                  👋
-                </button>
-                <button
-                  className={styles.quickMessageBtn}
-                  onClick={() => sendQuickMessage("👍")}
-                  title="좋아요"
-                >
-                  👍
-                </button>
-                <button
-                  className={styles.quickMessageBtn}
-                  onClick={() => sendQuickMessage("❤️")}
-                  title="좋아합니다"
-                >
-                  ❤️
-                </button>
-                <button
-                  className={styles.quickMessageBtn}
-                  onClick={() => sendQuickMessage("😂")}
-                  title="웃음"
-                >
-                  😂
-                </button>
-                <button
-                  className={styles.quickMessageBtn}
-                  onClick={() => sendQuickMessage("🎉")}
-                  title="축하"
-                >
-                  🎉
-                </button>
-              </div>
-            </div>
-          </div>
+          <GuestQuickPanel
+            onQuickMessage={sendQuickMessage}
+            onRegisterClick={() => setShowRegisterModal(true)}
+          />
         ) : (
-          <div className={styles.inputContainer}>
-            {/* 이모지 버튼 */}
-            <div className={styles.emojiPickerContainer} ref={emojiPickerRef}>
-              <button
-                className={styles.emojiPickerBtn}
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                title="이모지 추가"
-              >
-                😊
-              </button>
-              {showEmojiPicker && (
-                <div className={styles.emojiPanel}>
-                  {["😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😇"].map(
-                    (emoji) => (
-                      <button
-                        key={emoji}
-                        className={styles.emojiOption}
-                        onClick={() => handleEmojiClick(emoji)}
-                      >
-                        {emoji}
-                      </button>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className={styles.inputWrapper}>
-              <input
-                type="text"
-                className={styles.input}
-                placeholder="바르고 고운말을 씁시다"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onKeyUp={handleKeyUp}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                disabled={isAnalyzing}
-              />
-
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                onClick={handleSendMessage}
-                style={{
-                  cursor: isAnalyzing ? "not-allowed" : "pointer",
-                  opacity: isAnalyzing ? 0.5 : 1,
-                }}
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M10 20H8V18H10V20ZM20 16H8V18H6V16H4V14H6V12H8V14H18V4H20V16ZM10 12H8V10H10V12Z"
-                  fill="white"
-                  fillOpacity="0.7"
-                />
-              </svg>
-            </div>
-          </div>
+          <ChatInput onSend={handleSendMessage} isAnalyzing={isAnalyzing} />
         )}
       </div>
 
@@ -461,15 +131,53 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
       <RegisterModal
         isOpen={showRegisterModal}
         onClose={() => setShowRegisterModal(false)}
-        onSuccess={() => {
-          setShowRegisterModal(false);
-          checkUserStatus();
-          showToast({
-            type: "success",
-            message: "환영합니다! 회원가입이 완료되었습니다.",
-          });
-        }}
+        onSuccess={handleRegisterSuccess}
       />
     </>
+  );
+}
+
+// =================================================================
+// 내부 컴포넌트: 채팅 헤더
+// =================================================================
+interface ChatHeaderProps {
+  isFullHeight: boolean;
+  onToggleHeight: () => void;
+  onHide: () => void;
+  onClose?: () => void;
+}
+
+function ChatHeader({
+  isFullHeight,
+  onToggleHeight,
+  onHide,
+  onClose,
+}: ChatHeaderProps) {
+  return (
+    <div className={styles.header}>
+      <span className={styles.title}>채팅</span>
+      <div className={styles.headerButtons}>
+        <button
+          onClick={onToggleHeight}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+          title={isFullHeight ? "원래 크기" : "전체 확대"}
+        >
+          <img src="/assets/ui/chevrons-vertical.png" alt="expand" />
+        </button>
+        <button onClick={onHide} className={styles.hideBtn} title="채팅창 숨기기">
+          −
+        </button>
+      </div>
+      {onClose && (
+        <button className={styles.closeBtn} onClick={onClose}>
+          ✕
+        </button>
+      )}
+    </div>
   );
 }
