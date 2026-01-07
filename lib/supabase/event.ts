@@ -17,8 +17,7 @@ interface ResultProps {
   }
 }
 
-const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
-const EVENT_GAME_BASE_URL = `${NEXT_API_URL}/api/event/game`
+const EVENT_GAME_BASE_URL = "http://localhost:3000/api/event/game"
 
 // Project Info API
 export async function getEventGame(): Promise<ResultProps> {

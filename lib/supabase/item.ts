@@ -1,5 +1,4 @@
-const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
-const ITEM_BASE_URL = `${NEXT_API_URL}/api/items`
+const ITEM_BASE_URL = "http://localhost:3000/api/items"
 
 // Project Info API
 export async function getItemById(id: string | undefined): Promise<null> {
