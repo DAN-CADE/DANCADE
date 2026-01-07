@@ -8,7 +8,7 @@ import { RPSGameUIManager, Choice } from "./ui/RPSGameUIManager";
 import { ChoseongUIManager } from "./ui/ChoseongUIManager";
 import { RankingUIManager } from "./ui/RankingUIManager";
 
-export { Choice } from "./ui/RPSGameUIManager";
+// export { Choice } from "./ui/RPSGameUIManager";
 
 export class UIManager {
   private scene: MainScene;

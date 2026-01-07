@@ -24,22 +24,16 @@ import {
   type PartCategory,
   type ColorCategory,
 } from "@/constants/inventory";
+import { AvatarDataManager } from "@/game/managers/global/AvatarDataManager";
+import { AvatarManager } from "@/game/managers/global/AvatarManager";
+import { CharacterState } from "../avatar/utils/LpcTypes";
 
 // 전역 window 타입 확장
 interface WindowWithManagers extends Window {
-  __avatarDataManager?: AvatarDataManager;
-  __avatarManager?: AvatarManager;
+  __avatarDataManagerProp?: AvatarDataManager;
+  __avatarManagerProp?: AvatarManager;
 }
 
-interface AvatarDataManager {
-  customization: {
-    parts: Record<string, { color?: string; styleId?: string }>;
-  } | null;
-}
-
-interface AvatarManager {
-  getPosition: () => { x: number; y: number } | null;
-}
 
 interface InventoryItem {
   userItemId: string;
@@ -47,8 +41,9 @@ interface InventoryItem {
   imageUrl: string;
   isEquipped: boolean;
   category: string;
-  styleKey: string;
+  styleKey: string | null;
   itemId: string;
+  purchasedAt: string | null;
 }
 
 /* =========================
@@ -146,7 +141,7 @@ export default function Inventory() {
     const partKey = PART_CATEGORY_TO_PART[item.category as keyof typeof PART_CATEGORY_TO_PART];
     if (!partKey) return;
 
-    const next = buildNextPartState(current, partKey, item.styleKey);
+    const next = buildNextPartState(current, partKey, item.styleKey ?? "");
     applyAvatarState(next, avatarDataManager, avatarManager);
 
     try {
@@ -167,7 +162,11 @@ export default function Inventory() {
     const targetParts = COLOR_CATEGORY_TO_PART[category];
     if (!targetParts) return;
 
-    const next = buildNextColorState(current, targetParts as readonly string[], color);
+    const next = buildNextColorState(
+      current, 
+      targetParts as readonly (keyof CharacterState['parts'])[], 
+      color
+    );
     applyAvatarState(next, avatarDataManager, avatarManager);
     forceRender((v) => v + 1);
 

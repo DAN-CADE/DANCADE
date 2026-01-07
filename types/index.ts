@@ -74,7 +74,7 @@ export type {
   Enums,
 } from "@/types/database";
 
-export * from "@/types/character";
+export * from "@/types/onlinePlayer";
 export * from "@/types/gameResults";
 export * from "@/types/lpc";
 export * from "@/types/map";

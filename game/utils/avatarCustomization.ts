@@ -50,16 +50,22 @@ export function buildNextPartState(
  */
 export function buildNextColorState(
   current: CharacterState,
-  partKeys: readonly (keyof CharacterState["parts"])[],
+  // string[] 대신 keyof 타입을 사용하여 정확한 키만 들어오도록 제한합니다.
+  partKeys: readonly (keyof CharacterState['parts'])[], 
   color: string
 ): CharacterState {
   const nextParts = { ...current.parts };
 
   partKeys.forEach((key) => {
-    nextParts[key] = {
-      ...nextParts[key],
-      color,
-    };
+    const part = nextParts[key];
+    
+    // 해당 파트가 존재할 때만 업데이트 (Optional 대응)
+    if (part) {
+      nextParts[key] = {
+        ...part,
+        color,
+      };
+    }
   });
 
   return {

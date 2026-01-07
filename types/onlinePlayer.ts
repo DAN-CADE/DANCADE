@@ -1,3 +1,5 @@
+import { CharacterState } from "@/components/avatar/utils/LpcTypes";
+
 export interface OnlinePlayer {
   socketId: string;
   userId: string;
@@ -7,7 +9,7 @@ export interface OnlinePlayer {
   x: number;
   y: number;
   joinedAt: number;
-  customization?: Record<string, any>;
+  customization?: CharacterState;
 }
 
 export interface PlayerMoveData {

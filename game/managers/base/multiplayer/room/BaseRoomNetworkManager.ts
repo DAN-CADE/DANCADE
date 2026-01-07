@@ -10,7 +10,8 @@ export abstract class BaseRoomNetworkManager {
   protected gamePrefix: string;
   protected roomList: RoomData[] = [];
   protected currentRoomId: string | null = null;
-  protected callbacks: RoomNetworkCallbacks = {};
+  // protected callbacks: RoomNetworkCallbacks = {};
+  protected callbacks: any = {}; // 임시대응
 
   private registeredEvents: string[] = [];
 
@@ -48,11 +49,15 @@ export abstract class BaseRoomNetworkManager {
 
   protected setupSocketHandlers(): void {
     this.on("roomListUpdate", (data: RoomListResponse) => {
-      if (Array.isArray(data)) {
-        this.roomList = data;
-      } else if (data?.rooms) {
-        this.roomList = data.rooms;
-      }
+      console.log(this.roomList)
+      // if (Array.isArray(data)) {
+      //   this.roomList = data;
+      // } else if (data?.rooms) {
+      //   this.roomList = data.rooms;
+      // }
+
+      const rooms = (Array.isArray(data) ? data : data.rooms) as unknown as RoomData[];
+      this.roomList = rooms;
       this.callbacks.onRoomListUpdate?.(this.roomList);
     });
 
