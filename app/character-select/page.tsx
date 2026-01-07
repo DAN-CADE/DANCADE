@@ -5,10 +5,8 @@ import dynamic from "next/dynamic";
 import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { STORAGE_KEY } from "@/constants/character";
-import {
-  generateGuestId,
-  generateGuestNickname,
-} from "@/lib/utils/guestNickname";
+import { generateGuestNickname } from "@/lib/utils/guestNickname";
+import { generateGuestId } from "@/lib/utils/auth";
 import { useLPCData } from "@/hooks/useLPCData";
 import { useCharacterCustomization } from "@/hooks/useCharacterCustomization";
 import { useAuth } from "@/hooks/useAuth";

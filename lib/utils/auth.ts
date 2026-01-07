@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { generateGuestNickname } from "./guestNickname";
 
 /**
  * 게임 전역에서 사용하는 통합 유저 타입
@@ -98,10 +99,6 @@ export function clearLocalUser() {
 
 export function generateGuestId(): string {
   return `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function generateGuestNickname(): string {
-  return `게스트_${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 /**

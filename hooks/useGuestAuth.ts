@@ -4,10 +4,8 @@
 import { useCallback } from "react";
 import { GuestUser, isGuestUser, LocalUser } from "@/types/user";
 import { STORAGE_KEYS } from "@/constants/auth";
-import {
-  generateGuestId,
-  generateGuestNickname,
-} from "@/lib/utils/guestNickname";
+import { generateGuestNickname } from "@/lib/utils/guestNickname";
+import { generateGuestId } from "@/lib/utils/auth";
 
 export const useGuestAuth = () => {
   // 저장된 사용자 정보 가져오기
