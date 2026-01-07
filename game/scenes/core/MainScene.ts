@@ -9,10 +9,21 @@ import LpcCharacter from "@/components/avatar/core/LpcCharacter";
 import { LpcSpriteManager } from "@/game/managers/global/LpcSpriteManager";
 import io, { Socket } from "socket.io-client";
 import { UIManager } from "@/game/managers/global/UIManager";
-import { createEventGame } from "@/lib/supabase/event";
 import { supabase } from "@/lib/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
-import type { CharacterState } from "@/components/avatar/utils/LpcTypes";
+import type {
+  CharacterState,
+  LpcSprite,
+} from "@/components/avatar/utils/LpcTypes";
+
+// Window 확장 타입 정의
+declare global {
+  interface Window {
+    __avatarDataManager?: AvatarDataManager;
+    __avatarManager?: AvatarManager;
+    __mainScene?: MainScene;
+  }
+}
 
 // 플레이어 데이터 타입
 interface OnlinePlayer {
@@ -32,6 +43,16 @@ interface PlayerMoveData {
   socketId: string;
   x: number;
   y: number;
+}
+
+// 이벤트 게임 데이터 타입
+interface EventGameData {
+  title: string;
+}
+
+// 공지 데이터 타입
+interface NoticeData {
+  content: string;
 }
 
 export class MainScene extends BaseGameScene {
@@ -82,7 +103,7 @@ export class MainScene extends BaseGameScene {
     this.load.json("lpc_config", "/assets/lpc_assets.json");
     this.load.once(
       "filecomplete-json-lpc_config",
-      (key: string, type: string, data: any) => {
+      (key: string, type: string, data: LpcSprite) => {
         if (data?.assets) {
           this.lpcSpriteManager.setLpcSprite(data);
         }
@@ -142,11 +163,11 @@ export class MainScene extends BaseGameScene {
       }
     );
 
-    this.socket.on("createEventGame", (data: any) => {
+    this.socket.on("createEventGame", (data: EventGameData) => {
       this.uiManager.showNotice(data.title);
     });
 
-    this.socket.on("createNotice", (data: any) => {
+    this.socket.on("createNotice", (data: NoticeData) => {
       this.uiManager.showNotice(data.content);
     });
 
@@ -201,9 +222,9 @@ export class MainScene extends BaseGameScene {
     this.uiManager = new UIManager(this);
 
     // 🔥 React에서 접근 가능하도록 노출 => inventory 에서 두 매니저 접근
-    (window as any).__avatarDataManager = this.avatarDataManager;
-    (window as any).__avatarManager = this.player;
-    (window as any).__mainScene = this; // 카메라 접근을 위해 씬 노출
+    window.__avatarDataManager = this.avatarDataManager;
+    window.__avatarManager = this.player;
+    window.__mainScene = this; // 카메라 접근을 위해 씬 노출
   }
 
   // 화면에 무엇을 그릴 것인가
@@ -287,7 +308,7 @@ export class MainScene extends BaseGameScene {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "leaderboards" },
-        (payload) => {
+        (_payload) => {
           this.uiManager.showNotice("랭킹 게시판이 갱신되었습니다.");
         }
       )
