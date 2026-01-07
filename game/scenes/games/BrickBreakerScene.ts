@@ -161,6 +161,10 @@ export class BrickBreakerScene extends BaseGameScene {
           // 일시정지 UI 숨김 (isPaused = false)
           this.uiManager.togglePauseScreen(false);
         },
+        onBricksDescend: () => {
+          // ✅ 벽돌 하강 처리
+          this.descendBricks();
+        },
       }
     );
   }
@@ -365,16 +369,75 @@ export class BrickBreakerScene extends BaseGameScene {
 
     const { cols, width, spacing, startY, height } = this.BRICK_LAYOUT;
     const totalWidth = cols * width + (cols - 1) * spacing;
-    const startX = (800 - totalWidth) / 2 + width / 2;
+    const startX = (this.GAME_WIDTH - totalWidth) / 2 + width / 2;
 
     for (let row = 0; row < this.BRICK_LAYOUT.rows; row++) {
       for (let col = 0; col < cols; col++) {
         const brickX = startX + col * (width + spacing);
         const brickY = startY + row * height;
-        const brickColor = this.BRICK_COLORS[row];
+        const brickColor = this.BRICK_COLORS[row % this.BRICK_COLORS.length];
 
         this.bricks.create(brickX, brickY, brickColor);
       }
+    }
+  }
+
+  // 벽돌 하강 처리
+  private descendBricks(): void {
+    const { height } = this.BRICK_LAYOUT;
+    const paddleY = this.paddle.y - this.paddle.displayHeight / 2;
+    let gameOver = false;
+
+    // 모든 벽돌을 한 줄씩 아래로 이동
+    this.bricks.getChildren().forEach((brick) => {
+      const brickSprite = brick as Phaser.Physics.Arcade.Sprite;
+      const newY = brickSprite.y + height;
+
+      // 벽돌이 패들 높이에 도달하면 게임 오버
+      if (newY >= paddleY - 20) {
+        gameOver = true;
+      }
+
+      brickSprite.setY(newY);
+      brickSprite.refreshBody(); // StaticGroup이므로 body 갱신 필요
+    });
+
+    if (gameOver) {
+      this.gameManager.handleBrickReachedBottom();
+      return;
+    }
+
+    // 새로운 벽돌 행 추가
+    this.addNewBrickRow();
+  }
+
+  // 새로운 벽돌 행 추가
+  private addNewBrickRow(): void {
+    const { cols, width, spacing, startY } = this.BRICK_LAYOUT;
+    const totalWidth = cols * width + (cols - 1) * spacing;
+    const startX = (this.GAME_WIDTH - totalWidth) / 2 + width / 2;
+
+    // 랜덤 색상 선택
+    const randomColorIndex = Phaser.Math.Between(
+      0,
+      this.BRICK_COLORS.length - 1
+    );
+    const brickColor = this.BRICK_COLORS[randomColorIndex];
+
+    for (let col = 0; col < cols; col++) {
+      const brickX = startX + col * (width + spacing);
+      const brickY = startY;
+
+      const newBrick = this.bricks.create(brickX, brickY, brickColor);
+
+      // 새 벽돌 등장 애니메이션
+      newBrick.setAlpha(0);
+      this.tweens.add({
+        targets: newBrick,
+        alpha: 1,
+        duration: 300,
+        ease: "Power2",
+      });
     }
   }
 

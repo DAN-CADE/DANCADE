@@ -11,6 +11,7 @@ interface BrickBreakerCallbacks extends Record<string, unknown> {
   onLivesUpdate?: (lives: number) => void;
   onGamePause?: () => void;
   onGameResume?: () => void;
+  onBricksDescend?: () => void; // 벽돌 하강 콜백
 }
 
 interface BrickBreakerConfig {
@@ -19,6 +20,7 @@ interface BrickBreakerConfig {
   paddleSpeed: number;
   ballSpeed: number;
   initialLives: number;
+  descendInterval: number; // 벽돌 하강 간격 (초)
 }
 
 interface BrickLayoutConfig {
@@ -45,6 +47,7 @@ export const BRICKBREAKER_CONFIG: BrickBreakerConfig = {
   paddleSpeed: 300,
   ballSpeed: 200,
   initialLives: 3,
+  descendInterval: 15, // 15초마다 벽돌 하강
 };
 
 export const BRICK_LAYOUT: BrickLayoutConfig = {
@@ -62,7 +65,10 @@ export type GameResult = "win" | "gameOver";
  * 벽돌깨기 게임 로직 관리
  * - 물리 연산은 BrickBreakerPhysicsManager에 위임
  */
-export class BrickBreakerGameManager extends BaseGameManager<GameState, BrickBreakerCallbacks> {
+export class BrickBreakerGameManager extends BaseGameManager<
+  GameState,
+  BrickBreakerCallbacks
+> {
   // Game Objects (참조)
   private paddle?: Phaser.Physics.Arcade.Sprite;
   private ball?: Phaser.Physics.Arcade.Sprite;
@@ -85,6 +91,9 @@ export class BrickBreakerGameManager extends BaseGameManager<GameState, BrickBre
   // 일시정지 전 속도 저장용
   private savedBallVelocity?: { x: number; y: number };
   private savedPaddleVelocity?: number;
+
+  // 벽돌 하강 타이머
+  private descendTimer: number = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -139,6 +148,15 @@ export class BrickBreakerGameManager extends BaseGameManager<GameState, BrickBre
     // 게임 플레이 중일 때만 시간 누적
     if (this.gameState.isPlaying && !this.gameState.isPaused) {
       this.gameState.elapsedTime += delta / 1000;
+
+      // 벽돌 하강 타이머 (공이 발사된 후부터 시작)
+      if (this.isBallLaunched) {
+        this.descendTimer += delta / 1000;
+        if (this.descendTimer >= this.gameConfig.descendInterval) {
+          this.descendTimer = 0;
+          this.callCallback("onBricksDescend");
+        }
+      }
     }
   }
 
@@ -164,7 +182,9 @@ export class BrickBreakerGameManager extends BaseGameManager<GameState, BrickBre
 
   handlePaddleCollision(
     ball: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
-    paddle: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+    paddle:
+      | Phaser.Types.Physics.Arcade.GameObjectWithBody
+      | Phaser.Tilemaps.Tile
   ): void {
     this.physics.handlePaddleCollision(
       ball as Phaser.Physics.Arcade.Sprite,
@@ -190,6 +210,11 @@ export class BrickBreakerGameManager extends BaseGameManager<GameState, BrickBre
     if (this.bricks?.countActive() === 0) {
       this.handleWin();
     }
+  }
+
+  // 벽돌이 패들 높이에 도달했을 때 게임 오버
+  handleBrickReachedBottom(): void {
+    this.handleGameOver();
   }
 
   handleFloorCollision(): void {
@@ -325,6 +350,7 @@ export class BrickBreakerGameManager extends BaseGameManager<GameState, BrickBre
     this.gameState.isPaused = false;
     this.gameState.elapsedTime = 0;
     this.gameState.bricksDestroyed = 0;
+    this.descendTimer = 0;
 
     this.callCallback("onScoreUpdate", 0);
     this.callCallback("onLivesUpdate", this.gameState.lives);
