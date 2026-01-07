@@ -263,9 +263,10 @@ export class PingPongScene extends BaseGameScene {
         case PingPongMode.SINGLE:
           this.startSingleGame();
           break;
-        case PingPongMode.ONLINE:
-          this.showOnlineMenu();
-          break;
+        // TODO: 온라인 모드 구현 후 활성화
+        // case PingPongMode.ONLINE:
+        //   this.showOnlineMenu();
+        //   break;
         default:
           this.exitToMainScene();
       }
@@ -277,11 +278,11 @@ export class PingPongScene extends BaseGameScene {
     this.showColorSelection();
   }
 
-  private showOnlineMenu(): void {
-    // TODO: 온라인 매칭 UI 추가
-    console.log("온라인 모드는 준비 중입니다.");
-    this.showModeSelection();
-  }
+  // TODO: 온라인 모드 구현 후 활성화
+  // private showOnlineMenu(): void {
+  //   console.log("온라인 모드는 준비 중입니다.");
+  //   this.showModeSelection();
+  // }
 
   private exitToMainScene(): void {
     this.scene.start("MainScene");
@@ -325,10 +326,7 @@ export class PingPongScene extends BaseGameScene {
     this.aiPaddleColorIndex = this.playerPaddleColorIndex === 0 ? 1 : 0;
 
     console.log("🎮 [PingPong] 게임 시작!");
-    console.log(
-      "📊 모드:",
-      this.gameState.mode === 1 ? "SINGLE (AI)" : "ONLINE"
-    );
+    console.log("📊 모드: SINGLE (AI)");
     console.log("🎨 플레이어 색상:", this.playerPaddleColorIndex);
 
     this.children.removeAll();

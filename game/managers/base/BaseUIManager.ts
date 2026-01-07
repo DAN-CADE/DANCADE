@@ -2,7 +2,7 @@
 
 import { TEXT_STYLE } from "@/game/types/common/ui.constants";
 import { ButtonOptions } from "@/game/types/common/ui.types";
-import { ButtonFactory } from "@/utils/ButtonFactory";
+import { ButtonFactory } from "@/game/utils/ButtonFactory";
 
 /**
  * UI 매니저의 베이스 클래스

@@ -8,6 +8,7 @@ import {
   insertGameResult,
   insertMultiGameResult,
 } from "@/lib/supabase/gameResults";
+import { getRankings as getRankingsFromDB } from "@/lib/supabase/ranking";
 import { InsertGameResultParams } from "@/types/gameResults";
 
 // =====================================================================
@@ -17,6 +18,16 @@ import { InsertGameResultParams } from "@/types/gameResults";
 // =====================================================================
 export class GameResultService {
   private supabase = createServerClient();
+
+  // =====================================================================
+  /**
+   * 랭킹 조회
+   */
+  // =====================================================================
+  async getRankings(gameType: string, limit?: number) {
+    const rankings = await getRankingsFromDB(gameType);
+    return limit ? rankings.slice(0, limit) : rankings;
+  }
 
   // =====================================================================
   /**

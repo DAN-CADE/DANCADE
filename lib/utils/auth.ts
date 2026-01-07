@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { generateGuestNickname } from "./guestNickname";
 
 /**
  * 게임 전역에서 사용하는 통합 유저 타입
@@ -84,24 +85,12 @@ export function saveUserToLocal(user: UserData) {
   localStorage.setItem("user", JSON.stringify(user));
 }
 
-/**
- * 로컬스토리지 유저 정보 제거
- */
-export function clearLocalUser() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("user");
-}
-
 // =====================================================================
 // 게스트 관련
 // =====================================================================
 
 export function generateGuestId(): string {
   return `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-export function generateGuestNickname(): string {
-  return `게스트_${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
 /**
@@ -206,21 +195,6 @@ export async function getCurrentUser(): Promise<UserData | null> {
  */
 export function getUserData(): UserData | null {
   return getUserDataFromLocal();
-}
-
-export async function getCurrentUserId(): Promise<string | null> {
-  const user = await getCurrentUser();
-  return user?.userId ?? null;
-}
-
-export async function getCurrentNickname(): Promise<string | null> {
-  const user = await getCurrentUser();
-  return user?.nickname ?? null;
-}
-
-export async function isGuestUser(): Promise<boolean> {
-  const user = await getCurrentUser();
-  return user?.isGuest ?? false;
 }
 
 async function createUserInDB(user: UserData, authUUID: string) {

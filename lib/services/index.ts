@@ -1,0 +1,1 @@
+export { GameResultService } from "./gameResultService";

@@ -1,7 +1,7 @@
 // game/managers/games/pingpong/ui/PingPongEndGameRenderer.ts
 
 import { BaseEndGameUIManager } from "@/game/managers/base/multiplayer/ui/BaseEndGameUIManager";
-import type { EndGameUIConfig } from "@/game/managers/base/multiplayer/ui/BaseEndGameUIManager";
+import type { EndGameUIConfig } from "@/game/types/common/ui.types";
 
 /**
  * 핑퐁 게임 종료 UI 설정

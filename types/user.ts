@@ -1,21 +1,38 @@
-// types/user.ts
+/**
+ * 사용자 관련 타입 정의
+ */
 
 // ============================================
-// DB 사용자 (회원) - DB 스키마와 정확히 일치
+// 인증 관련 타입
 // ============================================
+
+// 회원가입 데이터
+export interface RegisterData {
+  userid: string;
+  nickname: string;
+  password: string;
+}
+
+// 로그인 데이터
+export interface LoginData {
+  userid: string;
+  password: string;
+}
+
+// DB에 저장된 사용자 정보
 export interface DBUser {
   id: string;
   userid: string;
   nickname: string;
+  password: string;
   total_points: number;
   created_at: string;
   updated_at: string;
-  password: string;
+  avatar_url?: string;
+  bio?: string;
 }
 
-// ============================================
-// 로컬스토리지 회원 데이터 (password 제외)
-// ============================================
+// 클라이언트에서 사용하는 회원 사용자 정보 (비밀번호 제외)
 export interface MemberUser {
   id: string;
   userid: string;
@@ -23,60 +40,82 @@ export interface MemberUser {
   total_points: number;
   created_at: string;
   updated_at: string;
-  isGuest: false; // 로컬에서 구분용
+  avatar_url?: string;
+  bio?: string;
+  type: "member";
+  isGuest: false;
 }
 
-// ============================================
-// 게스트 사용자 (로컬스토리지 전용)
-// ============================================
+// 게스트 사용자 정보
 export interface GuestUser {
-  userId: string;
+  id: string;
   nickname: string;
-  isGuest: true;
   points: number;
-  createdAt: string;
+  created_at: string;
+  type: "guest";
+  isGuest: true;
 }
 
-// ============================================
-// 로컬스토리지에 저장되는 통합 타입
-// ============================================
+// 로컬 스토리지에 저장되는 사용자 타입 (회원 또는 게스트)
 export type LocalUser = MemberUser | GuestUser;
 
-// ============================================
-// Type Guards
-// ============================================
-export const isGuestUser = (user: LocalUser): user is GuestUser => {
-  return user.isGuest === true;
-};
+// 타입 가드 함수
+export function isMemberUser(user: LocalUser): user is MemberUser {
+  return user.type === "member";
+}
 
-export const isMemberUser = (user: LocalUser): user is MemberUser => {
-  return user.isGuest === false;
-};
+export function isGuestUser(user: LocalUser): user is GuestUser {
+  return user.type === "guest";
+}
 
 // ============================================
-// API 요청 타입
+// 프로필 관련 타입
 // ============================================
-export interface RegisterData {
+
+// 사용자 기본 정보
+export interface User {
+  id: string;
   userid: string;
   nickname: string;
-  password: string;
+  avatar_url?: string;
+  created_at: string;
 }
 
-export interface LoginData {
+// 사용자 프로필
+export interface UserProfile {
+  id: string;
   userid: string;
-  password: string;
+  nickname: string;
+  avatar_url: string | null;
+  bio: string | null;
+  total_points: number;
+  created_at: string;
+  updated_at: string;
 }
 
-// ============================================
-// 유저 통계 데이터 (DB 테이블 user_stats와 일치)
-// ============================================
+// 프로필 업데이트 데이터
+export interface ProfileUpdateData {
+  nickname?: string;
+  avatar_url?: string;
+  bio?: string;
+}
+
+// 사용자 통계
 export interface UserStats {
-  id: string; // 통계 고유 PK
-  user_id: string; // users 테이블 참조 외래키 (UUID)
+  user_id: string;
   total_wins: number;
   total_losses: number;
-  win_rate: number; // 보통 0~100 사이의 소수점 포함 숫자
   total_games_played: number;
-  favorite_game?: string; // 가장 많이 플레이한 게임 (Nullable)
-  updated_at: string; // ISO 시간 문자열
+  win_rate: number;
+  favorite_game: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// 클라이언트용 통계 (화면 표시용)
+export interface UserStatsDisplay {
+  totalPlays: number;
+  totalPoints: number;
+  averageScore: number;
+  favoriteGame: string | null;
 }

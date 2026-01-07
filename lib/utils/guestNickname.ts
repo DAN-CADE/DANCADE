@@ -76,7 +76,3 @@ const config: Config = {
 export const generateGuestNickname = (): string => {
   return uniqueNamesGenerator(config);
 };
-
-export const generateGuestId = (): string => {
-  return `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
