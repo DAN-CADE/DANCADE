@@ -42,14 +42,14 @@ app.use(express.json());
 // ===================================================================
 
 // 소켓 연결 유지, 방 만들기/참가/나가기 같은 [방 관리] 세팅
-const baseGameHandler = require("./handlers/base/baseGameHandler");
+const baseGameHandler = require("./handlers/base/BaseGameHandler");
 
 // 공유 데이터
 const players = new Map();
 const rooms = new Map();
 
 // 게임별 핸들러 추가
-const omokHandler = require("./handlers/games/omok/omokHandler");
+const omokHandler = require("./handlers/games/omok/OmokHandler");
 
 // =====================================================================
 // Socket.io 연결
