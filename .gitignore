@@ -55,3 +55,11 @@ public/assets/*/Preview.png
 public/assets/*/README.txt
 public/assets/*/itch.io*
 public/assets/*/fonts/Font*
+
+# 테스트 파일
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+vitest.config.ts
+vitest.setup.ts

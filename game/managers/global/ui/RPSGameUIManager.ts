@@ -37,7 +37,14 @@ export class RPSGameUIManager {
 
     // 패널 배경
     const panelBg = this.scene.add
-      .rectangle(0, -panelHeight / 2 - 20, panelWidth, panelHeight, 0x2c3e50, 0.95)
+      .rectangle(
+        0,
+        -panelHeight / 2 - 20,
+        panelWidth,
+        panelHeight,
+        0x2c3e50,
+        0.95
+      )
       .setStrokeStyle(3, 0xffffff)
       .setInteractive();
 

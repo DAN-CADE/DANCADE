@@ -1,7 +1,7 @@
 // hooks/inventory/useInventoryPosition.ts
 // 인벤토리 위치 계산 및 캐릭터 추적 로직
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { INVENTORY_CONFIG } from "@/constants/inventory";
 
 interface Position {
