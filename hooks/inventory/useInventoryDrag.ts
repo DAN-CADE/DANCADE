@@ -35,7 +35,9 @@ export function useInventoryDrag({
 }: UseInventoryDragProps): UseInventoryDragReturn {
   const [isDragging, setIsDragging] = useState(false);
   const [hasUserDragged, setHasUserDragged] = useState(false);
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -61,7 +63,11 @@ export function useInventoryDrag({
   useEffect(() => {
     if (!isDragging || !dragOffset || !position) return;
 
-    const { WIDTH: inventoryWidth, HEIGHT: inventoryHeight, BOUNDARY_PADDING } = INVENTORY_CONFIG;
+    const {
+      WIDTH: inventoryWidth,
+      HEIGHT: inventoryHeight,
+      BOUNDARY_PADDING,
+    } = INVENTORY_CONFIG;
 
     const handleMouseMove = (e: MouseEvent) => {
       const newX = e.clientX - dragOffset.x;

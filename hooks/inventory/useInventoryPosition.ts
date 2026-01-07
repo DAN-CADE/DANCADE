@@ -62,16 +62,26 @@ export function useInventoryPosition({
     const characterDiagonal = Math.sqrt(
       characterWidth * characterWidth + characterHeight * characterHeight
     );
-    const minDistance = inventoryDiagonal / 2 + characterDiagonal / 2 + MIN_DISTANCE_OFFSET;
+    const minDistance =
+      inventoryDiagonal / 2 + characterDiagonal / 2 + MIN_DISTANCE_OFFSET;
     const maxDistance = minDistance + MAX_DISTANCE_OFFSET;
 
     // 랜덤 각도와 거리 (인벤토리 열릴 때 한 번만)
     const randomAngle = Math.random() * Math.PI * 2;
-    const randomDistance = minDistance + Math.random() * (maxDistance - minDistance);
+    const randomDistance =
+      minDistance + Math.random() * (maxDistance - minDistance);
 
     const updatePosition = () => {
       try {
-        const mainScene = (window as Window & { __mainScene?: { cameras: { main: { zoom: number; scrollX: number; scrollY: number } } } }).__mainScene;
+        const mainScene = (
+          window as Window & {
+            __mainScene?: {
+              cameras: {
+                main: { zoom: number; scrollX: number; scrollY: number };
+              };
+            };
+          }
+        ).__mainScene;
         if (!mainScene || !mainScene.cameras) return;
 
         const playerPos = avatarManager.getPosition();
@@ -105,8 +115,16 @@ export function useInventoryPosition({
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
 
-        finalX = clampToBoundary(finalX, windowWidth - inventoryWidth, BOUNDARY_PADDING);
-        finalY = clampToBoundary(finalY, windowHeight - inventoryHeight, BOUNDARY_PADDING);
+        finalX = clampToBoundary(
+          finalX,
+          windowWidth - inventoryWidth,
+          BOUNDARY_PADDING
+        );
+        finalY = clampToBoundary(
+          finalY,
+          windowHeight - inventoryHeight,
+          BOUNDARY_PADDING
+        );
 
         // 캐릭터 겹침 검사 및 조정
         const adjusted = adjustForCharacterOverlap(
@@ -192,7 +210,7 @@ function adjustForCharacterOverlap(
   const inventoryCenterY = finalY + inventoryHeight / 2;
   const distanceFromPlayer = Math.sqrt(
     Math.pow(inventoryCenterX - playerX, 2) +
-    Math.pow(inventoryCenterY - playerY, 2)
+      Math.pow(inventoryCenterY - playerY, 2)
   );
 
   if (!isOverlapping && distanceFromPlayer >= minDistance) {
@@ -205,8 +223,10 @@ function adjustForCharacterOverlap(
     inventoryCenterX - playerX
   );
 
-  let newX = playerX + Math.cos(angleToPlayer) * minDistance - inventoryWidth / 2;
-  let newY = playerY + Math.sin(angleToPlayer) * minDistance - inventoryHeight / 2;
+  let newX =
+    playerX + Math.cos(angleToPlayer) * minDistance - inventoryWidth / 2;
+  let newY =
+    playerY + Math.sin(angleToPlayer) * minDistance - inventoryHeight / 2;
 
   newX = clampToBoundary(newX, windowWidth - inventoryWidth, padding);
   newY = clampToBoundary(newY, windowHeight - inventoryHeight, padding);
@@ -216,13 +236,14 @@ function adjustForCharacterOverlap(
   const adjustedCenterY = newY + inventoryHeight / 2;
   const adjustedDistance = Math.sqrt(
     Math.pow(adjustedCenterX - playerX, 2) +
-    Math.pow(adjustedCenterY - playerY, 2)
+      Math.pow(adjustedCenterY - playerY, 2)
   );
 
   if (adjustedDistance < minDistance * 0.9) {
     const oppositeAngle = angleToPlayer + Math.PI;
     newX = playerX + Math.cos(oppositeAngle) * minDistance - inventoryWidth / 2;
-    newY = playerY + Math.sin(oppositeAngle) * minDistance - inventoryHeight / 2;
+    newY =
+      playerY + Math.sin(oppositeAngle) * minDistance - inventoryHeight / 2;
 
     newX = clampToBoundary(newX, windowWidth - inventoryWidth, padding);
     newY = clampToBoundary(newY, windowHeight - inventoryHeight, padding);
