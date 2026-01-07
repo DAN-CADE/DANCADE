@@ -1,94 +1,84 @@
-// game/types/omok/omok.types.ts
+import { GameNetworkCallbacks } from "@/game/types/multiplayer/network.types";
+import { OmokMoveData, ThreatType } from "@/game/types/omok";
 
-/**
- * 오목 게임 핵심 로직 타입
- * - 게임 상태, 위협 분석, 금수 체크 등
- * - UI나 네트워크와 무관한 순수 게임 로직 타입
- */
-
-// =====================================================================
-// 게임 모드
-// =====================================================================
 export enum OmokMode {
   NONE = 0,
-  SINGLE = 1, // AI 대전
-  LOCAL = 2, // 로컬 대전
-  ONLINE = 3, // 온라인 대전
+  SINGLE = 1,
+  LOCAL = 2,
+  ONLINE = 3,
 }
 
-// =====================================================================
-// 게임 상태
-// =====================================================================
+export const OmokSide = {
+  NONE: 0,
+  BLACK: 1,
+  WHITE: 2,
+} as const;
+export type OmokSideType = (typeof OmokSide)[keyof typeof OmokSide];
 
-/**
- * 오목 게임 상태
- * - board: 15x15 바둑판 (0: 빈칸, 1: 흑돌, 2: 백돌)
- * - size: 보드 크기
- * - lastMove: 마지막으로 둔 수의 위치
- */
+export interface Point {
+  row: number;
+  col: number;
+}
+
+export interface Coordinate {
+  x: number;
+  y: number;
+}
+
+export interface OmokMoveRecord {
+  point: Point;
+  side: OmokSideType;
+}
+
+export interface gameState {
+  isStarted: boolean;
+  currentTurn: OmokSideType;
+  mode: OmokMode;
+  userSide?: OmokSideType;
+}
+
+export interface onlineState {
+  mySide: OmokSideType;
+  isSideAssigned: boolean;
+  currentRoomId: string | null;
+}
+
 export interface OmokState {
   board: number[][];
   size: number;
+  moves: OmokMoveRecord[];
   lastMove?: { row: number; col: number };
 }
 
-// =====================================================================
-// 위협 분석
-// =====================================================================
+export interface AiTurnResult {
+  success: boolean;
+  move: Point | null;
+  fromGpt: boolean;
+  error?: string;
+}
 
-/**
- * AI 위협 분석 결과
- * - row, col: 위협이 되는 위치
- * - type: 위협의 종류
- * - priority: 우선순위 (낮을수록 긴급)
- */
-export interface Threat {
-  row: number;
-  col: number;
-  type: "WIN" | "MUST_DEFEND_4" | "DEFEND_3" | "ATTACK_4";
+export interface AiConfig {
+  readonly MIN_THREAT_PRIORITY: number;
+  readonly MAX_THREAT_COUNT: number;
+  readonly THINKING_DELAY: number;
+}
+
+export interface Threat extends Point {
+  type: ThreatType;
   priority: number;
 }
 
-// =====================================================================
-// 금수 체크
-// =====================================================================
-
-/**
- * 금수 체크 결과
- * - can: 해당 위치에 둘 수 있는지 여부
- * - reason: 둘 수 없는 경우 그 이유
- */
 export interface ForbiddenCheckResult {
   can: boolean;
   reason?: string;
 }
 
-// =====================================================================
-// 콜백 인터페이스
-// =====================================================================
-
-/**
- * OmokManager 콜백 인터페이스
- */
-export interface OmokCallbacks {
-  onWin: (winner: number) => void;
-  onMove: (row: number, col: number, color: number) => void;
+export interface OmokCallbacks
+  extends GameNetworkCallbacks<OmokMoveData, OmokSideType> {
+  onMove: (point: Point, side: OmokSideType, moveNumber: number) => void;
   onForbidden: (reason: string) => void;
+
+  [key: string]: ((...args: unknown[]) => void) | unknown;
 }
 
-// =====================================================================
-// 유틸리티 타입
-// =====================================================================
-
-/**
- * 좌표 타입
- */
-export interface Position {
-  row: number;
-  col: number;
-}
-
-/**
- * 방향 벡터 타입
- */
 export type Direction = [number, number];

@@ -58,7 +58,7 @@ export function UserPointBar() {
   }, [points]);
 
   return (
-<div className="flex items-center gap-3 px-4 py-2 rounded-md bg-black/50 text-white text-base scale-[1.2] origin-top-right">
+<div className="flex items-center gap-3 px-4 py-2 rounded-md bg-black/50 text-white text-base scale-[1.1] origin-top-right">
   <span className="opacity-70">POINT : </span>
 
   <div

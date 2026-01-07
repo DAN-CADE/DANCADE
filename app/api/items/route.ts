@@ -2,33 +2,34 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
 
-// export async function GET() {
-//   const { data, error } = await supabase
-//     .from("items")
-//     .select("id, name, price, category, image_url, style_key")
-//     .eq("is_available", true)
-//     .order("created_at", { ascending: false });
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
 
-//   if (error) {
-//     console.error("[GET /api/items]", error);
-//     return NextResponse.json(
-//       { message: "Failed to fetch items" },
-//       { status: 500 }
-//     );
-//   }
+  const { data, error } = await supabase
+    .from("items")
+    .select("*")
+    .eq("style_key", id);
 
-//   return NextResponse.json(data, { status: 200 });
-// }
+  if (error) {
+    console.error("[GET /api/items]", error);
+    return NextResponse.json(
+      { message: "Failed to fetch items" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(data, { status: 200 });
+}
 
 
 export async function POST(req: Request) {
   try {
     const { gender } = await req.json();
 
-    console.log(gender,"성별이지롱")
     let query = supabase
       .from("items")
-      .select("id, name, price, category, image_url, style_key, available_genders")
+      .select("id, name, price, category, image_url, style_key, available_genders,description")
       .eq("is_available", true)
       .order("created_at", { ascending: false });
 
@@ -49,7 +50,6 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(data,"data")
     return NextResponse.json(data, { status: 200 });
   } catch (err) {
     console.error("[POST /api/items] exception", err);

@@ -1,18 +1,20 @@
 // game/types/pingpong/index.ts
 /**
  * 핑퐁 멀티플레이 타입 정의
- * - 기존 realPingPong.ts와 함께 사용
+ *
  */
 
-/**
- * 핑퐁 게임 모드
- */
-export enum PingPongMode {
-  NONE = 0,
-  SINGLE = 1, // vs AI
-  LOCAL = 2, // 로컬 2인 대전
-  ONLINE = 3, // 온라인 대전
-}
+// 핵심 타입
+export * from "@/game/types/pingpong/pingpong.types";
+
+// 상수
+export * from "@/game/types/pingpong/pingpong.constants";
+
+// 네트워크 타입
+export * from "@/game/types/pingpong/pingpong.network.types";
+
+// UI 타입
+export * from "@/game/types/pingpong/pingpong.ui.types";
 
 /**
  * 핑퐁 역할 (패들 위치)

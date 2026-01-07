@@ -1,195 +1,106 @@
-// game/managers/base/multiplayer/ui/BaseGameAbortedDialog.ts
+import { GameAbortedDialogConfig } from "@/game/types/common/ui.types";
+import { UI_DEPTH } from "@/game/types/common/ui.constants";
+import { BaseUIManager } from "@/game/managers/base/BaseUIManager";
 
-import { ButtonFactory } from "@/utils/ButtonFactory";
-
-/**
- * 게임 중단 다이얼로그 설정
- */
-export interface GameAbortedDialogConfig {
-  colors: {
-    overlay: number;
-    overlayAlpha: number;
-    titleText: string;
-    reasonText: string;
-    buttonColor: number;
-  };
-  textStyle: {
-    title: Partial<Phaser.Types.GameObjects.Text.TextStyle>;
-    reason: Partial<Phaser.Types.GameObjects.Text.TextStyle>;
-  };
-  depth: number;
-}
-
-/**
- * BaseGameAbortedDialog
- * - 온라인 게임 중단 시 표시되는 다이얼로그
- * - 모든 게임에서 동일한 구조
- * - 게임별로 색상/텍스트만 커스터마이징
- */
-export class BaseGameAbortedDialog {
-  protected scene: Phaser.Scene;
+export class BaseGameAbortedDialog extends BaseUIManager {
   protected config: GameAbortedDialogConfig;
-  private dialogElements: Phaser.GameObjects.GameObject[] = [];
 
   constructor(scene: Phaser.Scene, config: GameAbortedDialogConfig) {
-    this.scene = scene;
+    super(scene);
     this.config = config;
   }
 
-  // =====================================================================
-  // Public API
-  // =====================================================================
+  // BaseUIManager 필수 구현
+  public createGameUI(): void {}
 
   /**
    * 게임 중단 다이얼로그 표시
-   * @param reason - 중단 이유
-   * @param leavingPlayer - 나간 플레이어 이름
-   * @param onConfirm - 확인 버튼 콜백
    */
   public show(
     reason: string,
     leavingPlayer: string,
     onConfirm: () => void
   ): void {
+    // 1. 기존 UI 정리 (BaseUIManager의 cleanup 활용 가능)
     this.clear();
 
     const { width, height } = this.scene.scale;
     const centerX = width / 2;
     const centerY = height / 2;
 
-    // 배경 오버레이
-    const overlay = this.createOverlay(centerX, centerY, width, height);
-    this.dialogElements.push(overlay);
+    // 2. 배경 오버레이 (Depth는 UI_DEPTH 시스템 준수)
+    this.renderOverlay(centerX, centerY, width, height);
 
-    // 타이틀
-    const titleText = this.createTitleText(centerX, centerY - 50);
-    this.dialogElements.push(titleText);
+    // 3. 타이틀 텍스트
+    this.createText(centerX, centerY - 50, "⚠️ 게임 중단", {
+      ...this.config.textStyle.title,
+      color: this.config.colors.titleText,
+    });
 
-    // 중단 이유
-    const reasonText = this.createReasonText(centerX, centerY + 20, reason);
-    this.dialogElements.push(reasonText);
+    // 4. 중단 이유 텍스트
+    this.createText(centerX, centerY + 20, reason, {
+      ...this.config.textStyle.reason,
+      color: this.config.colors.reasonText,
+    });
 
-    // 나간 플레이어 (선택적)
+    // 5. 나간 플레이어 (선택적)
     if (leavingPlayer) {
-      const playerText = this.createPlayerText(
+      this.createText(
         centerX,
         centerY + 60,
-        leavingPlayer
+        `(${leavingPlayer}님이 나갔습니다)`,
+        {
+          ...this.config.textStyle.reason,
+          fontSize: "18px",
+          color: this.config.colors.reasonText,
+        }
       );
-      this.dialogElements.push(playerText);
     }
 
-    // 확인 버튼
-    const confirmButton = this.createConfirmButton(
+    // 6. 확인 버튼 (BaseUIManager의 공통 버튼 메서드 사용)
+    this.createCommonButton(
       centerX,
-      centerY + 120,
-      onConfirm
-    );
-    this.dialogElements.push(confirmButton);
-  }
-
-  /**
-   * 다이얼로그 제거
-   */
-  public clear(): void {
-    this.dialogElements.forEach((element) => element.destroy());
-    this.dialogElements = [];
-  }
-
-  // =====================================================================
-  // Private 렌더링 로직
-  // =====================================================================
-
-  /**
-   * 오버레이 생성
-   */
-  private createOverlay(
-    centerX: number,
-    centerY: number,
-    width: number,
-    height: number
-  ): Phaser.GameObjects.Rectangle {
-    const { overlay, overlayAlpha } = this.config.colors;
-
-    return this.scene.add
-      .rectangle(centerX, centerY, width, height, overlay, overlayAlpha)
-      .setDepth(this.config.depth - 1);
-  }
-
-  /**
-   * 타이틀 텍스트 생성
-   */
-  private createTitleText(x: number, y: number): Phaser.GameObjects.Text {
-    return this.scene.add
-      .text(x, y, "⚠️ 게임 중단", {
-        ...this.config.textStyle.title,
-        color: this.config.colors.titleText,
-      })
-      .setOrigin(0.5)
-      .setDepth(this.config.depth);
-  }
-
-  /**
-   * 중단 이유 텍스트 생성
-   */
-  private createReasonText(
-    x: number,
-    y: number,
-    reason: string
-  ): Phaser.GameObjects.Text {
-    return this.scene.add
-      .text(x, y, reason, {
-        ...this.config.textStyle.reason,
-        color: this.config.colors.reasonText,
-      })
-      .setOrigin(0.5)
-      .setDepth(this.config.depth);
-  }
-
-  /**
-   * 나간 플레이어 텍스트 생성
-   */
-  private createPlayerText(
-    x: number,
-    y: number,
-    playerName: string
-  ): Phaser.GameObjects.Text {
-    return this.scene.add
-      .text(x, y, `(${playerName}님이 나갔습니다)`, {
-        ...this.config.textStyle.reason,
-        fontSize: "18px",
-        color: this.config.colors.reasonText,
-      })
-      .setOrigin(0.5)
-      .setDepth(this.config.depth);
-  }
-
-  /**
-   * 확인 버튼 생성
-   */
-  private createConfirmButton(
-    x: number,
-    y: number,
-    onConfirm: () => void
-  ): Phaser.GameObjects.Container {
-    const button = ButtonFactory.createButton(
-      this.scene,
-      x,
-      y,
+      centerY + 130,
       "확인",
       () => {
         this.clear();
         onConfirm();
       },
       {
-        width: 200,
-        height: 60,
+        size: "MEDIUM",
         color: this.config.colors.buttonColor,
         textColor: "#ffffff",
       }
-    );
+    ).setDepth(UI_DEPTH.UI + 1);
+  }
 
-    button.setDepth(this.config.depth);
-    return button;
+  /**
+   * 다이얼로그 및 관련 UI 제거
+   */
+  public clear(): void {
+    // UI_DEPTH.UI 근처의 모든 객체를 찾아서 제거 (타입 캐스팅 적용)
+    const list = this.scene.children.list as Phaser.GameObjects.Image[];
+    const targets = list.filter((child) => child.depth >= UI_DEPTH.UI - 5);
+
+    targets.forEach((child) => child.destroy());
+  }
+
+  public cleanup(): void {
+    this.clear();
+  }
+
+  // =====================================================================
+  // Helper 렌더링 로직 (BaseUIManager 스타일로 통합)
+  // =====================================================================
+
+  private renderOverlay(x: number, y: number, w: number, h: number): void {
+    const { overlay, overlayAlpha } = this.config.colors;
+    this.scene.add
+      .rectangle(x, y, w, h, overlay, overlayAlpha)
+      .setDepth(UI_DEPTH.UI - 1);
+  }
+
+  private createText(x: number, y: number, text: string, style: object): void {
+    this.scene.add.text(x, y, text, style).setOrigin(0.5).setDepth(UI_DEPTH.UI);
   }
 }

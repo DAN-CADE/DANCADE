@@ -1,7 +1,7 @@
 // game/managers/games/pingpong/PingPongEffectsManager.ts
 
 import { BaseEffectsManager } from "@/game/managers/base";
-import { PINGPONG_CONFIG, PingPongPaddle } from "@/game/types/realPingPong";
+import { PINGPONG_CONFIG, PingPongPaddle } from "@/game/types/pingpong";
 
 type Scorer = "player" | "ai";
 
@@ -90,6 +90,64 @@ export class PingPongEffectsManager extends BaseEffectsManager {
         y: y + Math.random() * 30,
         alpha: 0,
         duration: 500,
+        onComplete: () => particle.destroy(),
+      });
+    }
+  }
+
+  createPerfectHitEffect(x: number, y: number): void {
+    // "PERFECT!" 텍스트
+    const perfectText = this.scene.add
+      .text(x, y, "PERFECT!", {
+        fontSize: "16px",
+        color: "#ffd700", // 골드
+        fontFamily: '"Press Start 2P"',
+        stroke: "#ffffff",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5);
+
+    this.scene.tweens.add({
+      targets: perfectText,
+      y: y - 40,
+      alpha: 0,
+      scale: 1.5,
+      duration: 800,
+      ease: "Power2.easeOut",
+      onComplete: () => perfectText.destroy(),
+    });
+
+    // 골드 링 효과
+    const ring = this.scene.add.circle(x, y, 20, 0xffd700, 0);
+    ring.setStrokeStyle(3, 0xffd700, 0.8);
+
+    this.scene.tweens.add({
+      targets: ring,
+      scaleX: 2.5,
+      scaleY: 2.5,
+      alpha: 0,
+      duration: 600,
+      ease: "Power2.easeOut",
+      onComplete: () => ring.destroy(),
+    });
+
+    // 8방향 반짝이 파티클
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      const distance = 30;
+      const targetX = x + Math.cos(angle) * distance;
+      const targetY = y + Math.sin(angle) * distance;
+
+      const particle = this.scene.add.circle(x, y, 3, 0xffd700);
+
+      this.scene.tweens.add({
+        targets: particle,
+        x: targetX,
+        y: targetY,
+        alpha: 0,
+        scale: 0.5,
+        duration: 400,
+        ease: "Power2.easeOut",
         onComplete: () => particle.destroy(),
       });
     }

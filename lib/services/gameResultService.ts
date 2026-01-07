@@ -1,281 +1,195 @@
-// lib/services/gameResultService.ts
-
+import {
+  SaveGameResultRequest,
+  SaveGameResultResponse,
+} from "@/game/types/gameSessionData";
 import { createServerClient } from "@/lib/supabase/client";
+import { getUserStats, upsertUserStats } from "@/lib/supabase/userStats";
+import {
+  insertGameResult,
+  insertMultiGameResult,
+} from "@/lib/supabase/gameResults";
+import { getRankings as getRankingsFromDB } from "@/lib/supabase/ranking";
+import { InsertGameResultParams } from "@/types/gameResults";
 
+// =====================================================================
 /**
- * 게임 결과 저장 요청 데이터
+ * GameResultService - 게임 결과 저장 및 통계 업데이트 전용
  */
-export interface SaveGameResultRequest {
-  room_id: string;
-  game_type: string;
-  winner_user_id: string;
-  loser_user_id: string;
-  winner_score?: number;
-  loser_score?: number;
-}
-
-/**
- * 유저 통계 데이터
- */
-export interface UserStats {
-  user_id: string;
-  total_wins: number;
-  total_losses: number;
-  win_rate: number;
-  total_games_played: number;
-}
-
-/**
- * 게임 결과 저장 응답
- */
-export interface SaveGameResultResponse {
-  success: boolean;
-  winnerStats: UserStats;
-  loserStats: UserStats;
-}
-
-/**
- * GameResultService
- * - 게임 결과 저장 및 통계 업데이트
- * - 모든 멀티플레이 게임에서 재사용 가능
- */
+// =====================================================================
 export class GameResultService {
   private supabase = createServerClient();
 
+  // =====================================================================
   /**
-   * userid를 users 테이블의 id (UUID)로 변환
-   * ⭐ 게스트 유저는 없으면 자동 생성
-   * @param userid - userid (예: "test1", "guest_xxx")
-   * @returns UUID 또는 null
+   * 랭킹 조회
    */
-  private async getUserUUID(userid: string): Promise<string | null> {
-    // 이미 UUID 형식이면 그대로 반환
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(userid)) {
-      return userid;
-    }
-
-    // ⭐ 게스트 유저 처리
-    if (userid.startsWith("guest_")) {
-      console.log(`[GameResultService] 게스트 유저 처리: ${userid}`);
-
-      // 1. 먼저 조회
-      const { data: existing } = await this.supabase
-        .from("users")
-        .select("id")
-        .eq("userid", userid)
-        .maybeSingle();
-
-      if (existing) {
-        console.log(`[GameResultService] 게스트 유저 존재: ${existing.id}`);
-        return existing.id;
-      }
-
-      // 2. 없으면 생성
-      console.log(`[GameResultService] 게스트 유저 생성: ${userid}`);
-      const { data: newUser, error } = await this.supabase
-        .from("users")
-        .insert({
-          userid: userid,
-          nickname: `게스트_${userid.slice(-4)}`,
-          total_points: 0,
-        })
-        .select("id")
-        .single();
-
-      if (error) {
-        console.error(`[GameResultService] 게스트 생성 실패:`, error);
-        return null;
-      }
-
-      console.log(`[GameResultService] 게스트 생성 완료: ${newUser.id}`);
-      return newUser.id;
-    }
-
-    // 일반 유저 조회
-    const { data, error } = await this.supabase
-      .from("users")
-      .select("id")
-      .eq("userid", userid)
-      .maybeSingle();
-
-    if (error || !data) {
-      console.error(
-        `[GameResultService] UUID 조회 실패 (userid: ${userid}):`,
-        error
-      );
-      return null;
-    }
-
-    return data.id;
+  // =====================================================================
+  async getRankings(gameType: string, limit?: number) {
+    const rankings = await getRankingsFromDB(gameType);
+    return limit ? rankings.slice(0, limit) : rankings;
   }
 
+  // =====================================================================
   /**
-   * 게임 결과 저장 (트랜잭션)
-   * 1. userid → UUID 변환 (게스트는 자동 생성)
-   * 2. multi_game_results에 결과 저장
-   * 3. user_stats 업데이트 (승자/패자)
-   * 4. 업데이트된 통계 반환
+   * 게임 결과 저장
+   * 전달받는 ID는 이미 DB에 존재하는 유저의 UUID여야 합니다.
    */
+  // =====================================================================
+
   async saveGameResult(
     data: SaveGameResultRequest
   ): Promise<SaveGameResultResponse> {
     const { room_id, game_type, winner_user_id, loser_user_id } = data;
 
-    console.log("[GameResultService] 저장 시작:", data);
+    console.log(`[GameResultService] ${game_type} 저장 프로세스 시작:`, {
+      room_id,
+      winner_user_id,
+      loser_user_id,
+    });
 
     try {
-      // ⭐ 1. userid → UUID 변환 (게스트 자동 생성)
-      const winnerUUID = await this.getUserUUID(winner_user_id);
-      const loserUUID = await this.getUserUUID(loser_user_id);
+      // 결정된 테이블과 함께 데이터 저장
+      await this.processGameResults(data);
 
-      if (!winnerUUID || !loserUUID) {
-        throw new Error(
-          `UUID 변환 실패: winner=${winner_user_id}, loser=${loser_user_id}`
-        );
+      // 유저별 누적 통계 업데이트
+      if (loser_user_id) {
+        await this.updateUserStats(winner_user_id, loser_user_id, game_type);
       }
 
-      console.log("[GameResultService] UUID 변환 완료:", {
-        winner_user_id,
-        winnerUUID,
-        loser_user_id,
-        loserUUID,
-      });
-
-      // 2. 게임 결과 저장 (UUID 사용)
-      await this.insertGameResult({
-        ...data,
-        winner_user_id: winnerUUID,
-        loser_user_id: loserUUID,
-      });
-
-      // 3. 통계 업데이트
-      await this.updateUserStats(winnerUUID, loserUUID);
-
-      // 4. 업데이트된 통계 조회
-      const winnerStats = await this.getUserStats(winnerUUID);
-      const loserStats = await this.getUserStats(loserUUID);
+      // 최신화된 통계 데이터 가져오기
+      const winnerStats = await getUserStats(winner_user_id);
+      const loserStats = loser_user_id
+        ? await getUserStats(loser_user_id)
+        : null;
 
       if (!winnerStats || !loserStats) {
-        throw new Error("통계 조회 실패");
+        throw new Error("결과 저장 후 통계 데이터를 불러오는 데 실패했습니다.");
       }
 
-      return {
-        success: true,
-        winnerStats,
-        loserStats,
-      };
+      return { success: true, winnerStats, loserStats };
     } catch (error) {
-      console.error("[GameResultService] 저장 실패:", error);
+      console.error("[GameResultService] 데이터 저장 실패:", error);
       throw error;
     }
   }
 
+  // =====================================================================
   /**
-   * multi_game_results 테이블에 결과 저장
+   * game_results, multi_game_results 테이블에 기록 추가
    */
-  private async insertGameResult(data: SaveGameResultRequest): Promise<void> {
-    const { error } = await this.supabase.from("multi_game_results").insert({
-      room_id: data.room_id,
-      game_type: data.game_type,
-      winner_user_id: data.winner_user_id,
-      loser_user_id: data.loser_user_id,
-      winner_score: data.winner_score || null,
-      loser_score: data.loser_score || null,
-      played_at: new Date().toISOString(),
-    });
+  // =====================================================================
 
-    if (error) {
-      console.error("[GameResultService] 결과 저장 실패:", error);
-      throw new Error(`게임 결과 저장 실패: ${error.message}`);
+  private async processGameResults(data: SaveGameResultRequest): Promise<void> {
+    const playMode = data.play_mode || "multiplayer";
+
+    // UUID 형식 검증 정규식
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // 멀티용 테이블 저장 (현재 승자/패자 모두 실제 유저일 때만 저장)
+    if (playMode === "multiplayer") {
+      await insertMultiGameResult({
+        room_id: data.room_id,
+        game_type: data.game_type,
+        winner_user_id: data.winner_user_id,
+        loser_user_id: data.loser_user_id,
+        winner_score: data.winner_score,
+        loser_score: data.loser_score,
+      });
     }
 
-    console.log("[GameResultService] 결과 저장 완료");
+    // 개별 유저 로그 생성
+    const participants = this.createParticipants(data);
+
+    // 실제 유저인 경우에만 생성되도록
+    const logs: InsertGameResultParams[] = participants
+      .filter((p) => uuidRegex.test(p.id)) // 로그의 주인공(user_id)이 UUID인 경우만
+      .map((p) => ({
+        game_type: data.game_type,
+        play_mode: playMode,
+        user_id: p.id,
+        opponent_id: p.oppId && uuidRegex.test(p.oppId) ? p.oppId : undefined,
+        winner_id: uuidRegex.test(data.winner_user_id)
+          ? data.winner_user_id
+          : undefined,
+        is_win: p.win,
+        points_awarded: p.score,
+        room_id: data.room_id || "ai-battle",
+        game_duration: data.game_duration,
+      }));
+
+    if (logs.length > 0) {
+      await insertGameResult(logs);
+    }
   }
 
+  private createParticipants(data: SaveGameResultRequest) {
+    // 승자 정보
+    const winner = {
+      id: data.winner_user_id,
+      oppId: data.loser_user_id,
+      win: true,
+      score: data.winner_score,
+    };
+
+    // 패자 정보
+    if (!data.loser_user_id) {
+      return [winner];
+    }
+
+    const loser = {
+      id: data.loser_user_id,
+      oppId: data.winner_user_id,
+      win: false,
+      score: data.loser_score,
+    };
+
+    return [winner, loser];
+  }
+
+  // =====================================================================
   /**
-   * user_stats 테이블 업데이트 (승자/패자)
+   * user_stats 테이블 업데이트
    */
+  // =====================================================================
+
   private async updateUserStats(
-    winnerUserId: string,
-    loserUserId: string
+    winnerId: string,
+    loserId: string,
+    gameType: string
   ): Promise<void> {
-    // 승자 통계 업데이트
-    const { error: winnerError } = await this.supabase.rpc(
-      "update_user_stats",
-      {
-        p_user_id: winnerUserId,
-        p_is_winner: true,
+    const players = [
+      { id: winnerId, isWinner: true },
+      { id: loserId, isWinner: false },
+    ];
+
+    for (const player of players) {
+      const currentStats = await getUserStats(player.id);
+
+      if (currentStats) {
+        const wins = currentStats.total_wins + (player.isWinner ? 1 : 0); // 승수 증가
+        const games = currentStats.total_games_played + 1;
+
+        await upsertUserStats({
+          user_id: player.id,
+          total_wins: wins,
+          total_losses: currentStats.total_losses + (player.isWinner ? 0 : 1),
+          total_games_played: games,
+          win_rate: Math.round((wins / games) * 100),
+          favorite_game: gameType,
+        });
+      } else {
+        // 첫 판인 경우
+        await upsertUserStats({
+          user_id: player.id,
+          total_wins: player.isWinner ? 1 : 0,
+          total_losses: player.isWinner ? 0 : 1,
+          total_games_played: 1,
+          win_rate: player.isWinner ? 100 : 0,
+          favorite_game: gameType,
+        });
       }
-    );
-
-    if (winnerError) {
-      console.error(
-        "[GameResultService] 승자 통계 업데이트 실패:",
-        winnerError
-      );
-      throw new Error(`승자 통계 업데이트 실패: ${winnerError.message}`);
     }
-
-    // 패자 통계 업데이트
-    const { error: loserError } = await this.supabase.rpc("update_user_stats", {
-      p_user_id: loserUserId,
-      p_is_winner: false,
-    });
-
-    if (loserError) {
-      console.error("[GameResultService] 패자 통계 업데이트 실패:", loserError);
-      throw new Error(`패자 통계 업데이트 실패: ${loserError.message}`);
-    }
-
-    console.log("[GameResultService] 통계 업데이트 완료");
-  }
-
-  /**
-   * 유저 통계 조회
-   */
-  async getUserStats(userId: string): Promise<UserStats | null> {
-    const { data, error } = await this.supabase
-      .from("user_stats")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    if (error) {
-      console.error("[GameResultService] 통계 조회 실패:", error);
-      return null;
-    }
-
-    return data;
-  }
-
-  /**
-   * 게임 이력 조회
-   */
-  async getGameHistory(
-    userId: string,
-    gameType?: string,
-    limit: number = 10
-  ): Promise<any[]> {
-    let query = this.supabase
-      .from("multi_game_results")
-      .select("*")
-      .or(`winner_user_id.eq.${userId},loser_user_id.eq.${userId}`)
-      .order("played_at", { ascending: false })
-      .limit(limit);
-
-    if (gameType) {
-      query = query.eq("game_type", gameType);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("[GameResultService] 이력 조회 실패:", error);
-      return [];
-    }
-
-    return data || [];
+    console.log("[GameResultService] total_wins 업데이트 완료");
   }
 }

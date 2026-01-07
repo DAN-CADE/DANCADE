@@ -1,13 +1,9 @@
-// game/managers/games/omok/network/room/OmokRoomManager.ts
-
 import { Socket } from "socket.io-client";
-import {
-  BaseRoomManager,
-  BaseRoomNetworkManager,
-  BaseRoomUIManager,
-} from "@/game/managers/base/multiplayer";
 import { OmokRoomNetworkManager } from "@/game/managers/games/omok/network/room/OmokRoomNetworkManager";
 import { OmokRoomUIManager } from "@/game/managers/games/omok/ui/OmokRoomUIManager";
+import { BaseRoomNetworkManager } from "@/game/managers/base/multiplayer/room/BaseRoomNetworkManager";
+import { BaseRoomManager } from "@/game/managers/base/multiplayer/room/BaseRoomManager";
+import { BaseRoomUIManager } from "@/game/managers/base/multiplayer/ui/BaseRoomUIManager";
 
 /**
  * OmokRoomManager

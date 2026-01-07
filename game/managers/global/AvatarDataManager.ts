@@ -92,4 +92,11 @@ export class AvatarDataManager extends BaseGameManager<
   public resetGame(): void {
     this.loadFromStorage();
   }
+  // 게임 내 아바타 jons 업데이트
+  public setCustomization(next: CharacterState): void {
+  this.gameState.customization = next;
+
+  // 필요하면 AvatarManager에게 알림
+  this.callCallback("onDataUpdate", next);
+}
 }

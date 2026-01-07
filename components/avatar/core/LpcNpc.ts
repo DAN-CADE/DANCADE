@@ -1,6 +1,8 @@
+
 import { AvatarManager } from "@/game/managers/global/AvatarManager";
 import { MainScene } from "@/game/scenes/core/MainScene";
 import { getEventGame } from "@/lib/supabase/event"
+import { getRankings } from "@/lib/supabase/ranking";
 
 export type NpcType = 'MERCHANT' | 'VILLAGER' | 'EVENT';
 
@@ -15,15 +17,22 @@ export const NPC_CONFIG: Record<NpcType, NpcData> = {
     name: "상인",
     defaultSprite: "male",
     interaction: (scene, npc) => {
-      // scene.uiManager.showSpeechBubble(npc, "어서오게! 좋은 물건이 많다네.");
-      scene.uiManager.openModal("상점", "상점 메뉴를 여시겠습니까?");
+      scene.uiManager.showSpeechBubble(npc, "상점으로 이동합니다...", 1000);
+
+      scene.cameras.main.fadeOut(500, 0, 0, 0);
+
+      scene.cameras.main.once('camerafadeoutcomplete', () => {
+        if (typeof window !== "undefined") {
+          window.location.assign("/shop");
+        }
+      });
     }
   },
   VILLAGER: {
-    name: "주민",
+    name: "랭킹 NPC",
     defaultSprite: "female",
-    interaction: (scene, npc) => {
-      scene.uiManager.showSpeechBubble(npc, "오늘 날씨가 참 좋네요.", 2000);
+    interaction: async (scene, npc) => {
+      scene.uiManager.showRankingBoardUI()
     }
   },
   EVENT: {
@@ -31,8 +40,17 @@ export const NPC_CONFIG: Record<NpcType, NpcData> = {
     defaultSprite: "male",
     interaction: async (scene, npc) => {
       const { data } = await getEventGame();
+      
       if (data) {
-        scene.uiManager.showGameUI(npc);
+        switch(data.game_type) {
+          case 'rock_paper_scissors':
+            scene.uiManager.showGameUI(npc);
+            break; 
+          case 'consonant_quiz':
+            const {consonant, result, hint} = data.details
+            scene.uiManager.showConsonantQuizUI(npc, consonant, result, hint);
+            break;
+        }        
       } else {
         scene.uiManager.showSpeechBubble(npc, "진행중인 이벤트가 없습니다.", 2000);
       }

@@ -12,7 +12,7 @@
  */
 async function broadcastRoomListUpdate(io, rooms, gamePrefix) {
   try {
-    const { getRoomList } = require("./roomUtils");
+    const { getRoomList } = require("./RoomUtils");
     const roomList = await getRoomList(rooms, gamePrefix);
 
     // ⭐ 안전장치: 배열이 아니면 빈 배열

@@ -1,36 +1,55 @@
-// server.js
-// ⭐ dotenv 먼저 로드 (제일 위에!)
-require("dotenv").config();
+require("dotenv").config({ path: ".env.local" });
+require("dotenv").config(); // Fallback to .env if needed
+
+const { createClient } = require("@supabase/supabase-js");
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
+}
+
+// ===================================================================
+// ===================================================================
 
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 
-// 🔧 환경 변수 확인 (디버깅용)
-console.log("🔧 환경 변수 확인:", {
-  NEXT_API_URL: process.env.NEXT_API_URL,
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-});
-
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
+    // origin: ["http://3.25.232.135:3000","http://localhost:3000"],
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
+    credentials: true
   },
+  transports: ["websocket"],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
-
-const baseGameHandler = require("./handlers/base/baseGameHandler");
-const omokHandler = require("./handlers/games/omok/omokHandler");
 
 app.use(cors());
 app.use(express.json());
 
+// ===================================================================
+// ===================================================================
+
+// 소켓 연결 유지, 방 만들기/참가/나가기 같은 [방 관리] 세팅
+const baseGameHandler = require("./handlers/base/BaseGameHandler");
+
 // 공유 데이터
 const players = new Map();
 const rooms = new Map();
+
+// 게임별 핸들러 추가
+const omokHandler = require("./handlers/games/omok/OmokHandler");
 
 // =====================================================================
 // Socket.io 연결
@@ -39,15 +58,10 @@ const rooms = new Map();
 io.on("connection", (socket) => {
   console.log("플레이어 접속:", socket.id);
 
-  // ✅ 오목 핸들러 등록 (설정 주입)
-  const omokDisconnectHandler = baseGameHandler(io, socket, rooms, "omok", {
-    maxPlayers: 2, // 오목은 2명
-    minPlayers: 2, // 최소 2명
-    autoStart: false, // 수동 시작
-  });
-  omokHandler(io, socket, rooms);
-
+  // =====================================================================
   // 채팅 이벤트
+  // =====================================================================
+
   socket.on("lobby:chat", (data) => {
     const { username, message } = data;
 
@@ -58,28 +72,27 @@ io.on("connection", (socket) => {
       timestamp: Date.now(),
     });
   });
-  // ✅ 미래 확장: 핑퐁 (예시)
-  // const pingPongDisconnectHandler = baseGameHandler(io, socket, rooms, "pingpong", {
-  //   maxPlayers: 2,
-  //   minPlayers: 2,
-  //   autoStart: true,  // 자동 시작
-  // });
-  // pingPongHandler(io, socket, rooms);
 
-  // ✅ 미래 확장: 배틀로얄 (예시)
-  // const battleRoyaleDisconnectHandler = baseGameHandler(io, socket, rooms, "battleroyale", {
-  //   maxPlayers: 100,
-  //   minPlayers: 10,
-  //   autoStart: true,
-  //   allowSpectators: true,
-  // });
-  // battleRoyaleHandler(io, socket, rooms);
+  // =====================================================================
+  // 게임별 핸들러 등록
+  // =====================================================================
+
+  // 1. 오목
+  // 공통으로 생성할 매니저 인스턴스가 생성되는 baseGameHandler 등록
+  const omokDisconnectHandler = baseGameHandler(io, socket, rooms, "omok", {
+    maxPlayers: 2, // 오목은 2명
+    minPlayers: 2, // 최소 2명
+    autoStart: false, // 수동 시작
+  });
+  // 오목용 omokHandler 등록
+  omokHandler(io, socket, rooms, supabase);
 
   // =====================================================================
   // 연결 해제
   // =====================================================================
+
   socket.on("disconnect", () => {
-    // 로비 플레이어 정리
+    // ------------------------------- 로비 플레이어 정리
     const player = players.get(socket.id);
     if (player) {
       console.log("❌ 퇴장:", player.username);
@@ -87,10 +100,9 @@ io.on("connection", (socket) => {
       io.emit("players:update", Array.from(players.values()));
     }
 
-    // 게임별 방 정리
+    // ------------------------------- 게임별 방 정리
     omokDisconnectHandler.handleDisconnect();
     // pingPongDisconnectHandler.handleDisconnect();
-    // battleRoyaleDisconnectHandler.handleDisconnect();
   });
 
   // =====================================================================
@@ -153,25 +165,28 @@ app.post("/api/player/save", (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/api/rooms/:gameType", (req, res) => {
-  const { gameType } = req.params;
+app.get("/api/rooms/:gameType", async (req, res) => {
+  try {
+    const { gameType } = req.params;
+    
+    // Map의 Array.from(rooms.values()) 대신 await rooms.values() 사용
+    const allRooms = await rooms.values();
 
-  const roomList = Array.from(rooms.values())
-    .filter(
-      (room) =>
-        room.gameType === gameType &&
-        room.status === "waiting" &&
-        !room.isPrivate
-    )
-    .map((room) => ({
-      roomId: room.roomId,
-      roomName: room.roomName,
-      hostUsername: room.players[0]?.username,
-      playerCount: room.players.length,
-      maxPlayers: room.maxPlayers,
-    }));
-
-  res.json({ rooms: roomList });
+    const roomList = allRooms
+      .filter(room => room.gameType === gameType && room.status === "waiting" && !room.isPrivate)
+      .map(room => ({
+        roomId: room.roomId,
+        roomName: room.roomName,
+        hostUsername: room.players[0]?.username,
+        playerCount: room.players.length,
+        maxPlayers: room.maxPlayers,
+      }));
+      
+    res.json({ rooms: roomList });
+  } catch (err) {
+    console.error("방 목록 조회 에러:", err);
+    res.status(500).json({ error: "조회 중 오류 발생" });
+  }
 });
 
 const PORT = process.env.PORT || 3001;

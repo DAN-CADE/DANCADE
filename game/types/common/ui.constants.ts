@@ -1,5 +1,3 @@
-// game/types/common/ui.constants.ts
-
 /**
  * 공통 UI 상수
  * - 모든 게임에서 재사용 가능한 UI 설정
@@ -88,6 +86,7 @@ export const ONLINE_MENU_LAYOUT = {
   BUTTON_GAP: 20,
   PADDING_TOP: 60,
   PADDING_BOTTOM: 60,
+  PANEL_RADIUS: 30,
 } as const;
 
 // =====================================================================
@@ -125,4 +124,29 @@ export const TEXT_STYLE = {
     fontFamily: FONT_CONFIG.FAMILY,
     color: COMMON_COLORS.TEXT_PRIMARY,
   },
+  GAME_OVER: {
+    fontSize: "64px",
+    fontFamily: FONT_CONFIG.FAMILY,
+    color: "#ffffff",
+    fontStyle: "bold",
+    stroke: "#000000",
+    strokeThickness: 6,
+  },
+  SCORE: {
+    fontSize: "32px",
+    fontFamily: FONT_CONFIG.FAMILY,
+    color: COMMON_COLORS.TEXT_GOLD,
+    fontStyle: "bold",
+  },
 } as const;
+
+// =====================================================================
+// 온라인 메뉴
+// =====================================================================
+export const ONLINE_MENU_CONFIG = [
+  { id: "quickJoin", label: "빠른 매칭" },
+  { id: "createRoom", label: "방 만들기" },
+  { id: "showList", label: "방 목록" },
+  { id: "back", label: "뒤로가기" },
+  { id: "mainMove", label: "메인으로" },
+] as const;

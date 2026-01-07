@@ -27,12 +27,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
         gameType,
-        content
+        content,
+        details
     } = body;
 
     const insertEventGame = {
         game_type: gameType,
         title: content,
+        details: details
     };
 
     // 쿼리 실행 [이벤트 게임 생성]

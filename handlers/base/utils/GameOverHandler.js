@@ -5,23 +5,29 @@ const axios = require("axios");
 // 환경변수로 Next.js API URL 설정
 const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
 
+// =====================================================================
 /**
  * GameOverHandler
  * - 모든 게임의 종료 처리 공통화
  * - DB 저장, 통계 조회, 방 정리
  */
+// =====================================================================
 class GameOverHandler {
+  // =====================================================================
   /**
    * @param {Object} io - Socket.IO 서버 인스턴스
    * @param {Map} rooms - 방 목록
    * @param {string} gamePrefix - 게임 타입 (예: "omok", "pingpong")
    */
+  // =====================================================================
+
   constructor(io, rooms, gamePrefix) {
     this.io = io;
     this.rooms = rooms;
     this.gamePrefix = gamePrefix;
   }
 
+  // =====================================================================
   /**
    * 게임 종료 처리 (공통)
    * @param {string} roomId - 방 ID
@@ -31,14 +37,20 @@ class GameOverHandler {
    * @param {number} [options.loserScore] - 패자 점수
    * @returns {Promise<void>}
    */
+  // =====================================================================
+
   async handleGameOver(roomId, winner, options = {}) {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    // ⭐ [중복 방지] 이미 처리 중이거나 종료된 방이면 무시
     if (room.isProcessingEnd || room.status === "finished") {
       return;
     }
+
+    // 시간 계산
+    const gameDuration = room.startTime
+      ? Math.floor((Date.now() - room.startTime) / 1000)
+      : 0;
 
     // 상태 잠금
     room.isProcessingEnd = true;
@@ -59,12 +71,14 @@ class GameOverHandler {
     }
 
     try {
-      // ⭐ [DB 저장] 서버에서 딱 한 번만 수행
+      // 방 정보를 확인해서 빠른 매칭인지 판단
+      // const isQuickMatch = room.isQuickMatch || false;
+
       const { winnerStats, loserStats } = await this.saveGameResult(
         roomId,
         winnerPlayer,
         loserPlayer,
-        options
+        { ...options, gameDuration }
       );
 
       // 모든 클라이언트에 알림 (클라이언트는 이 정보를 받아서 UI만 그림)
@@ -73,6 +87,7 @@ class GameOverHandler {
         roomData: room,
         winnerStats,
         loserStats,
+        gameDuration,
       });
 
       console.log(`[${this.gamePrefix}] 결과 저장 및 브로드캐스트 완료`);
@@ -81,27 +96,30 @@ class GameOverHandler {
     }
   }
 
+  // =====================================================================
   /**
    * 승자/패자 찾기
    * @param {Object} room - 방 객체
    * @param {number} winner - 승자 역할
    * @returns {{winnerPlayer: Object, loserPlayer: Object}}
    */
+  // =====================================================================
+
   findWinnerAndLoser(room, winner) {
-    // 1. 승자 찾기 (입력받은 winner 값과 일치하는 플레이어)
+    // 승자 찾기 (입력받은 winner 값과 일치하는 플레이어)
     const winnerPlayer = room.players.find(
-      (p) => p.color === winner || p.side === winner || p.role === winner
+      (p) => p.side === winner || p.role === winner
     );
 
-    // 2. 패자 찾기 (승자가 아닌 남은 플레이어 한 명)
-    // 승자를 찾았다면 그 승자의 socketId와 다른 사람을 찾으면 됩니다.
+    // 승자를 제외한 다른 플레이어가 있는 경우에만 loserPlayer 할당
     const loserPlayer = room.players.find((p) =>
-      winnerPlayer ? p.socketId !== winnerPlayer.socketId : p.color !== winner
+      winnerPlayer ? p.userUUID !== winnerPlayer.userUUID : false
     );
 
     return { winnerPlayer, loserPlayer };
   }
 
+  // =====================================================================
   /**
    * 게임 결과 DB 저장
    * @param {string} roomId - 방 ID
@@ -110,9 +128,14 @@ class GameOverHandler {
    * @param {Object} options - 추가 옵션
    * @returns {Promise<{winnerStats: Object|null, loserStats: Object|null}>}
    */
+  // =====================================================================
+
   async saveGameResult(roomId, winnerPlayer, loserPlayer, options = {}) {
-    // ⭐ userId가 없으면 저장하지 않음
-    if (!winnerPlayer.userId || !loserPlayer.userId) {
+    const winnerId = winnerPlayer.userUUID || winnerPlayer.userId;
+    const loserId = loserPlayer.userUUID || loserPlayer.userId;
+
+    // if (!winnerPlayer.userId || !loserPlayer.userId) {
+    if (!winnerId || !loserId) {
       console.warn(`[${this.gamePrefix}][게임종료] userId 없음, DB 저장 생략`);
       console.warn(`[${this.gamePrefix}][디버그] winnerPlayer:`, winnerPlayer);
       console.warn(`[${this.gamePrefix}][디버그] loserPlayer:`, loserPlayer);
@@ -121,8 +144,8 @@ class GameOverHandler {
 
     console.log(`[${this.gamePrefix}][게임종료] DB 저장 시작:`, {
       roomId,
-      winner_user_id: winnerPlayer.userId,
-      loser_user_id: loserPlayer.userId,
+      winner_user_id: winnerPlayer.userUUID,
+      loser_user_id: loserPlayer.userUUID,
     });
 
     try {
@@ -131,10 +154,12 @@ class GameOverHandler {
         {
           room_id: roomId,
           game_type: this.gamePrefix,
-          winner_user_id: winnerPlayer.userId, // ⭐ userId 사용 (users 테이블의 userid와 매칭)
-          loser_user_id: loserPlayer.userId, // ⭐ userId 사용
+          play_mode: loserId ? "multiplayer" : "single",
+          winner_user_id: winnerId,
+          loser_user_id: loserId,
           winner_score: options.winnerScore,
           loser_score: options.loserScore,
+          game_duration: options.gameDuration,
         },
         {
           headers: {

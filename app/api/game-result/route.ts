@@ -1,22 +1,22 @@
-// app/api/game-result/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import {
-  GameResultService,
-  SaveGameResultRequest,
-} from "@/lib/services/gameResultService";
+import { GameResultService } from "@/lib/services/gameResultService";
+import { SaveGameResultRequest } from "@/game/types/gameSessionData";
+import { getUserStats } from "@/lib/supabase/userStats";
 
+// =====================================================================
 /**
  * POST /api/game-result
  * - Socket.IO 서버에서 호출
  * - 게임 결과 저장 및 통계 업데이트
  */
+// =====================================================================
+
 export async function POST(request: NextRequest) {
   try {
-    // 1. 요청 데이터 파싱
+    // 요청 데이터 파싱
     const body: SaveGameResultRequest = await request.json();
 
-    // 2. 필수 필드 검증
+    // 필수 필드 검증
     const { room_id, game_type, winner_user_id, loser_user_id } = body;
 
     if (!room_id || !game_type || !winner_user_id || !loser_user_id) {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error:
-            "필수 필드 누락: room_id, game_type, winner_user_id, loser_user_id",
+            "[api/game-result] 필수 필드 누락: room_id, game_type, winner_user_id, loser_user_id",
         },
         { status: 400 }
       );
@@ -32,11 +32,11 @@ export async function POST(request: NextRequest) {
 
     console.log("[API] 게임 결과 저장 요청:", body);
 
-    // 3. 서비스 호출
+    // 서비스 호출
     const service = new GameResultService();
     const result = await service.saveGameResult(body);
 
-    // 4. 성공 응답
+    // 성공 응답
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("[API] 게임 결과 저장 실패:", error);
@@ -51,15 +51,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// =====================================================================
 /**
  * GET /api/game-result?userId=xxx&gameType=omok
  * - 유저 통계 조회
  */
+// =====================================================================
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const gameType = searchParams.get("gameType") || undefined;
+    // const gameType = searchParams.get("gameType") || undefined;
 
     if (!userId) {
       return NextResponse.json(
@@ -68,8 +71,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const service = new GameResultService();
-    const stats = await service.getUserStats(userId);
+    // const service = new GameResultService();
+    const stats = await getUserStats(userId);
 
     if (!stats) {
       return NextResponse.json(
@@ -78,7 +81,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const history = await service.getGameHistory(userId, gameType, 10);
+    // const history = await service.getRankings(userId, gameType, 10);
 
     return NextResponse.json({
       success: true,

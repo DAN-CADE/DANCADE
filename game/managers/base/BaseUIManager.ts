@@ -1,7 +1,8 @@
 // game/managers/base/BaseUIManager.ts
 
 import { TEXT_STYLE } from "@/game/types/common/ui.constants";
-import { ButtonFactory } from "@/utils/ButtonFactory";
+import { ButtonOptions } from "@/game/types/common/ui.types";
+import { ButtonFactory } from "../../utils/ButtonFactory";
 
 /**
  * UI 매니저의 베이스 클래스
@@ -51,7 +52,7 @@ export abstract class BaseUIManager {
       onRestart,
       {
         size: "SMALL",
-        color: 0xffffff,
+        color: 0x000000,
         textColor: style.color,
         fontFamily: style.fontFamily,
         fontSize: style.fontSize,
@@ -80,7 +81,7 @@ export abstract class BaseUIManager {
       onHome,
       {
         size: "SMALL",
-        color: 0xffffff,
+        color: 0x000000,
         textColor: style.color,
         fontFamily: style.fontFamily,
         fontSize: style.fontSize,
@@ -91,14 +92,28 @@ export abstract class BaseUIManager {
   }
 
   /**
+   * 공통 버튼 생성 헬퍼
+   */
+  protected createCommonButton(
+    x: number,
+    y: number,
+    text: string,
+    callback: () => void,
+    config?: ButtonOptions
+  ): Phaser.GameObjects.Container {
+    return ButtonFactory.createButton(this.scene, x, y, text, callback, config);
+  }
+
+  /**
    * 오버레이 생성 (공통 패턴)
    */
   protected createOverlay(
     alpha = 0.7,
     depth = 10
   ): Phaser.GameObjects.Rectangle {
+    const { width, height } = this.scene.scale;
     return this.scene.add
-      .rectangle(400, 300, 800, 600, 0x000000, alpha)
+      .rectangle(width / 2, height / 2, width, height, 0x000000, alpha)
       .setDepth(depth);
   }
 

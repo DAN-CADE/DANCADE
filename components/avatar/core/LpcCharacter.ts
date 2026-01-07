@@ -72,6 +72,11 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
   private isMoving: boolean = false;
   private isJumping: boolean = false;
   private isThrusting: boolean = false;
+  private inputEnabled: boolean = true; // 입력 활성화 상태
+
+  // 이벤트 핸들러 참조 저장 (제거 위함)
+  private onInputLock: () => void;
+  private onInputUnlock: () => void;
 
   constructor(
     scene: Phaser.Scene,
@@ -92,6 +97,37 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     body.setSize(32, 32);
     body.setOffset(-16, 16);
     body.setCollideWorldBounds(false);
+
+    // -------------------------------------------------------------
+    // 🔒 입력 잠금 이벤트 리스너 등록
+    // -------------------------------------------------------------
+    this.onInputLock = () => {
+      this.inputEnabled = false;
+      // 잠금 시 즉시 정지
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      if (body) {
+        body.setVelocity(0, 0);
+        this.isMoving = false;
+        this.playLayeredAnimations();
+      }
+    };
+
+    this.onInputUnlock = () => {
+      this.inputEnabled = true;
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("game:input-locked", this.onInputLock);
+      window.addEventListener("game:input-unlocked", this.onInputUnlock);
+    }
+
+    // 객체 파괴 시 리스너 제거
+    this.on("destroy", () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("game:input-locked", this.onInputLock);
+        window.removeEventListener("game:input-unlocked", this.onInputUnlock);
+      }
+    });
 
     // 3. 파츠 스프라이트 초기화
     this.layerOrder.forEach((part) => {
@@ -123,8 +159,8 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
         left: Phaser.Input.Keyboard.KeyCodes.A,
         down: Phaser.Input.Keyboard.KeyCodes.S,
         right: Phaser.Input.Keyboard.KeyCodes.D,
-        space: Phaser.Input.Keyboard.KeyCodes.SPACE, // 점프 키 추가
-        z: Phaser.Input.Keyboard.KeyCodes.Z,          // 찌르기 키 추가
+        // space: Phaser.Input.Keyboard.KeyCodes.SPACE, // 점프 키 추가
+        // z: Phaser.Input.Keyboard.KeyCodes.Z,          // 찌르기 키 추가
       }) as { [key: string]: Phaser.Input.Keyboard.Key };
     }
   }
@@ -166,9 +202,12 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
 
+    // ⛔ 입력이 비활성화된 경우 업데이트 중단
+    if (!this.inputEnabled) return;
+
     // 1. 키 존재 여부 확인 후 입력 감지
-    const isSpaceJustDown = this.keys.space && Phaser.Input.Keyboard.JustDown(this.keys.space);
-    const isZJustDown = this.keys.z && Phaser.Input.Keyboard.JustDown(this.keys.z);
+    // const isSpaceJustDown = this.keys.space && Phaser.Input.Keyboard.JustDown(this.keys.space);
+    // const isZJustDown = this.keys.z && Phaser.Input.Keyboard.JustDown(this.keys.z);
 
     let velocityX = 0;
     let velocityY = 0;
@@ -200,16 +239,17 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
     }
 
     // 3. 애니메이션 상태 결정 및 재생
-    if (isSpaceJustDown && !this.isJumping) {
-      this.isJumping = true;
-      this.playLayeredAnimations(true);
-    } else if (isZJustDown && !this.isThrusting) {
-      this.isThrusting = true;
-      this.playLayeredAnimations(true);
-    } else if (!this.isJumping && !this.isThrusting) {
-      // 이동 또는 대기 애니메이션
-      this.playLayeredAnimations();
-    }
+    // if (isSpaceJustDown && !this.isJumping) {
+    //   this.isJumping = true;
+    //   this.playLayeredAnimations(true);
+    // } else if (isZJustDown && !this.isThrusting) {
+    //   this.isThrusting = true;
+    //   this.playLayeredAnimations(true);
+    // } else if (!this.isJumping && !this.isThrusting) {
+    //   // 이동 또는 대기 애니메이션
+    //   this.playLayeredAnimations();
+    // }
+    this.playLayeredAnimations();
   } 
 
   /**
@@ -234,24 +274,24 @@ export default class LpcCharacter extends Phaser.GameObjects.Container {
       });
 
       // 2. Thrust (찌르기): 0-1-2-3-4-5-6-7 패턴
-      anims.create({
-        key: `${textureKey}-thrust-${dir}`,
-        frames: anims.generateFrameNumbers(textureKey, {
-          frames: [0, 1, 2, 3, 4, 5].map(f => (THRUST_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
-        }),
-        frameRate: LPC_ANIMS.frameRate,
-        repeat: 0
-      });
+      // anims.create({
+      //   key: `${textureKey}-thrust-${dir}`,
+      //   frames: anims.generateFrameNumbers(textureKey, {
+      //     frames: [0, 1, 2, 3, 4, 5].map(f => (THRUST_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
+      //   }),
+      //   frameRate: LPC_ANIMS.frameRate,
+      //   repeat: 0
+      // });
 
       // 3. Jump (점프): 27번째 줄부터 시작, 0-1-2-3-4-1 패턴
-      anims.create({
-        key: `${textureKey}-jump-${dir}`,
-        frames: anims.generateFrameNumbers(textureKey, {
-          frames: [0, 1, 2, 3, 4, 1].map(f => (JUMP_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
-        }),
-        frameRate: LPC_ANIMS.frameRate,
-        repeat: 0
-      });      
+      // anims.create({
+      //   key: `${textureKey}-jump-${dir}`,
+      //   frames: anims.generateFrameNumbers(textureKey, {
+      //     frames: [0, 1, 2, 3, 4, 1].map(f => (JUMP_ROW_START + dirIdx) * FRAMES_PER_ROW + f)
+      //   }),
+      //   frameRate: LPC_ANIMS.frameRate,
+      //   repeat: 0
+      // });      
       
       // 4. Idle (기존 동일)
       anims.create({

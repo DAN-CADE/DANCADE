@@ -7,13 +7,17 @@ import logo from "@/public/assets/logos/logo.svg";
 import brickBreaker from "@/public/assets/screenshots/brick-breaker.png";
 import pingPong from "@/public/assets/screenshots/ping-pong.png";
 import Window from "@/components/common/Window";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
+import { useLogin } from "@/hooks/auth/useLogin";
+import { getCurrentUser } from "@/lib/utils/auth";
+import { STORAGE_KEY } from "@/constants/character";
 
 export default function LoginIdPage() {
   const router = useRouter();
   const { login, isLoading: isAuthLoading } = useAuth();
   const { getOrCreateGuestUser } = useGuestAuth();
+  const { readCharacter } = useLogin();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -51,8 +55,23 @@ export default function LoginIdPage() {
         password: formData.password,
       });
 
-      // 로그인 성공 - 캐릭터 선택 페이지로 이동
-      router.push("/character-select");
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error("로그인 후 유저 정보를 불러올 수 없습니다.");
+      }
+
+      // 로그인 된 유저의 케릭터 정보 조회 후 로컬스토리지에 동기화
+      const result = await readCharacter(currentUser.uuid!);
+      const characterSkin = result?.characterSkin;
+
+      if (characterSkin) {
+        //기존 캐릭터 있음 → 선택창 스킵
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(characterSkin));
+        router.push("/game");
+      } else {
+        //없음 → 캐릭터 생성
+        router.push("/character-select");
+      }
     } catch (error) {
       const errorMsg =
         error instanceof Error

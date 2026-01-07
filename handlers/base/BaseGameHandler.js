@@ -2,6 +2,7 @@
 
 const RoomManager = require("./RoomManager");
 const PlayerManager = require("./PlayerManager");
+// => require 에러린트 뜨는 거 확인 필요
 
 /**
  * 기본 게임 핸들러 (모든 멀티플레이 게임 공통 로직)
@@ -36,7 +37,9 @@ const PlayerManager = require("./PlayerManager");
  * });
  */
 module.exports = (io, socket, rooms, gamePrefix = "game", config = {}) => {
-  // 기본 설정
+  // =====================================================================
+  // =====================================================================
+
   const defaultConfig = {
     maxPlayers: 2,
     minPlayers: 2,
@@ -48,6 +51,9 @@ module.exports = (io, socket, rooms, gamePrefix = "game", config = {}) => {
   console.log(
     `[${gamePrefix}][핸들러등록] ${socket.id} (최대: ${finalConfig.maxPlayers}명, 최소: ${finalConfig.minPlayers}명, 자동시작: ${finalConfig.autoStart})`
   );
+
+  // =====================================================================
+  // =====================================================================
 
   // 매니저 인스턴스 생성
   const roomManager = new RoomManager(
@@ -65,9 +71,15 @@ module.exports = (io, socket, rooms, gamePrefix = "game", config = {}) => {
     finalConfig
   );
 
+  // =====================================================================
+  // =====================================================================
+
   // 이벤트 핸들러 등록
   roomManager.registerHandlers();
   playerManager.registerHandlers();
+
+  // =====================================================================
+  // =====================================================================
 
   // disconnect 핸들러 반환
   return {

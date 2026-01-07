@@ -1,22 +1,18 @@
-// game/managers/base/multiplayer/room/BaseRoomNetworkManager.ts (수정 버전)
-
-import { Socket } from "socket.io-client";
-import type {
-  RoomData,
+import {
+  RoomListResponse,
   RoomNetworkCallbacks,
-} from "@/game/types/multiplayer/room.types";
+} from "@/game/types/multiplayer/network.types";
+import { RoomData } from "@/game/types/omok";
+import { Socket } from "socket.io-client";
 
-/**
- * BaseRoomNetworkManager
- * - 모든 게임의 방 시스템 네트워크 로직 공통화
- * - 게임별 차이는 gamePrefix만으로 해결
- */
-export class BaseRoomNetworkManager {
+export abstract class BaseRoomNetworkManager {
   protected socket: Socket;
   protected gamePrefix: string;
-  protected roomList: RoomData[] = []; // ⭐ 반드시 배열로 초기화
+  protected roomList: RoomData[] = [];
   protected currentRoomId: string | null = null;
   protected callbacks: RoomNetworkCallbacks = {};
+
+  private registeredEvents: string[] = [];
 
   constructor(socket: Socket, gamePrefix: string) {
     this.socket = socket;
@@ -25,108 +21,111 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // 소켓 핸들러 설정
+  // =====================================================================
+
+  protected on(event: string, callback: (...args: any[]) => void): void {
+    const fullEventName = `${this.gamePrefix}:${event}`;
+    this.socket.on(fullEventName, callback);
+    this.registeredEvents.push(fullEventName);
+  }
+
+  // =====================================================================
+  // =====================================================================
+
+  public clear(): void {
+    this.registeredEvents.forEach((eventName) => {
+      this.socket.off(eventName);
+    });
+    this.registeredEvents = [];
+
+    this.callbacks = {};
+
+    console.log(`[${this.gamePrefix}Network] 리소스 정리 완료`);
+  }
+
+  // =====================================================================
   // =====================================================================
 
   protected setupSocketHandlers(): void {
-    const prefix = this.gamePrefix;
-
-    // ⭐ 방 목록 업데이트 (안전한 처리)
-    this.socket.on(`${prefix}:roomListUpdate`, (data: any) => {
-      console.log(`[${prefix}RoomNetwork] 방 목록 수신:`, data);
-
-      // ⭐ 서버 응답 형태 확인 및 처리
+    this.on("roomListUpdate", (data: RoomListResponse) => {
       if (Array.isArray(data)) {
-        // 배열로 직접 받은 경우
         this.roomList = data;
-        this.callbacks.onRoomListUpdate?.(data);
-      } else if (data && Array.isArray(data.rooms)) {
-        // { rooms: [...] } 형태로 받은 경우
+      } else if (data?.rooms) {
         this.roomList = data.rooms;
-        this.callbacks.onRoomListUpdate?.(data.rooms);
-      } else {
-        // 예상치 못한 형태
-        console.error(`[${prefix}RoomNetwork] 잘못된 방 목록 형태:`, data);
-        this.roomList = [];
-        this.callbacks.onRoomListUpdate?.([]);
       }
+      this.callbacks.onRoomListUpdate?.(this.roomList);
     });
 
-    // 방 생성 성공
-    this.socket.on(
-      `${prefix}:roomCreated`,
-      (data: { roomId: string; roomData: RoomData }) => {
-        this.currentRoomId = data.roomId;
-        this.callbacks.onRoomCreated?.(data.roomId, data.roomData);
-      }
-    );
+    this.on("roomCreated", (data: { roomId: string; roomData: RoomData }) => {
+      this.currentRoomId = data.roomId;
+      this.callbacks.onRoomCreated?.(data.roomId, data.roomData);
+    });
 
-    // 방 입장 성공
-    this.socket.on(`${prefix}:joinSuccess`, (data: { roomData: RoomData }) => {
+    this.on("joinSuccess", (data: { roomData: RoomData }) => {
       this.currentRoomId = data.roomData.roomId;
       this.callbacks.onJoinSuccess?.(data.roomData);
     });
 
-    // 방 입장 실패
-    this.socket.on(`${prefix}:joinError`, (data: { message: string }) => {
+    this.on("joinError", (data: { message: string }) => {
       this.callbacks.onJoinError?.(data.message);
     });
 
-    // 플레이어 입장
-    this.socket.on(`${prefix}:playerJoined`, (data: { roomData: RoomData }) => {
+    this.on("playerJoined", (data: { roomData: RoomData }) => {
       this.callbacks.onPlayerJoined?.(data.roomData);
     });
 
-    // 플레이어 퇴장
-    this.socket.on(
-      `${prefix}:playerLeft`,
-      (data: { roomData: RoomData; username: string }) => {
-        this.callbacks.onPlayerLeft?.(data.roomData, data.username);
-      }
-    );
+    this.on("playerLeft", (data: { roomData: RoomData; username: string }) => {
+      this.callbacks.onPlayerLeft?.(data.roomData, data.username);
+    });
 
-    // ⭐ 내가 방을 나감
-    this.socket.on(`${prefix}:leftRoom`, (data: { roomId: string }) => {
-      console.log(`[${prefix}RoomNetwork] 방 퇴장 완료:`, data.roomId);
+    this.on("leftRoom", (data: { roomId: string }) => {
       this.currentRoomId = null;
       this.callbacks.onLeftRoom?.(data.roomId);
     });
 
-    // 플레이어 준비
-    this.socket.on(`${prefix}:playerReady`, (data: { roomData: RoomData }) => {
+    this.on("playerReady", (data: { roomData: RoomData }) => {
       this.callbacks.onPlayerReady?.(data.roomData);
     });
 
-    // 게임 시작
-    this.socket.on(`${prefix}:gameStart`, () => {
-      console.log(`🎮 [${prefix}RoomNetwork] 게임 시작 이벤트 받음`);
+    this.on("gameStart", () => {
       this.callbacks.onGameStart?.();
     });
 
-    // 게임 중단
-    this.socket.on(
-      `${prefix}:gameAborted`,
+    this.on(
+      "gameAborted",
       (data: { reason: string; leavingPlayer: string }) => {
-        console.log(`[${prefix}RoomNetwork] 게임 중단:`, data);
         this.callbacks.onGameAborted?.(data.reason, data.leavingPlayer);
       }
     );
 
-    // 방장 변경
-    this.socket.on(`${prefix}:hostChanged`, (data: { roomData: RoomData }) => {
-      console.log(`[${prefix}RoomNetwork] 방장 변경:`, data);
+    this.on("hostChanged", (data: { roomData: RoomData }) => {
       this.callbacks.onHostChanged?.(data.roomData);
     });
 
-    // 에러
-    this.socket.on(`${prefix}:error`, (data: { message: string }) => {
-      console.error(`[${prefix}RoomNetwork] 에러:`, data.message);
+    this.on("error", (data: { message: string }) => {
       this.callbacks.onError?.(data.message);
+    });
+
+    // 재대결 관련
+
+    this.on("rematchRequested", (data: { requester: string }) => {
+      this.callbacks.onRematchRequested?.(data.requester);
+    });
+
+    this.on("rematchAccepted", (data: { accepter: string }) => {
+      this.callbacks.onRematchAccepted?.(data.accepter);
+    });
+
+    this.on("rematchDeclined", (data: { decliner: string }) => {
+      this.callbacks.onRematchDeclined?.(data.decliner);
+    });
+
+    this.on("rematchStart", () => {
+      this.callbacks.onRematchStart?.();
     });
   }
 
   // =====================================================================
-  // 네트워크 액션
   // =====================================================================
 
   public requestRoomList(): void {
@@ -152,7 +151,7 @@ export class BaseRoomNetworkManager {
       password: password || options?.password || "",
     };
 
-    console.log(`🚀 [${this.gamePrefix}RoomNetwork] 방 생성:`, payload);
+    console.log(`[${this.gamePrefix}RoomNetwork] 방 생성:`, payload);
     this.socket.emit(`${this.gamePrefix}:createRoom`, payload);
   }
 
@@ -197,7 +196,6 @@ export class BaseRoomNetworkManager {
   }
 
   // =====================================================================
-  // 콜백 등록
   // =====================================================================
 
   public setOnRoomListUpdate(callback: (rooms: RoomData[]) => void): void {
@@ -254,15 +252,77 @@ export class BaseRoomNetworkManager {
     this.callbacks.onError = callback;
   }
 
+  public requestRematch(manualRoomId?: string): void {
+    const targetId = manualRoomId || this.currentRoomId;
+
+    if (!targetId) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] 방 ID 없음 - 재대결 요청 실패`
+      );
+      return;
+    }
+
+    console.log(`[${this.gamePrefix}RoomNetwork] 재대결 요청 전송`);
+    this.socket.emit(`${this.gamePrefix}:requestRematch`, {
+      // roomId: this.currentRoomId,
+      roomId: targetId,
+    });
+  }
+
+  public setOnRematchRequested(callback: (requester: string) => void): void {
+    this.callbacks.onRematchRequested = callback;
+  }
+
+  public setOnRematchAccepted(callback: (accepter: string) => void): void {
+    this.callbacks.onRematchAccepted = callback;
+  }
+
+  public setOnRematchDeclined(callback: (decliner: string) => void): void {
+    this.callbacks.onRematchDeclined = callback;
+  }
+
+  public setOnRematchStart(callback: () => void): void {
+    this.callbacks.onRematchStart = callback;
+  }
+
   // =====================================================================
-  // Getters (⭐ 안전한 처리)
+  // =====================================================================
+
+  public acceptRematch(manualRoomId?: string): void {
+    const targetId = manualRoomId || this.currentRoomId;
+    if (!targetId) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] 방 ID 없음 - 재대결 수락 실패`
+      );
+      return;
+    }
+    this.socket.emit(`${this.gamePrefix}:acceptRematch`, { roomId: targetId });
+  }
+
+  public declineRematch(manualRoomId?: string): void {
+    const targetId = manualRoomId || this.currentRoomId;
+
+    if (!this.currentRoomId) {
+      console.warn(
+        `[${this.gamePrefix}RoomNetwork] 방 ID 없음 - 재대결 거절 실패`
+      );
+      return;
+    }
+
+    console.log(`[${this.gamePrefix}RoomNetwork] 재대결 거절: ${targetId}`);
+    this.socket.emit(`${this.gamePrefix}:declineRematch`, {
+      // roomId: this.currentRoomId,
+      roomId: targetId,
+    });
+  }
+
+  // =====================================================================
   // =====================================================================
 
   public getRoomList(): RoomData[] {
-    // ⭐ 항상 배열 반환 보장
     if (!Array.isArray(this.roomList)) {
       console.warn(
-        `[${this.gamePrefix}RoomNetwork] roomList가 배열이 아님! 빈 배열 반환`
+        `[${this.gamePrefix}RoomNetwork] roomList가 배열이 아님, 빈 배열 반환`
       );
       return [];
     }
@@ -271,30 +331,5 @@ export class BaseRoomNetworkManager {
 
   public getCurrentRoomId(): string | null {
     return this.currentRoomId;
-  }
-
-  // =====================================================================
-  // 정리
-  // =====================================================================
-
-  public cleanup(): void {
-    const events = [
-      "roomListUpdate",
-      "roomCreated",
-      "joinSuccess",
-      "joinError",
-      "playerJoined",
-      "playerLeft",
-      "leftRoom", // ⭐ 추가
-      "playerReady",
-      "gameStart",
-      "gameAborted",
-      "hostChanged",
-      "error",
-    ];
-
-    events.forEach((event) => {
-      this.socket.off(`${this.gamePrefix}:${event}`);
-    });
   }
 }

@@ -1,10 +1,7 @@
 // game/managers/games/pingpong/PingPongInputManager.ts
 
 import { BaseInputManager } from "@/game/managers/base";
-import {
-  PingPongGameState,
-  PingPongInputState,
-} from "@/game/types/realPingPong";
+import { PingPongGameState, PingPongInputState } from "@/game/types/pingpong";
 
 /**
  * 탁구 게임 입력 관리
@@ -15,18 +12,18 @@ export class PingPongInputManager extends BaseInputManager {
 
   private spaceKey!: Phaser.Input.Keyboard.Key;
 
-  private onSpacePress?: () => void;
   private onColorSelect?: (direction: "left" | "right") => void;
   private onServeAdjust?: (direction: "up" | "down") => void;
+  private onServe?: () => void;
 
   constructor(
     scene: Phaser.Scene,
     gameState: PingPongGameState,
     inputState: PingPongInputState,
     callbacks?: {
-      onSpacePress?: () => void;
       onColorSelect?: (direction: "left" | "right") => void;
       onServeAdjust?: (direction: "up" | "down") => void;
+      onServe?: () => void;
     }
   ) {
     super(scene);
@@ -35,9 +32,9 @@ export class PingPongInputManager extends BaseInputManager {
     this.inputState = inputState;
 
     if (callbacks) {
-      this.onSpacePress = callbacks.onSpacePress;
       this.onColorSelect = callbacks.onColorSelect;
       this.onServeAdjust = callbacks.onServeAdjust;
+      this.onServe = callbacks.onServe;
     }
 
     this.spaceKey = this.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)!;
@@ -67,7 +64,12 @@ export class PingPongInputManager extends BaseInputManager {
 
   private handleSpaceKey(): void {
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-      this.onSpacePress?.();
+      if (
+        this.gameState.gameMode === "playing" &&
+        this.gameState.isPreparingServe
+      ) {
+        this.onServe?.();
+      }
     }
   }
 
@@ -100,14 +102,7 @@ export class PingPongInputManager extends BaseInputManager {
     return null;
   }
 
-  registerRestartListener(onRestart: () => void): void {
-    const restartHandler = () => {
-      if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-        this.scene.input.keyboard?.off("keydown-SPACE", restartHandler);
-        onRestart();
-      }
-    };
-
-    this.scene.input.keyboard?.on("keydown-SPACE", restartHandler);
+  registerRestartListener(_onRestart: () => void): void {
+    // 재시작은 UI 버튼 클릭으로 처리됨
   }
 }

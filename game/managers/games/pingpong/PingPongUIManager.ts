@@ -1,17 +1,29 @@
 // game/managers/games/pingpong/PingPongUIManager.ts
 
 import { BaseUIManager } from "@/game/managers/base";
-import { PINGPONG_CONFIG } from "@/game/types/realPingPong";
+import { PINGPONG_CONFIG, PingPongGameResult } from "@/game/types/pingpong";
+import { PingPongMenuUIManager } from "./ui/PingPongMenuUIManager";
+import { PingPongGameOverUIManager } from "./ui/PingPongGameOverUIManager";
 
 /**
- * 탁구 게임 UI 관리
+ * 탁구 게임 UI 관리 (통합)
+ * - 게임 플레이 UI (스코어보드, 상태 텍스트, 랠리 카운터)
+ * - 메뉴 UI는 PingPongMenuUIManager에 위임
+ * - 게임 오버 UI는 PingPongGameOverUIManager에 위임
  */
 export class PingPongUIManager extends BaseUIManager {
-  private scoreBar?: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Graphics;
+  // 서브 매니저
+  private menuUI: PingPongMenuUIManager;
+  private gameOverUI: PingPongGameOverUIManager;
+
+  // 게임 플레이 UI 요소
+  private scoreBar?: Phaser.GameObjects.Graphics;
   private playerScoreText?: Phaser.GameObjects.Text;
   private aiScoreText?: Phaser.GameObjects.Text;
   private gameStatusText?: Phaser.GameObjects.Text;
+  private rallyText?: Phaser.GameObjects.Text;
 
+  // 상태 메시지 로테이션
   private readonly STATUS_MESSAGES: string[] = [
     "11점을 먼저 따는 사람이 승리!",
     "2점 차이로 이기면 승리!",
@@ -21,21 +33,7 @@ export class PingPongUIManager extends BaseUIManager {
   private currentStatusIndex: number = 0;
   private statusTimer?: Phaser.Time.TimerEvent;
 
-  private colorPreviewPaddles: Phaser.GameObjects.Image[] = [];
-
-  private readonly PINGPONG_TEXT_STYLE = {
-    TITLE: {
-      fontFamily: '"Press Start 2P", "Malgun Gothic", "맑은 고딕", sans-serif',
-      fontSize: "48px",
-      color: "#ffffff",
-    },
-    SUBTITLE: {
-      fontFamily:
-        '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
-      fontSize: "28px",
-      color: "#ffffff",
-      fontStyle: "bold",
-    },
+  private readonly TEXT_STYLE = {
     SCORE_LABEL: {
       fontFamily: '"Press Start 2P"',
       fontSize: "10px",
@@ -45,27 +43,32 @@ export class PingPongUIManager extends BaseUIManager {
       fontSize: "24px",
     },
     STATUS: {
-      fontFamily:
-        '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
+      fontFamily: '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
       fontSize: "16px",
       color: "#ffffff",
       fontStyle: "bold",
     },
-    BLINK: {
+    RALLY: {
       fontFamily: '"Press Start 2P"',
-      fontSize: "16px",
-      color: "#ffff00",
-    },
-    FINAL_SCORE: {
-      fontFamily: '"Press Start 2P"',
-      fontSize: "32px",
+      fontSize: "20px",
       color: "#ffffff",
     },
   };
 
+  constructor(scene: Phaser.Scene) {
+    super(scene);
+    this.menuUI = new PingPongMenuUIManager(scene);
+    this.gameOverUI = new PingPongGameOverUIManager(scene);
+  }
+
+  // =====================================================================
+  // 게임 플레이 UI
+  // =====================================================================
+
   createGameUI(): void {
     this.createScoreBoard();
     this.createScoreTexts();
+    this.createRallyCounter();
     this.createStatusText();
     this.startStatusTextRotation();
   }
@@ -90,34 +93,27 @@ export class PingPongUIManager extends BaseUIManager {
   private createScoreTexts(): void {
     const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
 
+    // Player Label
     const playerLabel = this.scene.add
       .text(centerX - 80, 35, "PLAYER", {
-        ...this.PINGPONG_TEXT_STYLE.SCORE_LABEL,
+        ...this.TEXT_STYLE.SCORE_LABEL,
         color: "#00ff88",
       })
       .setOrigin(0.5);
     playerLabel.setStroke("#00aa55", 2);
 
+    // AI Label
     const aiLabel = this.scene.add
       .text(centerX + 80, 35, "COMPUTER", {
-        ...this.PINGPONG_TEXT_STYLE.SCORE_LABEL,
+        ...this.TEXT_STYLE.SCORE_LABEL,
         color: "#ff8844",
       })
       .setOrigin(0.5);
     aiLabel.setStroke("#cc4400", 2);
 
-    this.playerScoreText = this.createScoreText(
-      centerX - 80,
-      55,
-      "#00ffdd",
-      "#00aa99"
-    );
-    this.aiScoreText = this.createScoreText(
-      centerX + 80,
-      55,
-      "#ffaa44",
-      "#cc6600"
-    );
+    // Score texts
+    this.playerScoreText = this.createScoreText(centerX - 80, 55, "#00ffdd", "#00aa99");
+    this.aiScoreText = this.createScoreText(centerX + 80, 55, "#ffaa44", "#cc6600");
   }
 
   private createScoreText(
@@ -127,14 +123,24 @@ export class PingPongUIManager extends BaseUIManager {
     strokeColor: string
   ): Phaser.GameObjects.Text {
     const text = this.scene.add
-      .text(x, y, "0", {
-        ...this.PINGPONG_TEXT_STYLE.SCORE_VALUE,
-        color,
-      })
+      .text(x, y, "0", { ...this.TEXT_STYLE.SCORE_VALUE, color })
       .setOrigin(0.5);
     text.setStroke(strokeColor, 3);
     text.setShadow(0, 0, color, 8);
     return text;
+  }
+
+  private createRallyCounter(): void {
+    const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
+    const y = 120;
+
+    this.rallyText = this.scene.add
+      .text(centerX, y, "Rally: 0", { ...this.TEXT_STYLE.RALLY, color: "#ffd700" })
+      .setOrigin(0.5)
+      .setAlpha(0.9);
+
+    this.rallyText.setStroke("#996600", 3);
+    this.rallyText.setShadow(0, 0, "#ffd700", 5);
   }
 
   private createStatusText(): void {
@@ -149,18 +155,41 @@ export class PingPongUIManager extends BaseUIManager {
     statusBg.setDepth(-1);
 
     this.gameStatusText = this.scene.add
-      .text(
-        centerX,
-        y,
-        this.STATUS_MESSAGES[0],
-        this.PINGPONG_TEXT_STYLE.STATUS
-      )
+      .text(centerX, y, this.STATUS_MESSAGES[0], this.TEXT_STYLE.STATUS)
       .setOrigin(0.5);
   }
+
+  // =====================================================================
+  // UI 업데이트
+  // =====================================================================
 
   updateScore(playerScore: number, aiScore: number): void {
     this.playerScoreText?.setText(playerScore.toString());
     this.aiScoreText?.setText(aiScore.toString());
+  }
+
+  updateRally(count: number): void {
+    if (!this.rallyText) return;
+
+    this.rallyText.setText(`Rally: ${count}`);
+
+    // 펄스 애니메이션
+    this.scene.tweens.add({
+      targets: this.rallyText,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 100,
+      yoyo: true,
+      ease: "Back.easeOut",
+    });
+
+    // 5의 배수마다 색상 변경
+    if (count % 5 === 0 && count > 0) {
+      this.rallyText.setColor("#ff1493");
+      this.scene.time.delayedCall(500, () => {
+        this.rallyText?.setColor("#ffd700");
+      });
+    }
   }
 
   updateStatusText(message: string): void {
@@ -171,11 +200,8 @@ export class PingPongUIManager extends BaseUIManager {
     this.statusTimer = this.scene.time.addEvent({
       delay: 3000,
       callback: () => {
-        this.currentStatusIndex =
-          (this.currentStatusIndex + 1) % this.STATUS_MESSAGES.length;
-        this.gameStatusText?.setText(
-          this.STATUS_MESSAGES[this.currentStatusIndex]
-        );
+        this.currentStatusIndex = (this.currentStatusIndex + 1) % this.STATUS_MESSAGES.length;
+        this.gameStatusText?.setText(this.STATUS_MESSAGES[this.currentStatusIndex]);
       },
       loop: true,
     });
@@ -185,11 +211,16 @@ export class PingPongUIManager extends BaseUIManager {
     this.statusTimer?.remove();
   }
 
+  // =====================================================================
+  // UI 가시성
+  // =====================================================================
+
   showGameUI(): void {
     this.playerScoreText?.setVisible(true);
     this.aiScoreText?.setVisible(true);
     this.gameStatusText?.setVisible(true);
     this.scoreBar?.setVisible(true);
+    this.rallyText?.setVisible(true);
   }
 
   hideGameUI(): void {
@@ -197,152 +228,56 @@ export class PingPongUIManager extends BaseUIManager {
     this.aiScoreText?.setVisible(false);
     this.gameStatusText?.setVisible(false);
     this.scoreBar?.setVisible(false);
+    this.rallyText?.setVisible(false);
   }
 
-  showStartMenu(): void {
+  // =====================================================================
+  // 메뉴 UI (위임)
+  // =====================================================================
+
+  showModeSelection(onModeSelect: (mode: number) => void): void {
     this.hideGameUI();
-
-    const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
-
-    this.scene.add
-      .text(centerX, 150, "PING PONG", this.PINGPONG_TEXT_STYLE.TITLE)
-      .setOrigin(0.5);
-
-    const startText = this.scene.add
-      .text(
-        centerX,
-        380,
-        "PRESS SPACE TO START",
-        this.PINGPONG_TEXT_STYLE.BLINK
-      )
-      .setOrigin(0.5);
-
-    this.scene.tweens.add({
-      targets: startText,
-      alpha: 0.3,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-    });
+    this.menuUI.showModeSelection(onModeSelect);
   }
 
-  showColorSelection(currentColorIndex: number): void {
-    const centerX = PINGPONG_CONFIG.GAME_WIDTH / 2;
-
-    this.scene.add
-      .text(
-        centerX,
-        150,
-        "플레이어를 선택하세요",
-        this.PINGPONG_TEXT_STYLE.SUBTITLE
-      )
-      .setOrigin(0.5);
-
-    this.createColorOptions();
-    this.updateColorPreview(currentColorIndex);
-
-    this.scene.add
-      .text(centerX, 450, "← → 키로 선택, SPACE로 확인", {
-        fontSize: "18px",
-        color: "#ffffff",
-        fontFamily:
-          '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-  }
-
-  private createColorOptions(): void {
-    const positions = [250, 550];
-    this.colorPreviewPaddles = [];
-
-    positions.forEach((x, index) => {
-      const paddle = this.scene.add.image(x, 300, "pingpong_player");
-      paddle.setScale(0.8);
-      paddle.setTint(PINGPONG_CONFIG.PADDLE_COLORS[index].color);
-      this.colorPreviewPaddles.push(paddle);
-    });
+  showColorSelection(currentColorIndex: number, onConfirm?: () => void): void {
+    this.menuUI.showColorSelection(currentColorIndex, onConfirm);
   }
 
   updateColorPreview(selectedIndex: number): void {
-    this.colorPreviewPaddles.forEach((paddle, index) => {
-      const isSelected = index === selectedIndex;
-      paddle.setScale(isSelected ? 1.2 : 0.8);
-      paddle.setAlpha(isSelected ? 1.0 : 0.5);
-    });
+    this.menuUI.updateColorPreview(selectedIndex);
   }
+
+  // =====================================================================
+  // 게임 오버 UI (위임)
+  // =====================================================================
 
   showGameOverScreen(
     isPlayerWin: boolean,
     playerScore: number,
     aiScore: number,
-    onRestart: () => void
+    onRestart: () => void,
+    onHome: () => void,
+    gameResult?: PingPongGameResult
   ): void {
-    const depth = 10;
-    const winner = isPlayerWin ? "YOU WIN!" : "GAME OVER";
-
-    this.createOverlay(0.7, depth);
-
-    const resultText = this.scene.add
-      .text(400, 200, winner, {
-        ...this.TEXT_STYLE.GAME_OVER,
-        color: isPlayerWin ? "#2ecc71" : "#e74c3c",
-      })
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-
-    this.scene.tweens.add({
-      targets: resultText,
-      ...(isPlayerWin
-        ? { scale: 1.1, duration: 300 }
-        : { alpha: 0.3, duration: 500 }),
-      yoyo: true,
-      repeat: -1,
-    });
-
-    this.createFinalScoreDisplay(playerScore, aiScore, depth);
-
-    this.createRestartButton(onRestart, 400, 440, depth + 1);
-
-    this.createHomeButton(() => {}, 400, 520, depth + 1);
+    this.gameOverUI.showGameOverScreen(
+      isPlayerWin,
+      playerScore,
+      aiScore,
+      onRestart,
+      onHome,
+      gameResult
+    );
   }
 
-  private createFinalScoreDisplay(
-    playerScore: number,
-    aiScore: number,
-    depth: number
-  ): void {
-    this.scene.add
-      .text(400, 280, "PLAYER", {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "14px",
-        color: "#95a5a6",
-      })
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-
-    this.scene.add
-      .text(
-        400,
-        320,
-        `${playerScore} - ${aiScore}`,
-        this.PINGPONG_TEXT_STYLE.FINAL_SCORE
-      )
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-
-    this.scene.add
-      .text(400, 360, "COMPUTER", {
-        fontFamily: '"Press Start 2P"',
-        fontSize: "14px",
-        color: "#95a5a6",
-      })
-      .setOrigin(0.5)
-      .setDepth(depth + 1);
-  }
+  // =====================================================================
+  // 정리
+  // =====================================================================
 
   cleanup(): void {
     this.stopStatusTextRotation();
-    this.colorPreviewPaddles = [];
+    this.menuUI.cleanup();
+    this.gameOverUI.cleanup();
+    this.rallyText = undefined;
   }
 }
