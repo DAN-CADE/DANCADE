@@ -112,7 +112,12 @@ export class PingPongGameOverUIManager {
       .setDepth(depth + 1);
 
     this.scene.add
-      .text(400, 320, `${playerScore} - ${aiScore}`, this.TEXT_STYLE.FINAL_SCORE)
+      .text(
+        400,
+        320,
+        `${playerScore} - ${aiScore}`,
+        this.TEXT_STYLE.FINAL_SCORE
+      )
       .setOrigin(0.5)
       .setDepth(depth + 1);
 

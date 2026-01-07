@@ -19,7 +19,8 @@ export class PingPongMenuUIManager {
       color: "#ffffff",
     },
     SUBTITLE: {
-      fontFamily: '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
+      fontFamily:
+        '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
       fontSize: "28px",
       color: "#ffffff",
       fontStyle: "bold",
@@ -33,7 +34,8 @@ export class PingPongMenuUIManager {
     HINT: {
       fontSize: "16px",
       color: "#ffff88",
-      fontFamily: '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
+      fontFamily:
+        '"Noto Sans KR", "Malgun Gothic", "맑은 고딕", Arial, sans-serif',
       fontStyle: "bold",
     },
   };
@@ -52,16 +54,22 @@ export class PingPongMenuUIManager {
     this.createBackgroundOverlay();
 
     this.scene.add
-      .text(centerX, 60, "PING PONG", this.TEXT_STYLE.TITLE)
+      .text(centerX, 60, "PING PONG", { ...this.TEXT_STYLE.TITLE, color: "#ffff00" })
       .setOrigin(0.5);
 
     this.scene.add
-      .text(centerX, 130, "게임 모드를 선택하세요", this.TEXT_STYLE.SUBTITLE)
+      .text(
+        centerX,
+        130,
+        "게임을 시작하려면 아래 버튼을 눌러주세요",
+        this.TEXT_STYLE.SUBTITLE
+      )
       .setOrigin(0.5);
 
     const modes = [
-      { label: "SINGLE (VS AI)", value: 1, color: 0x3498db },
-      { label: "ONLINE (MULTI)", value: 3, color: 0xe74c3c },
+      { label: "START", value: 1, color: 0x3498db },
+      // TODO: 온라인 모드 구현 후 활성화
+      // { label: "ONLINE (MULTI)", value: 3, color: 0xe74c3c },
       { label: "EXIT", value: 0, color: 0x95a5a6 },
     ];
 
@@ -72,9 +80,17 @@ export class PingPongMenuUIManager {
 
     modes.forEach((mode, index) => {
       const y = startY + index * buttonSpacing;
-      this.createButton(centerX, y, buttonWidth, buttonHeight, mode.label, mode.color, () => {
-        onModeSelect(mode.value);
-      });
+      this.createButton(
+        centerX,
+        y,
+        buttonWidth,
+        buttonHeight,
+        mode.label,
+        mode.color,
+        () => {
+          onModeSelect(mode.value);
+        }
+      );
     });
   }
 
@@ -93,7 +109,12 @@ export class PingPongMenuUIManager {
       .setOrigin(0.5);
 
     this.scene.add
-      .text(centerX, 140, "플레이어 색상을 선택하세요", this.TEXT_STYLE.SUBTITLE)
+      .text(
+        centerX,
+        140,
+        "플레이어 색상을 선택하세요",
+        this.TEXT_STYLE.SUBTITLE
+      )
       .setOrigin(0.5);
 
     this.createColorOptions(currentColorIndex, (index) => {
@@ -188,7 +209,10 @@ export class PingPongMenuUIManager {
     button.setInteractive({ useHandCursor: true });
     button.setDepth(1);
 
-    const graphics = this.scene.add.graphics({ x: x - width / 2, y: y - height / 2 });
+    const graphics = this.scene.add.graphics({
+      x: x - width / 2,
+      y: y - height / 2,
+    });
     graphics.lineStyle(2, 0xffffff, 0.9);
     graphics.strokeRect(0, 0, width, height);
     graphics.setDepth(1);

@@ -1,6 +1,10 @@
 // game/managers/games/pingpong/physics/PingPongPhysicsManager.ts
 
-import { PINGPONG_CONFIG, PingPongPaddle, PingPongBall } from "@/game/types/pingpong";
+import {
+  PINGPONG_CONFIG,
+  PingPongPaddle,
+  PingPongBall,
+} from "@/game/types/pingpong";
 
 /**
  * 핑퐁 게임 물리 연산 관리
@@ -40,7 +44,8 @@ export class PingPongPhysicsManager {
   ): void {
     const boardBounds = board.getBounds();
     const topBound = boardBounds.top + PINGPONG_CONFIG.BOARD_BOUNDARY_OFFSET;
-    const bottomBound = boardBounds.bottom - PINGPONG_CONFIG.BOARD_BOUNDARY_OFFSET;
+    const bottomBound =
+      boardBounds.bottom - PINGPONG_CONFIG.BOARD_BOUNDARY_OFFSET;
 
     if (
       ball.y <= topBound + ball.radius ||
@@ -66,16 +71,12 @@ export class PingPongPhysicsManager {
     const netHeight = PINGPONG_CONFIG.NET_HEIGHT;
     const netTopY = tableY - netHeight;
 
-    const prevX = ball.x - ball.velocityX * PINGPONG_CONFIG.BALL_PREVIOUS_FRAME_TIME;
+    const prevX =
+      ball.x - ball.velocityX * PINGPONG_CONFIG.BALL_PREVIOUS_FRAME_TIME;
     const crossingNet =
-      (prevX < netX && ball.x >= netX) ||
-      (prevX > netX && ball.x <= netX);
+      (prevX < netX && ball.x >= netX) || (prevX > netX && ball.x <= netX);
 
-    if (
-      crossingNet &&
-      ball.y > netTopY &&
-      ball.y < tableY + ball.radius
-    ) {
+    if (crossingNet && ball.y > netTopY && ball.y < tableY + ball.radius) {
       ball.velocityX *= -PINGPONG_CONFIG.NET_COLLISION_REDUCTION;
       ball.velocityY += PINGPONG_CONFIG.NET_BOUNCE_ADDITION;
 
@@ -99,7 +100,10 @@ export class PingPongPhysicsManager {
   // 패들 충돌
   // =====================================================================
 
-  checkPaddleBallCollision(paddle: PingPongPaddle, ball: PingPongBall): boolean {
+  checkPaddleBallCollision(
+    paddle: PingPongPaddle,
+    ball: PingPongBall
+  ): boolean {
     const ballLeft = ball.x - ball.radius;
     const ballRight = ball.x + ball.radius;
     const ballTop = ball.y - ball.radius;
@@ -128,8 +132,13 @@ export class PingPongPhysicsManager {
     isPlayerPaddle: boolean
   ): boolean {
     const relativeIntersectY = (ball.y - paddle.y) / (paddle.height / 2);
-    const normalizedRelativeIntersectionY = Phaser.Math.Clamp(relativeIntersectY, -1, 1);
-    const bounceAngle = normalizedRelativeIntersectionY * PINGPONG_CONFIG.MAX_BOUNCE_ANGLE;
+    const normalizedRelativeIntersectionY = Phaser.Math.Clamp(
+      relativeIntersectY,
+      -1,
+      1
+    );
+    const bounceAngle =
+      normalizedRelativeIntersectionY * PINGPONG_CONFIG.MAX_BOUNCE_ANGLE;
 
     // 속도 증가
     if (ball.speed < PINGPONG_CONFIG.BALL_MAX_SPEED) {
@@ -149,7 +158,10 @@ export class PingPongPhysicsManager {
     }
 
     // 완벽한 타격 판정 (패들 중앙 30% 영역)
-    return Math.abs(normalizedRelativeIntersectionY) <= PINGPONG_CONFIG.PERFECT_HIT_ZONE;
+    return (
+      Math.abs(normalizedRelativeIntersectionY) <=
+      PINGPONG_CONFIG.PERFECT_HIT_ZONE
+    );
   }
 
   // =====================================================================
