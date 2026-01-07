@@ -24,7 +24,7 @@ export interface DBUser {
   id: string;
   userid: string;
   nickname: string;
-  password_hash: string;
+  password: string;
   total_points: number;
   created_at: string;
   updated_at: string;

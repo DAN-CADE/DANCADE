@@ -159,7 +159,7 @@ export const useAuth = () => {
       // 2. 비밀번호 검증
       const isPasswordValid = await passwordUtils.verify(
         data.password,
-        dbUser.password_hash
+        dbUser.password
       );
 
       if (!isPasswordValid) {
