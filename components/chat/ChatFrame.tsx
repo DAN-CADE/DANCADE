@@ -74,7 +74,7 @@ export default function ChatFrame({ onClose }: ChatFrameProps) {
   // 회원가입 성공 핸들러
   const handleRegisterSuccess = () => {
     setShowRegisterModal(false);
-    checkUserStatus();
+    checkUserStatus(); // 로컬스토리지에서 isGuest: false 읽어서 채팅 활성화
     showToast({
       type: "success",
       message: "환영합니다! 회원가입이 완료되었습니다.",
@@ -169,7 +169,11 @@ function ChatHeader({
         >
           <img src="/assets/ui/chevrons-vertical.png" alt="expand" />
         </button>
-        <button onClick={onHide} className={styles.hideBtn} title="채팅창 숨기기">
+        <button
+          onClick={onHide}
+          className={styles.hideBtn}
+          title="채팅창 숨기기"
+        >
           −
         </button>
       </div>

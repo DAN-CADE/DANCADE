@@ -58,7 +58,7 @@ export function useRegisterForm({
   onSuccess,
 }: UseRegisterFormOptions = {}): UseRegisterFormReturn {
   const router = useRouter();
-  const { register: registerUser, isLoading } = useAuth();
+  const { register: registerUser, login, isLoading } = useAuth();
   const { getStoredUser, clearGuestData } = useGuestAuth();
 
   const [serverError, setServerError] = useState<string>("");
@@ -245,22 +245,13 @@ export function useRegisterForm({
       // 3. 게스트 데이터 초기화
       clearGuestData();
 
-      // 로컬스토리지 업데이트
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("user");
-        const memberData = {
-          id: newUser.id,
-          userid: newUser.userid,
-          nickname: newUser.nickname,
-          total_points: newUser.total_points,
-          created_at: newUser.created_at,
-          updated_at: newUser.updated_at,
-          isGuest: false,
-        };
-        localStorage.setItem("user", JSON.stringify(memberData));
-      }
+      // 4. 자동 로그인 처리 (DB에서 조회 후 로컬스토리지 저장)
+      await login({
+        userid: data.userid,
+        password: data.password,
+      });
 
-      // 4. 완료 처리
+      // 5. 완료 처리
       if (onSuccess) {
         onSuccess();
       } else {
