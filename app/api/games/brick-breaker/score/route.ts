@@ -23,7 +23,15 @@ export async function POST(request: NextRequest) {
   try {
     const body: BrickBreakerScoreRequest = await request.json();
 
-    const { userId, sessionId, score, elapsedTime, bricksDestroyed, isWin, lives } = body;
+    const {
+      userId,
+      sessionId,
+      score,
+      elapsedTime,
+      bricksDestroyed,
+      isWin,
+      lives,
+    } = body;
 
     // 필수 필드 검증
     if (!userId || !sessionId) {
@@ -42,7 +50,7 @@ export async function POST(request: NextRequest) {
     // 참고: game_rankings 테이블에 필요한 컬럼이 없을 수 있음
     // 테이블 구조에 맞게 수정 필요
     let savedData = null;
-    
+
     try {
       const { data, error } = await supabase
         .from(DB_TABLES.GAME_RANKINGS)
@@ -62,7 +70,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (error) {
-        console.warn("[API] game_rankings 저장 실패, 대체 방식 시도:", error.message);
+        console.warn(
+          "[API] game_rankings 저장 실패, 대체 방식 시도:",
+          error.message
+        );
       } else {
         savedData = data;
       }
@@ -115,7 +126,8 @@ export async function GET(request: NextRequest) {
     // 전체 랭킹 조회
     const { data: rankings, error: rankingError } = await supabase
       .from(DB_TABLES.GAME_RANKINGS)
-      .select(`
+      .select(
+        `
         id,
         user_id,
         score,
@@ -124,7 +136,8 @@ export async function GET(request: NextRequest) {
         is_win,
         played_at,
         users:user_id (nickname)
-      `)
+      `
+      )
       .eq("game_type", "brick_breaker")
       .order("score", { ascending: false })
       .limit(limit);
@@ -163,9 +176,10 @@ export async function GET(request: NextRequest) {
 }
 
 // =====================================================================
-// 최고 점수 업데이트 헬퍼
+// 최고 점수 업데이트 헬퍼 (향후 사용 예정)
 // =====================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function updateHighScore(userId: string, newScore: number) {
   try {
     // 현재 최고 점수 조회
@@ -179,15 +193,13 @@ async function updateHighScore(userId: string, newScore: number) {
 
     // 새 점수가 더 높으면 업데이트
     if (newScore > currentHighScore) {
-      await supabase
-        .from(DB_TABLES.USER_STATS)
-        .upsert(
-          {
-            user_id: userId,
-            brick_breaker_high_score: newScore,
-          },
-          { onConflict: "user_id" }
-        );
+      await supabase.from(DB_TABLES.USER_STATS).upsert(
+        {
+          user_id: userId,
+          brick_breaker_high_score: newScore,
+        },
+        { onConflict: "user_id" }
+      );
 
       console.log(`[API] 최고 점수 갱신: ${currentHighScore} → ${newScore}`);
     }
