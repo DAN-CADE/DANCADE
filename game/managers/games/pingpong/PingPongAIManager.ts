@@ -132,10 +132,19 @@ export class PingPongAIManager {
     // 예측 지점에 전략적 오프셋 반영
     const targetY = predictedY + strategicOffset;
 
-    // 4. 목표 지점과 현재 패들 위치 차이
-    const targetdiff = targetY - aiPaddleY;
+    // 4. 난이도별 예측 오차 추가 (AI 정확도 감소)
+    const errorRange = {
+      easy: 180,   // ±180px 오차 (매우 자주 실수)
+      medium: 130, // ±130px 오차 (적당히 실수)
+      hard: 60,    // ±60px 오차
+    };
+    const randomError = (Math.random() - 0.5) * 2 * errorRange[gameState.difficulty];
+    const noisyTargetY = targetY + randomError;
 
-    // 4. 난이도별 오차 적용
+    // 5. 목표 지점과 현재 패들 위치 차이
+    const targetdiff = noisyTargetY - aiPaddleY;
+
+    // 6. 거리에 따른 속도 조절
     const absDiff = Math.abs(targetdiff);
     let intensity = 0;
 
