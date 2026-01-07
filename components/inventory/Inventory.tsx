@@ -133,10 +133,9 @@ export default function Inventory() {
 
   // 인벤토리 열릴 때 데이터 fetch
   useEffect(() => {
-    if (isOpen && user) {
-      fetchInventory();
-    }
-  }, [isOpen, user, fetchInventory]);
+    if (!isOpen || !userId) return;
+  fetchInventory();
+  }, [isOpen, userId, fetchInventory]);
 
   // 파츠 장착
   async function onEquipPart(item: InventoryItem) {
