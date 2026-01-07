@@ -25,9 +25,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
+    // origin: ["http://3.25.232.135:3000","http://localhost:3000"],
     origin: "http://localhost:3000",
     methods: ["GET", "POST"],
+    credentials: true
   },
+  transports: ["websocket"],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 app.use(cors());
@@ -158,6 +163,30 @@ app.post("/api/player/save", (req, res) => {
   const { userId, x, y } = req.body;
   console.log("💾 플레이어 저장:", userId, x, y);
   res.json({ success: true });
+});
+
+app.get("/api/rooms/:gameType", async (req, res) => {
+  try {
+    const { gameType } = req.params;
+    
+    // Map의 Array.from(rooms.values()) 대신 await rooms.values() 사용
+    const allRooms = await rooms.values();
+
+    const roomList = allRooms
+      .filter(room => room.gameType === gameType && room.status === "waiting" && !room.isPrivate)
+      .map(room => ({
+        roomId: room.roomId,
+        roomName: room.roomName,
+        hostUsername: room.players[0]?.username,
+        playerCount: room.players.length,
+        maxPlayers: room.maxPlayers,
+      }));
+      
+    res.json({ rooms: roomList });
+  } catch (err) {
+    console.error("방 목록 조회 에러:", err);
+    res.status(500).json({ error: "조회 중 오류 발생" });
+  }
 });
 
 const PORT = process.env.PORT || 3001;

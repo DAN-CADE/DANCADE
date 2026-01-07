@@ -17,7 +17,8 @@ interface ResultProps {
   }
 }
 
-const EVENT_GAME_BASE_URL = 'http://localhost:3000/api/event/game'
+const NEXT_API_URL = process.env.NEXT_API_URL || "http://localhost:3000";
+const EVENT_GAME_BASE_URL = `${NEXT_API_URL}/api/event/game`
 
 // Project Info API
 export async function getEventGame(): Promise<ResultProps> {
@@ -36,7 +37,6 @@ export async function getEventGame(): Promise<ResultProps> {
 export async function createEventGame(eventGame: EventGameProps): Promise<ResultProps> {
   try {
     const url = `${EVENT_GAME_BASE_URL}`
-    console.log(url)
     const res = await fetch(url, {
         method: 'POST',
         headers: {
