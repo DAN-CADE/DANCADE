@@ -10,7 +10,7 @@ import Window from "@/components/common/Window";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useGuestAuth } from "@/hooks/useGuestAuth";
 import { useLogin } from "@/hooks/auth/useLogin";
-import { getCurrentUser, getUserData } from "@/lib/utils/auth";
+import { getCurrentUser } from "@/lib/utils/auth";
 import { STORAGE_KEY } from "@/constants/character";
 
 export default function LoginIdPage() {

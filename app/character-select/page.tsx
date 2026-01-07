@@ -90,7 +90,7 @@ export default function CharacterSelect() {
             if (!styleId) return;
 
             const data = await getItemById(styleId);
-            const id = (data as any)?.[0]?.id;
+            const id = (data as { id: string }[] | null)?.[0]?.id;
             if (id) {
               await saveItemToInventory(memberUser.id, id);
             }
@@ -117,7 +117,7 @@ export default function CharacterSelect() {
 
     // 4️⃣ 게임 시작
     router.push("/game");
-  }, [customization, getCurrentUser, router]);
+  }, [customization, getCurrentUser, router, saveCharacter]);
 
   // 4. 조건부 렌더링
   if (isLoading || !customization) {

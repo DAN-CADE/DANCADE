@@ -85,14 +85,6 @@ export function saveUserToLocal(user: UserData) {
   localStorage.setItem("user", JSON.stringify(user));
 }
 
-/**
- * 로컬스토리지 유저 정보 제거
- */
-export function clearLocalUser() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("user");
-}
-
 // =====================================================================
 // 게스트 관련
 // =====================================================================
@@ -203,21 +195,6 @@ export async function getCurrentUser(): Promise<UserData | null> {
  */
 export function getUserData(): UserData | null {
   return getUserDataFromLocal();
-}
-
-export async function getCurrentUserId(): Promise<string | null> {
-  const user = await getCurrentUser();
-  return user?.userId ?? null;
-}
-
-export async function getCurrentNickname(): Promise<string | null> {
-  const user = await getCurrentUser();
-  return user?.nickname ?? null;
-}
-
-export async function isGuestUser(): Promise<boolean> {
-  const user = await getCurrentUser();
-  return user?.isGuest ?? false;
 }
 
 async function createUserInDB(user: UserData, authUUID: string) {
