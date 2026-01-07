@@ -64,13 +64,9 @@ export class MainScene extends BaseGameScene {
     );
 
     // 네트워크 매니저 초기화 및 연결
-    this.lobbyNetwork = new LobbyNetworkManager(
-      this,
-      this.lpcSpriteManager,
-      {
-        onNotice: (message) => this.uiManager?.showNotice(message),
-      }
-    );
+    this.lobbyNetwork = new LobbyNetworkManager(this, this.lpcSpriteManager, {
+      onNotice: (message) => this.uiManager?.showNotice(message),
+    });
     this.lobbyNetwork.connect();
   }
 
