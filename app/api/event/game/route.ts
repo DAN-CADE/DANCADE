@@ -1,22 +1,24 @@
-import { getEventGame } from "@/lib/supabase/event";
-import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase/server";
 
-// =====================================================================
-/**
- * GET - 활성 이벤트 게임 조회
- */
-// =====================================================================
+export async function GET(request: Request) {
+    // 쿼리 실행 [이벤트 게임 조회]
+    let query = supabase.from("event_games")
+    .select("*")
+    .gt("end_at", new Date().toISOString())
+    .order("end_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-export async function GET() {
-  const eventGame = await getEventGame();
+    const { data: eventGames, error: getError } = await query;
 
-  if (eventGame === null) {
-    // 에러가 발생했거나 결과가 없음
-    return NextResponse.json(
-      { error: "이벤트 게임을 찾을 수 없습니다." },
-      { status: 404 }
-    );
-  }
+    if (getError) {
+        console.error("Error fetching event games:", getError);
+        return Response.json({ error: getError.message }, { status: 500 });
+    }
+    const result = {
+        data: eventGames
+    };
 
-  return NextResponse.json({ data: eventGame });
+    // 결과 반환
+    return Response.json(result);
 }

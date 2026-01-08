@@ -4,6 +4,7 @@ import { ASSET_PATHS } from "@/game/constants";
 
 export class StartScene extends BaseGameScene {
   private startButton?: Phaser.GameObjects.Image;
+  private exitButton?: Phaser.GameObjects.Image;
   private gameConfig?: GameConfig;
 
   constructor() {
@@ -76,6 +77,7 @@ export class StartScene extends BaseGameScene {
     this.createTitle();
     this.createPreview();
     this.createStartButton();
+    this.createExitButton();
     this.createInstructions();
   }
 
@@ -133,16 +135,16 @@ export class StartScene extends BaseGameScene {
     }
 
     this.add
-      .image(this.getRelativeX(400), this.getRelativeY(360), "paddle")
+      .image(this.getRelativeX(400), this.getRelativeY(340), "paddle")
       .setScale(1.2);
     const ball = this.add.image(
       this.getRelativeX(400),
-      this.getRelativeY(320),
+      this.getRelativeY(300),
       "ball"
     );
     this.tweens.add({
       targets: ball,
-      y: this.getRelativeY(340),
+      y: this.getRelativeY(320),
       duration: 600,
       yoyo: true,
       repeat: -1,
@@ -152,33 +154,57 @@ export class StartScene extends BaseGameScene {
 
   private createStartButton(): void {
     const x = this.getRelativeX(400),
-      y = this.getRelativeY(450);
+      y = this.getRelativeY(420);
     this.startButton = this.add
       .image(x, y, "buttonDefault")
-      .setScale(2)
+      .setScale(1.5)
       .setInteractive({ useHandCursor: true });
     this.add
       .text(x, y, "START", {
         fontFamily: '"Press Start 2P"',
-        fontSize: "16px",
+        fontSize: "14px",
         color: "#333333",
       })
       .setOrigin(0.5);
 
     this.startButton.on("pointerover", () =>
-      this.startButton?.setScale(2.1).setTexture("buttonSelected")
+      this.startButton?.setScale(1.6).setTexture("buttonSelected")
     );
     this.startButton.on("pointerout", () =>
-      this.startButton?.setScale(2).setTexture("buttonDefault")
+      this.startButton?.setScale(1.5).setTexture("buttonDefault")
     );
     this.startButton.on("pointerdown", () => this.startGame());
+  }
+
+  private createExitButton(): void {
+    const x = this.getRelativeX(400),
+      y = this.getRelativeY(500);
+    this.exitButton = this.add
+      .image(x, y, "buttonDefault")
+      .setScale(1.5)
+      .setInteractive({ useHandCursor: true });
+    this.add
+      .text(x, y, "EXIT", {
+        fontFamily: '"Press Start 2P"',
+        fontSize: "14px",
+        color: "#333333",
+      })
+      .setOrigin(0.5);
+
+    this.exitButton.on("pointerover", () =>
+      this.exitButton?.setScale(1.6).setTexture("buttonSelected")
+    );
+    this.exitButton.on("pointerout", () =>
+      this.exitButton?.setScale(1.5).setTexture("buttonDefault")
+    );
+    this.exitButton.on("pointerdown", () => this.exitGame());
   }
 
   private createInstructions(): void {
     this.add
       .text(
         this.getRelativeX(400),
-        this.getRelativeY(520),
+        this.getRelativeY(570),
         "◀︎  ▶︎ USE ARROW KEYS",
         {
           fontFamily: '"Press Start 2P"',
@@ -192,6 +218,10 @@ export class StartScene extends BaseGameScene {
   private startGame(): void {
     const sceneKey = this.gameConfig?.sceneKey || "BrickBreakerScene";
     this.transitionTo(sceneKey, { gameConfig: this.gameConfig });
+  }
+
+  private exitGame(): void {
+    this.transitionTo("MainScene");
   }
 
   // --- BaseGameScene 의무 구현 메서드 (필요 없으면 비워둠) ---
