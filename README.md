@@ -8,6 +8,8 @@
 ![Socket.io](https://img.shields.io/badge/Socket.io-4.8.1-010101?logo=socket.io)
 ![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?logo=supabase)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)
+![Redis](https://img.shields.io/badge/Redis-Adapter-DC382D?logo=redis)
+![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai)
 
 ## 📋 목차
 
@@ -73,7 +75,7 @@
 - Socket.io 기반 실시간 채팅
 - 로비 전체 채팅
 - 게스트용 퀵 메시지 패널
-- GPT 연동 AI 분석 (예정)
+- GPT-4o-mini 연동 AI 분석
 
 ### 🏪 상점 & 인벤토리
 
@@ -94,32 +96,40 @@
 
 ### Frontend
 
-| 기술             | 버전   | 용도             |
-| ---------------- | ------ | ---------------- |
-| **Next.js**      | 16.0.7 | React 프레임워크 |
-| **React**        | 19.2.0 | UI 라이브러리    |
-| **TypeScript**   | 5.x    | 타입 안정성      |
-| **Tailwind CSS** | 4.x    | 스타일링         |
-| **Zustand**      | 5.0.9  | 상태 관리        |
-| **Phaser**       | 3.90.0 | 게임 엔진        |
-| **GSAP**         | 3.14.2 | 애니메이션       |
+| 기술                    | 버전   | 용도                      |
+| ----------------------- | ------ | ------------------------- |
+| **Next.js**             | 16.0.7 | React 프레임워크 (App Router) |
+| **React**               | 19.2.0 | UI 라이브러리             |
+| **TypeScript**          | 5.x    | 타입 안정성               |
+| **Tailwind CSS**        | 4.x    | 스타일링                  |
+| **Zustand**             | 5.0.9  | 전역 상태 관리            |
+| **Phaser**              | 3.90.0 | 2D 게임 엔진              |
+| **GSAP**                | 3.14.2 | 애니메이션                |
+| **react-hook-form**     | 7.x    | 폼 상태 관리              |
+| **Zod**                 | 3.x    | 스키마 기반 유효성 검사   |
+| **axios**               | 1.x    | HTTP 클라이언트           |
+| **unique-names-generator** | 4.7.1 | 게스트 닉네임 생성       |
 
 ### Backend
 
-| 기술          | 버전   | 용도                |
-| ------------- | ------ | ------------------- |
-| **Express**   | 4.18.2 | HTTP 서버           |
-| **Socket.io** | 4.8.1  | 실시간 통신         |
-| **Supabase**  | 2.86.2 | 데이터베이스 & 인증 |
-| **bcryptjs**  | 3.0.3  | 비밀번호 해싱       |
+| 기술                        | 버전   | 용도                        |
+| --------------------------- | ------ | --------------------------- |
+| **Express**                 | 4.18.2 | HTTP 서버                   |
+| **Socket.io**               | 4.8.1  | 실시간 통신 (WebSocket)     |
+| **@socket.io/redis-adapter**| -      | Socket.io 수평 확장 어댑터  |
+| **Redis**                   | -      | Socket.io 어댑터 & 세션 공유 |
+| **Supabase**                | 2.86.2 | PostgreSQL DB & 인증        |
+| **bcryptjs**                | 3.0.3  | 비밀번호 해싱               |
+| **OpenAI API**              | -      | GPT-4o-mini AI 분석         |
 
 ### 개발 도구
 
-| 기술             | 용도              |
-| ---------------- | ----------------- |
-| **Vitest**       | 테스트 프레임워크 |
-| **ESLint**       | 코드 린팅         |
-| **Concurrently** | 동시 실행         |
+| 기술                          | 용도                     |
+| ----------------------------- | ------------------------ |
+| **Vitest**                    | 테스트 프레임워크        |
+| **@testing-library/react**    | React 컴포넌트 테스트    |
+| **ESLint**                    | 코드 린팅                |
+| **Concurrently**              | 멀티 프로세스 동시 실행  |
 
 ---
 
@@ -264,7 +274,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 # Socket.io 서버
 PORT=3001
 
-# OpenAI (선택)
+# OpenAI (GPT-4o-mini AI 분석)
 OPENAI_API_KEY=your_openai_key
 ```
 
